@@ -717,6 +717,86 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     </div>
     <div class="result-tips" id="r-tips"></div>
   </div>
+
+  <!-- ─────────────────────────────────────────────────────────
+       CALCOLATORE FERTILIZZANTE
+  ───────────────────────────────────────────────────────── -->
+  <div class="app-header" style="margin-top:1.5rem">
+    <h1 style="font-size:clamp(18px,4vw,26px)">Calcolatore Fertilizzante 💚</h1>
+    <p>Quantità di concime in base alla dose del produttore e all'acqua usata</p>
+  </div>
+
+  <div class="calc-card">
+    <div class="calc-card-title">📋 Dose consigliata dal produttore</div>
+    <div class="calc-row">
+      <div class="calc-field" style="flex:0 0 140px">
+        <label>Quantità</label>
+        <input type="number" id="f-dose" value="5" min="0" step="0.1" oninput="fCalculate()">
+      </div>
+      <div class="calc-field">
+        <label>Unità di misura</label>
+        <select id="f-unit" onchange="fCalculate()">
+          <option value="ml_l">ml per litro (ml/L)</option>
+          <option value="g_l">grammi per litro (g/L)</option>
+          <option value="ml_10l">ml per 10 litri (ml/10L)</option>
+          <option value="g_10l">grammi per 10 litri (g/10L)</option>
+          <option value="ml_100l">ml per 100 litri (ml/100L)</option>
+          <option value="g_100l">grammi per 100 litri (g/100L)</option>
+          <option value="pct">percentuale (%)</option>
+          <option value="tsp_l">cucchiaini per litro (≈5 ml)</option>
+          <option value="tbsp_l">cucchiai per litro (≈15 ml)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="calc-card">
+    <div class="calc-card-title">💧 Acqua utilizzata</div>
+    <div class="calc-row">
+      <div class="calc-field" style="flex:0 0 140px">
+        <label>Litri di acqua</label>
+        <input type="number" id="f-water" value="1" min="0.05" step="0.1" oninput="fCalculate()">
+      </div>
+      <div class="calc-field">
+        <label>Scorciatoie</label>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          <button class="ctrl-btn" onclick="fSetWater(0.25)" style="padding:6px 10px;font-size:11px">250 ml</button>
+          <button class="ctrl-btn" onclick="fSetWater(0.5)" style="padding:6px 10px;font-size:11px">500 ml</button>
+          <button class="ctrl-btn" onclick="fSetWater(1)" style="padding:6px 10px;font-size:11px">1 L</button>
+          <button class="ctrl-btn" onclick="fSetWater(2)" style="padding:6px 10px;font-size:11px">2 L</button>
+          <button class="ctrl-btn" onclick="fSetWater(5)" style="padding:6px 10px;font-size:11px">5 L</button>
+          <button class="ctrl-btn" onclick="fUseWaterFromCalc()" style="padding:6px 10px;font-size:11px;background:var(--accent-light);border-color:var(--accent);color:var(--accent)">↑ Dal calcolatore acqua</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="calc-card">
+    <div class="calc-card-title">⚖️ Riduzione dose</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Molte piante richiedono dose ridotta rispetto a quella del produttore (orchidee, succulente, piante delicate)</div>
+    <div class="vol-toggle">
+      <button class="vol-toggle-btn" id="f-dose-100" onclick="fSetDoseFactor(1)">Piena</button>
+      <button class="vol-toggle-btn active" id="f-dose-75" onclick="fSetDoseFactor(0.75)">¾ (75%)</button>
+      <button class="vol-toggle-btn" id="f-dose-50" onclick="fSetDoseFactor(0.5)">½ (50%)</button>
+      <button class="vol-toggle-btn" id="f-dose-25" onclick="fSetDoseFactor(0.25)">¼ (25%)</button>
+    </div>
+  </div>
+
+  <!-- Risultato fertilizzante -->
+  <div class="result-card" id="f-result" style="background:#eaf5ed;border-color:#b8d8c0">
+    <div class="result-main">
+      <span class="result-qty" id="fr-qty" style="color:#2d7a3a">—</span>
+      <span class="result-unit" id="fr-unit" style="color:#2d7a3a">ml</span>
+    </div>
+    <div class="result-label" id="fr-label" style="color:#2d6a3a">di concime da aggiungere</div>
+    <div class="result-grid">
+      <div class="result-item" style="border-color:#b8d8c0"><div class="result-item-label">Dose produttore</div><div class="result-item-val" id="fr-prod">—</div></div>
+      <div class="result-item" style="border-color:#b8d8c0"><div class="result-item-label">Dose applicata</div><div class="result-item-val" id="fr-applied">—</div></div>
+      <div class="result-item" style="border-color:#b8d8c0"><div class="result-item-label">Acqua</div><div class="result-item-val" id="fr-water">—</div></div>
+      <div class="result-item" style="border-color:#b8d8c0"><div class="result-item-label">Concentrazione finale</div><div class="result-item-val" id="fr-conc">—</div></div>
+    </div>
+    <div class="result-tips" id="fr-tips" style="color:#2d6a3a;border-top-color:#b8d8c0"></div>
+  </div>
 </div>
 
 <!-- ── SECTION: CALENDARIO BIOBIZZ ───────────────────────────── -->
@@ -1949,6 +2029,133 @@ function wCalculate() {
   document.getElementById('w-result').classList.add('visible');
   document.getElementById('w-result').scrollIntoView({behavior:'smooth', block:'nearest'});
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// ⑥ CALCOLATORE FERTILIZZANTE
+// ══════════════════════════════════════════════════════════════════════
+
+// Fattore di conversione → ml (o g) per 1 L d'acqua
+const F_UNIT_CONV = {
+  ml_l:   {factor: 1,      type:'ml', label:'ml/L'},
+  g_l:    {factor: 1,      type:'g',  label:'g/L'},
+  ml_10l: {factor: 0.1,    type:'ml', label:'ml/10L'},
+  g_10l:  {factor: 0.1,    type:'g',  label:'g/10L'},
+  ml_100l:{factor: 0.01,   type:'ml', label:'ml/100L'},
+  g_100l: {factor: 0.01,   type:'g',  label:'g/100L'},
+  pct:    {factor: 10,     type:'ml', label:'%'},       // 1% = 10 ml/L
+  tsp_l:  {factor: 5,      type:'ml', label:'cucchiaini/L'},
+  tbsp_l: {factor: 15,     type:'ml', label:'cucchiai/L'},
+};
+
+let fDoseFactor = 0.75;  // default: ¾ dose (valore prudente)
+
+function fSetWater(liters) {
+  document.getElementById('f-water').value = liters;
+  fCalculate();
+}
+
+function fUseWaterFromCalc() {
+  // Usa il volume del vaso calcolato sopra, moltiplicato per la ritenzione del substrato
+  // In pratica usa la quantità d'acqua da dare per annaffiatura
+  const qtyText = document.getElementById('r-qty').textContent;
+  if (qtyText === '—') {
+    alert('Prima calcola l\u2019acqua necessaria nel calcolatore sopra!');
+    return;
+  }
+  // Il risultato può essere in ml o L
+  let liters;
+  if (qtyText.includes('L')) {
+    liters = parseFloat(qtyText);
+  } else {
+    liters = (+qtyText) / 1000;
+  }
+  document.getElementById('f-water').value = liters.toFixed(2);
+  fCalculate();
+}
+
+function fSetDoseFactor(f) {
+  fDoseFactor = f;
+  document.querySelectorAll('[id^="f-dose-"]').forEach(b=>b.classList.remove('active'));
+  const id = f===1?'f-dose-100':f===0.75?'f-dose-75':f===0.5?'f-dose-50':'f-dose-25';
+  document.getElementById(id).classList.add('active');
+  fCalculate();
+}
+
+function fCalculate() {
+  const dose = +document.getElementById('f-dose').value || 0;
+  const unit = document.getElementById('f-unit').value;
+  const water = +document.getElementById('f-water').value || 0;
+
+  if (dose <= 0 || water <= 0) {
+    document.getElementById('fr-qty').textContent = '—';
+    document.getElementById('fr-unit').textContent = '';
+    return;
+  }
+
+  const conv = F_UNIT_CONV[unit];
+  // Quantità per 1 L alla dose piena del produttore
+  const perLiterFull = dose * conv.factor;
+  // Quantità totale per il volume d'acqua alla dose piena
+  const totalFull = perLiterFull * water;
+  // Quantità effettiva applicando il fattore riduzione
+  const totalActual = totalFull * fDoseFactor;
+  // Concentrazione finale (per litro)
+  const finalConcentration = perLiterFull * fDoseFactor;
+
+  // Formatta risultato principale
+  const unitType = conv.type; // 'ml' o 'g'
+  let qtyDisplay, unitDisplay;
+  if (totalActual < 1) {
+    // Mostra con più precisione se sotto 1 ml/g
+    qtyDisplay = totalActual.toFixed(2);
+    unitDisplay = unitType;
+  } else if (totalActual < 10) {
+    qtyDisplay = totalActual.toFixed(1);
+    unitDisplay = unitType;
+  } else {
+    qtyDisplay = Math.round(totalActual);
+    unitDisplay = unitType;
+  }
+
+  document.getElementById('fr-qty').textContent = qtyDisplay;
+  document.getElementById('fr-unit').textContent = unitDisplay;
+
+  // Dettagli
+  document.getElementById('fr-prod').textContent = dose + ' ' + conv.label;
+  const factorText = fDoseFactor===1?'100% (piena)':fDoseFactor===0.75?'75% (¾)':fDoseFactor===0.5?'50% (½)':'25% (¼)';
+  document.getElementById('fr-applied').textContent = factorText;
+  document.getElementById('fr-water').textContent = water >= 1 ? water + ' L' : Math.round(water*1000) + ' ml';
+  document.getElementById('fr-conc').textContent = finalConcentration.toFixed(2) + ' ' + unitType + '/L';
+
+  // Tips contestuali
+  const tips = [];
+  if (fDoseFactor === 1) {
+    tips.push('<b>Dose piena</b>: usa solo per piante robuste in piena stagione di crescita. Molte piante sensibili preferiscono ½ o ¼ dose.');
+  }
+  if (fDoseFactor <= 0.25) {
+    tips.push('<b>¼ dose</b>: ideale per orchidee, succulente, piante in scarsa luce o primo periodo dopo il rinvaso.');
+  }
+  if (totalActual < 0.5) {
+    tips.push('<b>Quantità molto piccola</b> (< 0.5 ' + unitType + '): usa una siringa graduata o un contagocce per misurare con precisione.');
+  } else if (totalActual < 2 && unitType === 'ml') {
+    tips.push('<b>Usa una siringa</b> da 5 ml per dosare con precisione queste quantità minime.');
+  }
+  if (unitType === 'g') {
+    tips.push('<b>Prodotto in polvere/granulare</b>: sciogli bene in acqua prima dell\u2019uso. Mescola fino a dissoluzione completa.');
+  }
+  tips.push('\u{1F4A1} <b>Regola d\u2019oro</b>: meglio sottodosare che sovradosare. In caso di dubbio parti da ½ dose e osserva la reazione della pianta dopo 2-3 applicazioni.');
+  tips.push('\u{26A0}\u{FE0F} <b>Mai concimare su terreno asciutto</b> — bagna prima leggermente, poi applica la soluzione per evitare di bruciare le radici.');
+  document.getElementById('fr-tips').innerHTML = tips.join('<br>');
+
+  document.getElementById('f-result').classList.add('visible');
+}
+
+// Inizializza il calcolatore fertilizzante quando si apre la sezione acqua
+const _wInitCalc_orig = wInitCalc;
+wInitCalc = function() {
+  _wInitCalc_orig();
+  fCalculate();
+};
 // ══════════════════════════════════════════════════════════════════════
 // ⑥ CALENDARIO BIOBIZZ
 // ══════════════════════════════════════════════════════════════════════
