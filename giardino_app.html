@@ -1077,7 +1077,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
         <div class="inv-form-card-title">🪨 Substrato</div>
         <div class="form-field">
           <label>Tipo di substrato</label>
-          <select id="inv-substrate">
+          <select id="inv-substrate" onchange="invSubstrateChange()">
             <option value="universale_mix">🌱 Universale (50% univ + 30% perlite + 20% pomice)</option>
             <option value="succulente_mix">🌵 Succulente/Cactus</option>
             <option value="orchidee_mix">🌸 Orchidee (corteccia)</option>
@@ -1089,6 +1089,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
             <option value="arbusti_mix">🌺 Arbusti da fiore</option>
             <option value="custom">⚙️ Personalizzato</option>
           </select>
+        </div>
+        <div id="inv-sub-custom" style="display:none;margin-top:8px">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:6px">Regola le percentuali di ogni componente (totale deve essere 100%)</div>
+          <div id="inv-sub-sliders" style="display:flex;flex-direction:column;gap:4px"></div>
+          <div id="inv-sub-total" class="sub-total" style="margin-top:6px">Totale: 0%</div>
         </div>
       </div>
 
@@ -2190,6 +2195,14 @@ const wSubstrates = [
   { id:'humus',       name:'Humus di lombrico',      whc: 0.62, color:'#4a3020' },
   { id:'succulente',  name:'Mix succulente/cactus',  whc: 0.22, color:'#c0a060' },
   { id:'argilla',     name:'Argilla espansa (leca)', whc: 0.15, color:'#c06030' },
+  { id:'kanuma',      name:'Kanuma',                 whc: 0.50, color:'#d4a850' },
+  { id:'kiryu',       name:'Kiryu',                  whc: 0.25, color:'#8a8a70' },
+  { id:'lapillo',     name:'Lapillo vulcanico',      whc: 0.12, color:'#6a3030' },
+  { id:'sfagno',      name:'Sfagno',                 whc: 0.80, color:'#7aa050' },
+  { id:'zeolite',     name:'Zeolite',                whc: 0.35, color:'#8090a0' },
+  { id:'kyodama',     name:'Kyodama',                whc: 0.40, color:'#b0905a' },
+  { id:'torba',       name:'Torba',                  whc: 0.65, color:'#5a3818' },
+  { id:'vermiculite', name:'Vermiculite',            whc: 0.55, color:'#c0a868' },
 ];
 
 let wVolMode = 'dim'; // 'dim' o 'lit'
@@ -2662,7 +2675,13 @@ function fiOpenFromCalendar() {
       const first = invItems[0];
       const vol = invGetVolFromItem(first);
       // Calcolo acqua basato su substrato reale
-      const whc = SUBSTRATE_WHC[first.substrate] || 0.30;
+      let whc = SUBSTRATE_WHC[first.substrate] || 0.30;
+      if (first.substrate === 'custom' && first.customSubstrate) {
+        whc = wSubstrates.reduce((s, sub) => {
+          const pct = (first.customSubstrate[sub.id] || 0) / 100;
+          return s + pct * sub.whc;
+        }, 0) || 0.30;
+      }
       const potFactor = POT_MAT_FACTOR[first.potMat] || 1.0;
       const plantFactor = PLANT_WATER_FACTOR[pm.id] || 1.0;
       // Acqua per annaffiatura normale: vol × WHC × 1.2 × materiale × tipo pianta
@@ -2954,6 +2973,68 @@ function invShapeChange() {
   document.getElementById('inv-dims-sq').style.display     = shape==='square'    ? 'flex' : 'none';
 }
 
+function invSubstrateChange() {
+  const val = document.getElementById('inv-substrate').value;
+  const customDiv = document.getElementById('inv-sub-custom');
+  if (val === 'custom') {
+    customDiv.style.display = 'block';
+    if (!document.getElementById('inv-sub-sliders').children.length) invBuildSubSliders();
+  } else {
+    customDiv.style.display = 'none';
+  }
+}
+
+function invBuildSubSliders() {
+  const container = document.getElementById('inv-sub-sliders');
+  container.innerHTML = wSubstrates.map(s => `
+    <div class="sub-row">
+      <span class="sub-name" title="${s.name}" style="width:120px;font-size:11px">${s.name}</span>
+      <input type="range" class="sub-slider" id="invs-${s.id}" min="0" max="100" value="0"
+        oninput="invSubSliderChange('${s.id}')" style="accent-color:${s.color}">
+      <span class="sub-val" id="invsv-${s.id}" style="width:36px;text-align:right;font-size:12px;font-weight:500;color:var(--accent)">0%</span>
+    </div>`).join('');
+}
+
+function invSubSliderChange(id) {
+  document.getElementById('invsv-'+id).textContent = document.getElementById('invs-'+id).value + '%';
+  invSubUpdateTotal();
+}
+
+function invSubUpdateTotal() {
+  const total = wSubstrates.reduce((s, sub) => {
+    const el = document.getElementById('invs-'+sub.id);
+    return s + (el ? +el.value : 0);
+  }, 0);
+  const el = document.getElementById('inv-sub-total');
+  el.textContent = 'Totale: ' + total + '%';
+  el.className = 'sub-total ' + (Math.abs(total-100) <= 2 ? 'ok' : 'warn');
+  if (Math.abs(total-100) > 2) el.textContent += ' ⚠️ deve essere 100%';
+}
+
+function invSubSetSlider(id, val) {
+  const slider = document.getElementById('invs-'+id);
+  const label = document.getElementById('invsv-'+id);
+  if (slider) { slider.value = val; }
+  if (label) { label.textContent = val + '%'; }
+}
+
+function invSubGetMix() {
+  const mix = {};
+  wSubstrates.forEach(s => {
+    const el = document.getElementById('invs-'+s.id);
+    const val = el ? +el.value : 0;
+    if (val > 0) mix[s.id] = val;
+  });
+  return mix;
+}
+
+function invSubLoadMix(mix) {
+  if (!document.getElementById('inv-sub-sliders').children.length) invBuildSubSliders();
+  wSubstrates.forEach(s => invSubSetSlider(s.id, 0));
+  if (mix) Object.entries(mix).forEach(([id, val]) => invSubSetSlider(id, val));
+  invSubUpdateTotal();
+}
+
 function invInit() {
   // Populate plant type dropdown
   const sel = document.getElementById('inv-plant-type');
@@ -3058,6 +3139,7 @@ function invOpenAdd() {
   document.getElementById('inv-pot-vol-sq').value = '';
   invShapeChange();
   document.getElementById('inv-substrate').value = 'universale_mix';
+  invSubstrateChange();
   document.getElementById('inv-del-btn').style.display = 'none';
   // Reset ferts
   document.querySelectorAll('.inv-fert-opt.selected').forEach(el=>el.classList.remove('selected'));
@@ -3099,6 +3181,10 @@ function invOpenEdit(id) {
   document.getElementById('inv-pot-vol-sq').value = item.potVolSq||'';
   invShapeChange();
   document.getElementById('inv-substrate').value = item.substrate||'universale_mix';
+  invSubstrateChange();
+  if (item.substrate === 'custom' && item.customSubstrate) {
+    invSubLoadMix(item.customSubstrate);
+  }
   document.getElementById('inv-del-btn').style.display = 'inline-flex';
   // Ferts
   document.getElementById('inv-fert-search').value = '';
@@ -3146,6 +3232,7 @@ function invSave() {
     potHSq: +(document.getElementById('inv-pot-h-sq').value)||22,
     potVolSq: document.getElementById('inv-pot-vol-sq').value ? +(document.getElementById('inv-pot-vol-sq').value) : null,
     substrate: document.getElementById('inv-substrate').value,
+    customSubstrate: document.getElementById('inv-substrate').value === 'custom' ? invSubGetMix() : null,
     fertilizers: invGetSelectedFerts(),
     diseases: invTempDiseases,
   };
@@ -3244,7 +3331,7 @@ function invRender() {
       ${it.qty>1?`<div class="inv-card-qty">×${it.qty} vasi</div>`:''}
       <div class="inv-detail-row"><span class="inv-lbl">Posizione</span><span class="inv-val">${INV_LOC_LABELS[it.location]||it.location}</span></div>
       <div class="inv-detail-row"><span class="inv-lbl">Vaso</span><span class="inv-val">${dimsLabel} · ${vol.toFixed(1)} L · ${it.potMat}</span></div>
-      <div class="inv-detail-row"><span class="inv-lbl">Substrato</span><span class="inv-val">${INV_SUB_LABELS[it.substrate]||it.substrate}</span></div>
+      <div class="inv-detail-row"><span class="inv-lbl">Substrato</span><span class="inv-val">${it.substrate==='custom'&&it.customSubstrate ? 'Personalizzato: '+Object.entries(it.customSubstrate).map(([k,v])=>{const s=wSubstrates.find(x=>x.id===k);return (s?s.name:k)+' '+v+'%';}).join(', ') : INV_SUB_LABELS[it.substrate]||it.substrate}</span></div>
       ${ferts?`<div style="margin-top:4px">${ferts}${moreFerts}</div>`:''}
       ${activeDiseases.length?`<div style="margin-top:4px">${activeDiseases.map(d=>`<span class="inv-disease-chip active">⚠️ ${INV_DISEASE_LABELS[d.type]||d.type}</span>`).join(' ')}</div>`:''}
     </div>`;
