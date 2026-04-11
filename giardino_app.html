@@ -45,6 +45,38 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .wa-legend-item:hover{border-color:var(--border);background:var(--surface)}
 .wa-legend-item.hidden-plant{opacity:.3}
 .wa-legend-dot{width:8px;height:8px;border-radius:0 50% 50% 50%;transform:rotate(-45deg);flex-shrink:0;background:#3a8abf}
+/* Inventario vasi */
+.inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;max-width:900px;margin:0 auto}
+.inv-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;cursor:pointer;transition:all .15s;position:relative}
+.inv-card:hover{border-color:var(--border2);box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.inv-card-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.inv-card-icon{width:40px;height:40px;border-radius:10px;background:#f5f4ef;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.inv-card-title{font-size:14px;font-weight:600}
+.inv-card-sub{font-size:11px;color:var(--muted)}
+.inv-card-qty{position:absolute;top:10px;right:12px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--accent-light);color:var(--accent)}
+.inv-detail-row{display:flex;gap:4px;align-items:flex-start;font-size:11px;margin-bottom:3px}
+.inv-detail-row .inv-lbl{color:var(--muted);min-width:65px;flex-shrink:0}
+.inv-detail-row .inv-val{color:var(--text)}
+.inv-disease-chip{display:inline-flex;align-items:center;gap:3px;font-size:9px;padding:2px 7px;border-radius:12px;font-weight:500}
+.inv-disease-chip.active{background:#faeaea;color:#b04040}
+.inv-disease-chip.resolved{background:#eaf3de;color:#3b6d11}
+.inv-fert-chip{display:inline-flex;align-items:center;gap:3px;font-size:9px;padding:2px 7px;border-radius:12px;background:#eeedfe;color:#534ab7;font-weight:500}
+.inv-add-btn{background:var(--surface);border:2px dashed var(--border);border-radius:var(--radius);padding:2rem;text-align:center;cursor:pointer;color:var(--muted);font-size:13px;transition:all .15s}
+.inv-add-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
+.inv-form-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.inv-form-card-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.inv-disease-list{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.inv-disease-row{display:flex;align-items:center;gap:6px;font-size:11px;padding:5px 8px;border-radius:6px;background:#fff;border:1px solid var(--border)}
+.inv-fert-grid{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.inv-fert-opt{font-size:10px;padding:4px 8px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:all .12s;background:#fff}
+.inv-fert-opt:hover{border-color:var(--accent)}
+.inv-fert-opt.selected{background:var(--accent);color:#fff;border-color:var(--accent)}
+.inv-fert-opt .fert-brand{font-size:8px;color:var(--muted);display:block;line-height:1.2}
+.inv-fert-opt.selected .fert-brand{color:rgba(255,255,255,.7)}
+.inv-empty{text-align:center;padding:2rem;color:var(--muted);font-size:13px;font-style:italic}
+.inv-empty .empty-icon{font-size:36px;display:block;margin-bottom:8px}
+.inv-search{display:flex;gap:6px;max-width:900px;margin:0 auto .8rem;flex-wrap:wrap}
+.inv-search input,.inv-search select{border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;font-family:'DM Sans',sans-serif;background:var(--surface);flex:1;min-width:120px}
 .treat-dot.done{opacity:.35;position:relative}
 .treat-dot.done::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:7px;color:#fff;background:rgba(0,0,0,.35);border-radius:2px}
 .tr-prod-legend{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;max-width:900px;margin:0 auto .7rem}
@@ -317,6 +349,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .vol-toggle{display:flex;gap:6px;margin-bottom:10px}
 .vol-toggle-btn{flex:1;padding:7px;font-size:12px;border:1px solid var(--border);background:transparent;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--muted);transition:all .13s}
 .vol-toggle-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+/* fertirrigazione */
+.fi-plant-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);transition:all .13s}
+.fi-plant-row.selected{background:var(--accent-light);border-color:#b8d8a0}
+.fi-plant-row .fi-check{width:18px;height:18px;border-radius:4px;border:2px solid var(--border);cursor:pointer;accent-color:var(--accent);flex-shrink:0}
+.fi-plant-row .fi-icon{font-size:16px;flex-shrink:0}
+.fi-plant-row .fi-name{font-size:12px;font-weight:500;flex:1;min-width:80px}
+.fi-plant-row .fi-controls{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.fi-plant-row .fi-mini-field{display:flex;align-items:center;gap:3px;font-size:10px;color:var(--muted)}
+.fi-plant-row .fi-mini-field input,.fi-plant-row .fi-mini-field select{border:1px solid var(--border);border-radius:5px;padding:3px 5px;font-size:11px;width:55px;font-family:'DM Sans',sans-serif;background:#fff}
+.fi-plant-row .fi-mini-field select{width:70px}
 </style>
 </head>
 <body>
@@ -472,7 +514,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
           <option>Betulla</option><option>Acero Campestre</option><option>Pitosforo</option>
           <option>Spino di Giuda</option><option>Gelso Bonsai</option>
           <option>Tradescantia</option><option>Rosmarino</option><option>Salvia</option>
-          <option>Paulownia</option><option>Crassula Ovata</option>
+          <option>Paulownia</option><option>Crassula Ovata</option><option>Carmona Bonsai</option>
           <option>Tutte le piante</option>
         </select>
       </div>
@@ -512,7 +554,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
       <option>Betulla</option><option>Acero Campestre</option><option>Pitosforo</option>
       <option>Spino di Giuda</option><option>Gelso Bonsai</option>
       <option>Tradescantia</option><option>Rosmarino</option><option>Salvia</option>
-      <option>Paulownia</option><option>Crassula Ovata</option><option>Tutte le piante</option>
+      <option>Paulownia</option><option>Crassula Ovata</option><option>Carmona Bonsai</option><option>Tutte le piante</option>
     </select>
     <select id="d-filter-op" onchange="dRender()">
       <option value="">Tutte le operazioni</option>
@@ -556,7 +598,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
               <option>Betulla</option><option>Acero Campestre</option><option>Pitosforo</option>
               <option>Spino di Giuda</option><option>Gelso Bonsai</option>
               <option>Tradescantia</option><option>Rosmarino</option><option>Salvia</option>
-              <option>Paulownia</option><option>Crassula Ovata</option>
+              <option>Paulownia</option><option>Crassula Ovata</option><option>Carmona Bonsai</option>
               <option>Tutte le piante</option>
             </select>
           </div>
@@ -797,9 +839,264 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     </div>
     <div class="result-tips" id="fr-tips" style="color:#2d6a3a;border-top-color:#b8d8c0"></div>
   </div>
+
+  <!-- ─────────────────────────────────────────────────────────
+       CALCOLATORE FERTIRRIGAZIONE
+  ───────────────────────────────────────────────────────── -->
+  <div class="app-header" style="margin-top:1.5rem">
+    <h1 style="font-size:clamp(18px,4vw,26px)">Fertirrigazione 🧪💧</h1>
+    <p>Prepara una soluzione unica ottimizzata per più piante</p>
+  </div>
+
+  <div class="calc-card">
+    <div class="calc-card-title">💚 Prodotto da utilizzare</div>
+    <div class="calc-row">
+      <div class="calc-field">
+        <label>Seleziona prodotto</label>
+        <select id="fi-product" onchange="fiUpdate()">
+          <option value="grow"    data-dose="2"  data-unit="ml/L">Bio·Grow (2 ml/L)</option>
+          <option value="bloom"   data-dose="2"  data-unit="ml/L">Bio·Bloom (2 ml/L)</option>
+          <option value="topmax"  data-dose="1"  data-unit="ml/L">Top·Max (1 ml/L)</option>
+          <option value="alg"     data-dose="1"  data-unit="ml/L">Alg·A·Mic (1 ml/L)</option>
+          <option value="fish"    data-dose="2"  data-unit="ml/L">Fish·Mix (2 ml/L)</option>
+          <option value="calmag"  data-dose="1"  data-unit="ml/L">CalMag (1 ml/L)</option>
+          <option value="root"    data-dose="1"  data-unit="ml/L">Root·Juice (1 ml/L)</option>
+          <option value="custom"  data-dose="0"  data-unit="ml/L">— Altro prodotto —</option>
+        </select>
+      </div>
+    </div>
+    <div id="fi-custom-dose" style="display:none;margin-top:8px">
+      <div class="calc-row">
+        <div class="calc-field" style="max-width:120px">
+          <label>Dose etichetta</label>
+          <input type="number" id="fi-custom-val" value="5" min="0" step="0.1" oninput="fiUpdate()">
+        </div>
+        <div class="calc-field" style="max-width:140px">
+          <label>Unità</label>
+          <select id="fi-custom-unit" onchange="fiUpdate()">
+            <option value="ml/L">ml/L</option>
+            <option value="g/L">g/L</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="calc-card">
+    <div class="calc-card-title">🌿 Piante da fertirrigare</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Seleziona le piante e regola la dose e l'acqua per ciascuna</div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+      <button class="ctrl-btn" onclick="fiSelectAll()" style="font-size:11px;padding:5px 10px">✅ Tutte</button>
+      <button class="ctrl-btn" onclick="fiSelectNone()" style="font-size:11px;padding:5px 10px">❌ Nessuna</button>
+      <button class="ctrl-btn" onclick="fiSelectIndoor()" style="font-size:11px;padding:5px 10px">🏠 Interne</button>
+      <button class="ctrl-btn" onclick="fiSelectOutdoor()" style="font-size:11px;padding:5px 10px">☀️ Esterne</button>
+    </div>
+    <div id="fi-plant-list" style="display:flex;flex-direction:column;gap:4px"></div>
+  </div>
+
+  <!-- Risultato fertirrigazione -->
+  <div class="result-card" id="fi-result" style="background:#edf5ff;border-color:#b0c8e8;display:none">
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+      <div>
+        <div style="font-size:10px;color:#2a5a8a;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Acqua totale</div>
+        <div style="display:flex;align-items:baseline;gap:4px">
+          <span class="result-qty" id="fi-total-water" style="color:#2a5a8a;font-size:36px">—</span>
+          <span class="result-unit" style="color:#2a5a8a">L</span>
+        </div>
+      </div>
+      <div style="font-size:28px;color:#b0c8e8">+</div>
+      <div>
+        <div style="font-size:10px;color:#2d7a3a;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Fertilizzante</div>
+        <div style="display:flex;align-items:baseline;gap:4px">
+          <span class="result-qty" id="fi-total-fert" style="color:#2d7a3a;font-size:36px">—</span>
+          <span class="result-unit" id="fi-total-fert-unit" style="color:#2d7a3a">ml</span>
+        </div>
+      </div>
+    </div>
+    <div class="result-label" id="fi-summary" style="color:#2a5a8a">Prepara la soluzione nel contenitore</div>
+
+    <div class="result-grid" id="fi-stats" style="margin-top:10px"></div>
+
+    <div style="margin-top:12px;border-top:1px solid #b0c8e8;padding-top:10px">
+      <div style="font-size:11px;font-weight:600;color:#2a5a8a;margin-bottom:6px">📋 Distribuzione per pianta</div>
+      <div id="fi-breakdown" style="display:flex;flex-direction:column;gap:3px"></div>
+    </div>
+
+    <div class="result-tips" id="fi-tips" style="color:#2a5a8a;border-top-color:#b0c8e8;margin-top:10px"></div>
+  </div>
+
+  <!-- Risultato fertirrigazione da calendario (multi-prodotto) -->
+  <div class="result-card" id="fi-cal-result" style="background:#edf5ff;border-color:#b0c8e8;display:none">
+    <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:#2a5a8a;margin-bottom:4px" id="fi-cal-title">Fertirrigazione del giorno</div>
+    <div style="font-size:11px;color:#5a7a9a;margin-bottom:12px" id="fi-cal-subtitle"></div>
+    <div id="fi-cal-groups"></div>
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid #b0c8e8">
+      <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+        <div><div style="font-size:9px;color:#2a5a8a;text-transform:uppercase;letter-spacing:.4px">Acqua totale</div><span style="font-family:'Playfair Display',serif;font-size:28px;font-weight:600;color:#2a5a8a" id="fi-cal-total-water">—</span> <span style="color:#2a5a8a;font-size:14px">L</span></div>
+        <div><div style="font-size:9px;color:#2a5a8a;text-transform:uppercase;letter-spacing:.4px">Vasi totali</div><span style="font-family:'Playfair Display',serif;font-size:28px;font-weight:600;color:#2a5a8a" id="fi-cal-total-pots">—</span></div>
+      </div>
+    </div>
+    <div class="result-tips" id="fi-cal-tips" style="color:#2a5a8a;border-top-color:#b0c8e8;margin-top:10px"></div>
+  </div>
 </div>
 
-<!-- ── SECTION: CALENDARIO BIOBIZZ ───────────────────────────── -->
+<!-- ── SECTION: INVENTARIO VASI ────────────────────────────── -->
+<div id="sec-vasi" class="section">
+  <div class="app-header">
+    <h1>I miei vasi 📦</h1>
+    <p>Inventario · Dimensioni · Concimi · Malattie</p>
+  </div>
+  <div class="inv-search">
+    <input type="text" id="inv-search" placeholder="Cerca pianta..." oninput="invRender()">
+    <select id="inv-filter-loc" onchange="invRender()">
+      <option value="">Tutte le posizioni</option>
+      <option value="indoor">🏠 Interno</option>
+      <option value="outdoor">☀️ Esterno</option>
+      <option value="balcone">🏗️ Balcone</option>
+    </select>
+    <span style="font-size:12px;color:var(--muted);padding:8px 0" id="inv-count"></span>
+  </div>
+  <div class="inv-grid" id="inv-grid"></div>
+</div>
+
+<!-- Overlay add/edit vaso -->
+<div class="overlay" id="inv-overlay" onclick="if(event.target===this)invCloseForm()">
+  <div class="panel" style="max-width:540px">
+    <div class="panel-header">
+      <div class="panel-title" id="inv-form-title">Aggiungi vaso</div>
+      <button class="close-btn" onclick="invCloseForm()">✕</button>
+    </div>
+    <div class="panel-body" id="inv-form-body">
+      <input type="hidden" id="inv-edit-id">
+
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">🌿 Pianta</div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Tipo di pianta</label>
+            <select id="inv-plant-type"></select>
+          </div>
+          <div class="form-field" style="max-width:100px">
+            <label>Esemplari</label>
+            <input type="number" id="inv-qty" value="1" min="1" max="50">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Soprannome (opzionale)</label>
+            <input type="text" id="inv-nickname" placeholder="Es: Ficus del salotto">
+          </div>
+          <div class="form-field">
+            <label>Posizione</label>
+            <select id="inv-location">
+              <option value="indoor">🏠 Interno</option>
+              <option value="outdoor">☀️ Esterno</option>
+              <option value="balcone">🏗️ Balcone</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">📦 Vaso</div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Forma</label>
+            <select id="inv-pot-shape">
+              <option value="cylinder">Cilindrico / Rotondo</option>
+              <option value="square">Quadrato / Rettangolare</option>
+              <option value="truncated">Troncoconico</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Materiale</label>
+            <select id="inv-pot-mat">
+              <option value="plastica">Plastica</option>
+              <option value="terracotta">Terracotta</option>
+              <option value="ceramica">Ceramica smaltata</option>
+              <option value="bonsai">Vaso bonsai</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field" style="max-width:100px">
+            <label>Ø sup. (cm)</label>
+            <input type="number" id="inv-pot-diam" value="25" min="1">
+          </div>
+          <div class="form-field" style="max-width:100px">
+            <label>Altezza (cm)</label>
+            <input type="number" id="inv-pot-h" value="22" min="1">
+          </div>
+          <div class="form-field" style="max-width:100px">
+            <label>Volume (L)</label>
+            <input type="number" id="inv-pot-vol" step="0.1" placeholder="auto">
+          </div>
+        </div>
+      </div>
+
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">🪨 Substrato</div>
+        <div class="form-field">
+          <label>Tipo di substrato</label>
+          <select id="inv-substrate">
+            <option value="universale_mix">🌱 Universale (50% univ + 30% perlite + 20% pomice)</option>
+            <option value="succulente_mix">🌵 Succulente/Cactus</option>
+            <option value="orchidee_mix">🌸 Orchidee (corteccia)</option>
+            <option value="agrumi_mix">🍋 Agrumi</option>
+            <option value="bonsai_mix">💜 Bonsai (akadama)</option>
+            <option value="mediterranee_mix">🌿 Mediterranee (sabbioso)</option>
+            <option value="tropicali_mix">🌳 Tropicali</option>
+            <option value="acidofile_mix">🍂 Acidofile</option>
+            <option value="arbusti_mix">🌺 Arbusti da fiore</option>
+            <option value="custom">⚙️ Personalizzato</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">💚 Concimi utilizzati</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:6px">Seleziona i prodotti che usi per questa pianta</div>
+        <div class="form-field" style="margin-bottom:6px">
+          <input type="text" id="inv-fert-search" placeholder="Cerca concime..." oninput="invFilterFerts()">
+        </div>
+        <div class="inv-fert-grid" id="inv-fert-grid"></div>
+      </div>
+
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">🔬 Malattie / Parassiti</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <select id="inv-disease-type" style="flex:1;min-width:120px;border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:11px;font-family:'DM Sans',sans-serif">
+            <option value="">— Aggiungi —</option>
+            <option value="cocciniglia">Cocciniglia</option>
+            <option value="cocciniglia_cotonosa">Cocciniglia cotonosa</option>
+            <option value="ragnetto_rosso">Ragnetto rosso</option>
+            <option value="afidi">Afidi</option>
+            <option value="mosca_bianca">Mosca bianca</option>
+            <option value="oidio">Oidio (Mal bianco)</option>
+            <option value="marciume_radicale">Marciume radicale</option>
+            <option value="fumaggine">Fumaggine</option>
+            <option value="clorosi_ferrica">Clorosi ferrica</option>
+            <option value="minatore_fogliare">Minatore fogliare</option>
+            <option value="alternaria">Alternaria</option>
+            <option value="altro">Altro</option>
+          </select>
+          <input type="text" id="inv-disease-note" placeholder="Note..." style="flex:1;min-width:100px;border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:11px;font-family:'DM Sans',sans-serif">
+          <button class="ctrl-btn" onclick="invAddDisease()" style="padding:6px 12px;font-size:11px">+ Aggiungi</button>
+        </div>
+        <div class="inv-disease-list" id="inv-disease-list"></div>
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:space-between;margin-top:12px;flex-wrap:wrap">
+        <button class="ctrl-btn" id="inv-del-btn" onclick="invDelete()" style="color:#b04040;display:none">Elimina vaso</button>
+        <div style="display:flex;gap:8px;margin-left:auto">
+          <button class="ctrl-btn" onclick="invCloseForm()">Annulla</button>
+          <button class="save-btn" onclick="invSave()">Salva</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ── BOTTOM NAV ─────────────────────────────────────────────────── -->
 <nav class="app-nav">
   <button class="nav-tab active" id="tab-schede" data-sec="schede" onclick="showSection('schede')">
@@ -817,13 +1114,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   <button class="nav-tab" id="tab-acqua" data-sec="acqua" onclick="showSection('acqua')">
     <span class="nav-icon">💧</span>Acqua
   </button>
+  <button class="nav-tab" id="tab-vasi" data-sec="vasi" onclick="showSection('vasi')">
+    <span class="nav-icon">📦</span>Vasi
+  </button>
 </nav>
 
 <script>
 // ══════════════════════════════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════════════════════════════
-const sectionInited = {schede:false, mensile:false, giorni:false, diario:false, acqua:false};
+const sectionInited = {schede:false, mensile:false, giorni:false, diario:false, acqua:false, vasi:false};
 
 function showSection(name) {
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -836,13 +1136,14 @@ function showSection(name) {
     else if (name==='giorni') gInitGiorni();
     else if (name==='diario') dInitDiario();
     else if (name==='acqua') wInitCalc();
+    else if (name==='vasi') invInit();
     sectionInited[name] = true;
   }
   if (name==='diario') dRender();
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key==='Escape') { sCloseDetail(); cCloseOverlay(); gClosePanel(); }
+  if (e.key==='Escape') { sCloseDetail(); cCloseOverlay(); gClosePanel(); invCloseForm(); }
 });
 
 // ══════════════════════════════════════════════════════════════════════
@@ -998,8 +1299,13 @@ const sPlants = [
     sub:{terreno:"Substrato per succulente e cactus; oppure terriccio universale + 40% di sabbia grossa, perlite o pomice",ph:"6.0 – 7.0",vaso:"Terracotta con foro di drenaggio. Vaso pesante e stabile — la pianta diventa grande e pesante negli anni",rinvaso:"Ogni 2-3 anni in primavera; tollera bene vasi leggermente stretti",vivo:"Dosi minime di humus di lombrico (5-10%) come per l'Aloe. Micorrize universali al rinvaso. Substrato troppo ricco trattiene umidità e causa marciume."},
     esp:{luce:"Piena luce o sole diretto — più luce = crescita compatta e possibilità di fioritura",sole:"Tollera il sole diretto; in estate proteggere dal sole più forte nelle ore centrali se appena spostata fuori",temperatura:"Ideale 15–28°C; resiste a brevi gelate fino a -2°C ma non al gelo prolungato",umidita:"Bassissima; odia l'umidità elevata"},
     cur:{acqua:"Annaffiare solo quando il substrato è completamente asciutto. Metodo 'soak and dry' come l'Aloe. In inverno 1× al mese o meno",potatura:"Non necessaria; si può potare per dare forma ad alberello. I rami tagliati radicano facilmente",parassiti:"Cocciniglia (soprattutto cotonosa) e marciume radicale da eccesso d'acqua",extra:"Può vivere decenni e diventare un piccolo albero. Le foglie carnose diventano rosse ai bordi con molta luce. Fiorisce in inverno con piccoli fiori bianchi/rosa stellati se le condizioni sono ideali (estate calda, inverno fresco)."},
-    bio:{prodotti:"Alg·A·Mic · Root·Juice",primavera:"Alg·A·Mic a ¼ dose 1× al mese da aprile — è sufficiente",estate:"Alg·A·Mic a ¼ dose 1× al mese",autunno:"Stop totale da ottobre",rinvaso:"Root·Juice diluito sulle radici al rinvaso. Worm·Humus a dose minima (5%)",note:"Come l'Aloe: Bio·Grow e Bio·Bloom sono troppo ricchi per le succulente. L'Alg·A·Mic a ¼ dose è l'unico prodotto BioBizz adatto. Qualsiasi eccesso produce crescita molle e predispone al marciume."}}
-
+    bio:{prodotti:"Alg·A·Mic · Root·Juice",primavera:"Alg·A·Mic a ¼ dose 1× al mese da aprile — è sufficiente",estate:"Alg·A·Mic a ¼ dose 1× al mese",autunno:"Stop totale da ottobre",rinvaso:"Root·Juice diluito sulle radici al rinvaso. Worm·Humus a dose minima (5%)",note:"Come l'Aloe: Bio·Grow e Bio·Bloom sono troppo ricchi per le succulente. L'Alg·A·Mic a ¼ dose è l'unico prodotto BioBizz adatto. Qualsiasi eccesso produce crescita molle e predispone al marciume."}},
+  { name:"Carmona Bonsai", latin:"Carmona microphylla (Ehretia buxifolia)", icon:"🌳", isNew:true, tags:["Interno","Bonsai","Tropicale"], tc:["pt","pb","pc"],
+    con:{periodo:"Aprile – Settembre (ridotta in inverno se temp >18°C)",frequenza:"Ogni 2-3 settimane",concime:"Liquido bilanciato NPK per bonsai, ½ dose",stop:"Ridurre in inverno ma non fermare del tutto — è tropicale e non va mai in vero riposo se tenuto al caldo",note:"Se l'ambiente è caldo (>18°C) continua a vegetare anche in inverno: una leggera concimazione mensile è possibile. Non eccedere — le radici sono delicate."},
+    sub:{terreno:"Substrato per bonsai ben drenante: akadama (50%) + pomice (25%) + humus di lombrico (25%). Il drenaggio è fondamentale",ph:"5.5 – 7.0",vaso:"Vaso bonsai poco profondo con ottimo drenaggio. Non troppo grande — preferisce sentirsi contenuto",rinvaso:"Ogni 2-3 anni in tarda primavera (maggio/giugno), quando le temperature notturne sono sopra i 15°C. Mai rinvasare in inverno",vivo:"15% di humus di lombrico nella miscela. Micorrize universali sulle radici al rinvaso. Non disturbare troppo le radici: è meno vigoroso di Gelso e Glicine nella rigenerazione radicale."},
+    esp:{luce:"Luce intensa indiretta o sole mattutino filtrato. Pianta da interni nella nostra latitudine",sole:"Alcune ore di sole mattutino sono benefiche; evitare sole diretto estivo pomeridiano",temperatura:"18–28°C ideale. Non scendere MAI sotto i 12°C — è tropicale e il freddo è letale. Niente balcone in inverno",umidita:"Alta (50–70%): fondamentale. Nebulizzare le foglie regolarmente. Sottovaso con argilla espansa e acqua per umidità costante"},
+    cur:{acqua:"Substrato leggermente umido ma mai saturo. Odia sia la siccità prolungata sia i ristagni. Controllare ogni giorno in estate — il vaso bonsai asciuga rapidamente",potatura:"Accorciare i germogli a 2-3 foglie quando raggiungono 5-6 foglie. Potatura strutturale in tarda primavera. Produce fiorellini bianchi e bacche rosse decorative",parassiti:"Molto sensibile a cocciniglia, ragnetto rosso e mosca bianca in ambienti secchi. L'umidità insufficiente è la causa principale. Neem a dose ridotta",extra:"Le foglie cadono se: fa troppo freddo, l'aria è troppo secca, il terreno è troppo asciutto/bagnato, oppure se viene spostato bruscamente. Pianta esigente ma gratificante — i fiorellini bianchi e le bacche rosse sono spettacolari."},
+    bio:{prodotti:"Bio·Grow · Alg·A·Mic · Root·Juice",primavera:"Bio·Grow a ½ dose ogni 2-3 settimane da aprile. Alg·A·Mic 1× al mese come rinvigorente",estate:"Bio·Grow a ½ dose ogni 2-3 settimane. Alg·A·Mic come spray fogliare diluito per umidità",autunno:"Ridurre a Bio·Grow 1× al mese a ¼ dose se temp >18°C. Stop sotto i 18°C",rinvaso:"Root·Juice sulle radici al rinvaso (solo in tarda primavera/estate). Worm·Humus a 15%",note:"Mai Bio·Bloom. Il Bio·Grow a ½ dose è sufficiente. L'Alg·A·Mic come spray fogliare è particolarmente utile per mantenere l'alta umidità che il Carmona richiede."}}
 ];
 
 const sTabDefs = [
@@ -1099,7 +1405,8 @@ const cPlants = [
   {name:"Rosmarino",latin:"Salvia rosmarinus",icon:"🌿",months:[0,0,1,1,1,1,1,0,0,0,0,0],freq:"Ogni 6-8 settimane",concime:"Leggero P-K, tipo piante fiorite",notes:{3:"Prima concimazione dell'anno se necessaria. Pota dopo la fioritura.",4:"Fioritura azzurro-viola. Non potare durante la fioritura.",5:"Stagione attiva. In piena terra quasi autonomo.",6:"Continua per piante in vaso.",7:"Ultima concimazione leggera. Da agosto stop."}},
   {name:"Salvia",latin:"Salvia officinalis",icon:"🍃",months:[0,0,1,1,1,1,1,0,0,0,0,0],freq:"Ogni 6-8 settimane",concime:"Leggero P-K, tipo piante mediterranee",notes:{3:"Prima concimazione leggera. Potatura di forma primaverile.",4:"Stagione attiva. Fioritura viola-blu.",5:"Continua per piante in vaso.",6:"Continua. Raccogli le foglie regolarmente per stimolare nuova crescita.",7:"Ultima concimazione. Da agosto stop."}},
   {name:"Paulownia",latin:"Paulownia tomentosa",icon:"🌸",months:[0,0,1,1,1,1,1,0,0,0,0,0],freq:"Ogni 3-4 settimane (solo giovani piante)",concime:"Bilanciato NPK, dose piena per giovani",notes:{3:"Prima concimazione. Se giovane, sostieni la crescita esplosiva.",4:"Crescita rapidissima. Foglie enormi in sviluppo.",5:"Fioritura viola spettacolare (prima delle foglie sugli esemplari adulti).",6:"Continua per giovani piante. Adulte in piena terra: nessun intervento.",7:"Ultima concimazione. Da agosto stop — i rami devono lignificare."}},
-  {name:"Crassula Ovata",latin:"Crassula ovata",icon:"🪴",months:[0,0,0,1,1,1,1,1,1,0,0,0],freq:"1× al mese",concime:"Liquido succulente, ½ dose",notes:{4:"Prima concimazione. Controlla la pianta per cocciniglia cotonosa.",5:"Stagione attiva. Annaffia solo quando il substrato è completamente asciutto.",6:"Piena estate — può stare all'aperto in posizione luminosa.",7:"Continua normalmente.",8:"Continua. Le foglie diventano rosse ai bordi con molta luce.",9:"Ultima concimazione. Da ottobre stop totale."}}
+  {name:"Crassula Ovata",latin:"Crassula ovata",icon:"🪴",months:[0,0,0,1,1,1,1,1,1,0,0,0],freq:"1× al mese",concime:"Liquido succulente, ½ dose",notes:{4:"Prima concimazione. Controlla la pianta per cocciniglia cotonosa.",5:"Stagione attiva. Annaffia solo quando il substrato è completamente asciutto.",6:"Piena estate — può stare all'aperto in posizione luminosa.",7:"Continua normalmente.",8:"Continua. Le foglie diventano rosse ai bordi con molta luce.",9:"Ultima concimazione. Da ottobre stop totale."}},
+  {name:"Carmona Bonsai",latin:"Carmona microphylla",icon:"🌳",months:[2,2,2,1,1,1,1,1,1,2,2,2],freq:"Ogni 2-3 settimane (ridotta in inverno)",concime:"Liquido bilanciato per bonsai, ½ dose",notes:{1:"Se temp >18°C: concime ridotto 1× al mese. Nebulizzare le foglie quotidianamente.",2:"Come gennaio. Aumentare umidità ambientale con sottovaso + argilla espansa.",3:"Ripresa graduale. Aumentare frequenza se emette nuove foglie.",4:"Stagione attiva. Concima ogni 2-3 settimane. Ottimo momento per potature di formazione.",5:"Piena crescita. Può fiorire con piccoli fiori bianchi. Controlla umidità.",6:"Estate: massima attenzione all'umidità. Mai sotto il sole diretto pomeridiano.",7:"Continua. Il substrato bonsai asciuga rapidamente — controllare ogni giorno.",8:"Continua normalmente. Accorcia i germogli a 2-3 foglie.",9:"Ultima concimazione piena. Da ottobre ridurre.",10:"Concime ridotto 1× al mese se temp >18°C. Mai portare fuori — niente freddo!",11:"Dose molto ridotta. Mantenere umidità alta con i riscaldamenti.",12:"Come novembre. Bacche rosse decorative se ha fiorito."}}
 
 ];
 
@@ -1179,7 +1486,8 @@ const gPlants = [
   {id:21,name:"Rosmarino",latin:"Salvia rosmarinus",icon:"🌿",color:"#4a7060",concime:"Leggero P-K, tipo piante fiorite",schedules:[{months:[3,4,5,6,7],interval:45}],startDate:new Date(2026,2,18)},
   {id:22,name:"Salvia",latin:"Salvia officinalis",icon:"🍃",color:"#6a8050",concime:"Leggero P-K, tipo piante mediterranee",schedules:[{months:[3,4,5,6,7],interval:45}],startDate:new Date(2026,2,20)},
   {id:23,name:"Paulownia",latin:"Paulownia tomentosa",icon:"🌸",color:"#8060b0",concime:"Bilanciato NPK dose piena (solo giovani)",schedules:[{months:[3,4,5,6,7],interval:25}],startDate:new Date(2026,2,15)},
-  {id:24,name:"Crassula Ovata",latin:"Crassula ovata",icon:"🪴",color:"#5a8a50",concime:"Liquido succulente, ½ dose",schedules:[{months:[4,5,6,7,8,9],interval:30}],startDate:new Date(2026,3,12)}
+  {id:24,name:"Crassula Ovata",latin:"Crassula ovata",icon:"🪴",color:"#5a8a50",concime:"Liquido succulente, ½ dose",schedules:[{months:[4,5,6,7,8,9],interval:30}],startDate:new Date(2026,3,12)},
+  {id:25,name:"Carmona Bonsai",latin:"Carmona microphylla",icon:"🌳",color:"#4a6a3a",concime:"Liquido bilanciato bonsai, ½ dose",schedules:[{months:[4,5,6,7,8,9],interval:18},{months:[1,2,3,10,11,12],interval:30,note:"Dose ridotta — solo se temp >18°C"}],startDate:new Date(2026,3,8)}
 
 ];
 
@@ -1514,6 +1822,15 @@ function gOpenDay(date, fertEvs, bbEvs, trEvs, waEvs) {
       });
       html+=`</div>`;
     });
+  }
+
+  // ── Pulsante fertirrigazione
+  if(fertEvs.length || bbEvs.length){
+    // Salva i dati del giorno per il calcolo fertirrigazione
+    window._fiCalEvts = {fertEvs, bbEvs, date};
+    html+=`<div style="text-align:center;margin:12px 0">
+      <button class="ctrl-btn primary" style="padding:10px 20px;font-size:13px;border-radius:10px" onclick="fiOpenFromCalendar()">🧪💧 Calcola fertirrigazione per oggi</button>
+    </div>`;
   }
 
   // ── Sezione trattamenti preventivi
@@ -2155,7 +2472,665 @@ const _wInitCalc_orig = wInitCalc;
 wInitCalc = function() {
   _wInitCalc_orig();
   fCalculate();
+  fiInit();
 };
+
+// ══════════════════════════════════════════════════════════════════════
+// ⑨ CALCOLATORE FERTIRRIGAZIONE
+// ══════════════════════════════════════════════════════════════════════
+
+const FI_PLANTS = [
+  {id:0,  name:'Sanseviera',      icon:'🌿', loc:'indoor',  waterMl:150, doseFactor:0.25},
+  {id:1,  name:'Orchidea',        icon:'🌸', loc:'indoor',  waterMl:200, doseFactor:0.25},
+  {id:2,  name:'Ficus Benjamina', icon:'🌳', loc:'indoor',  waterMl:400, doseFactor:0.5},
+  {id:3,  name:'Ficus Elastica',  icon:'🌱', loc:'indoor',  waterMl:500, doseFactor:0.5},
+  {id:4,  name:'Oleandro',        icon:'🌺', loc:'outdoor', waterMl:1500,doseFactor:1.0},
+  {id:5,  name:'Glicine Bonsai',  icon:'💜', loc:'outdoor', waterMl:300, doseFactor:0.5},
+  {id:6,  name:'Limone',          icon:'🍋', loc:'outdoor', waterMl:2000,doseFactor:1.0},
+  {id:7,  name:'Moneta Cinese',   icon:'🪙', loc:'indoor',  waterMl:250, doseFactor:0.25},
+  {id:8,  name:'Vinca',           icon:'🔵', loc:'outdoor', waterMl:400, doseFactor:0.5},
+  {id:9,  name:'Mimosa',          icon:'🌼', loc:'outdoor', waterMl:800, doseFactor:0.5},
+  {id:10, name:'Melograno',       icon:'🍎', loc:'outdoor', waterMl:1500,doseFactor:1.0},
+  {id:11, name:'Stella di Natale',icon:'🌟', loc:'indoor',  waterMl:300, doseFactor:1.0},
+  {id:12, name:'Aloe Vera',       icon:'🌵', loc:'indoor',  waterMl:200, doseFactor:0.25},
+  {id:13, name:'Liquidambar',     icon:'🍂', loc:'outdoor', waterMl:2000,doseFactor:1.0},
+  {id:14, name:'Ippocastano',     icon:'🌰', loc:'outdoor', waterMl:3000,doseFactor:1.0},
+  {id:15, name:'Betulla',         icon:'🌿', loc:'outdoor', waterMl:2000,doseFactor:0.5},
+  {id:16, name:'Acero Campestre', icon:'🍁', loc:'outdoor', waterMl:1500,doseFactor:0.5},
+  {id:17, name:'Pitosforo',       icon:'🌿', loc:'outdoor', waterMl:1000,doseFactor:1.0},
+  {id:18, name:'Spino di Giuda',  icon:'🌿', loc:'outdoor', waterMl:2000,doseFactor:1.0},
+  {id:19, name:'Gelso Bonsai',    icon:'🍃', loc:'outdoor', waterMl:300, doseFactor:0.5},
+  {id:20, name:'Tradescantia',    icon:'💜', loc:'indoor',  waterMl:250, doseFactor:0.25},
+  {id:21, name:'Rosmarino',       icon:'🌿', loc:'outdoor', waterMl:300, doseFactor:0.5},
+  {id:22, name:'Salvia',          icon:'🍃', loc:'outdoor', waterMl:300, doseFactor:0.5},
+  {id:23, name:'Paulownia',       icon:'🌸', loc:'outdoor', waterMl:3000,doseFactor:1.0},
+  {id:24, name:'Crassula Ovata',  icon:'🪴', loc:'indoor',  waterMl:150, doseFactor:0.25},
+  {id:25, name:'Carmona Bonsai',  icon:'🌳', loc:'indoor',  waterMl:200, doseFactor:0.5},
+];
+
+let fiInited = false;
+
+function fiInit() {
+  if (fiInited) return;
+  fiInited = true;
+  const list = document.getElementById('fi-plant-list');
+  list.innerHTML = FI_PLANTS.map(p => `
+    <div class="fi-plant-row" id="fir-${p.id}">
+      <input type="checkbox" class="fi-check" id="fic-${p.id}" onchange="fiUpdate()">
+      <span class="fi-icon">${p.icon}</span>
+      <span class="fi-name">${p.name}</span>
+      <div class="fi-controls">
+        <div class="fi-mini-field">🪴<input type="number" id="fin-${p.id}" value="1" min="1" max="50" style="width:38px" onchange="fiUpdate()" title="N° vasi"></div>
+        <div class="fi-mini-field">💧<input type="number" id="fiw-${p.id}" value="${p.waterMl}" min="10" step="10" onchange="fiUpdate()" title="Acqua per vaso (ml)"><span>ml</span></div>
+        <div class="fi-mini-field">⚖️<select id="fid-${p.id}" onchange="fiUpdate()" title="Dose">
+          <option value="1"${p.doseFactor===1?' selected':''}>Piena</option>
+          <option value="0.75"${p.doseFactor===0.75?' selected':''}>¾</option>
+          <option value="0.5"${p.doseFactor===0.5?' selected':''}>½</option>
+          <option value="0.25"${p.doseFactor===0.25?' selected':''}>¼</option>
+        </select></div>
+      </div>
+    </div>`).join('');
+}
+
+function fiSelectAll()  { FI_PLANTS.forEach(p=>{document.getElementById('fic-'+p.id).checked=true;}); fiUpdate(); }
+function fiSelectNone() { FI_PLANTS.forEach(p=>{document.getElementById('fic-'+p.id).checked=false;}); fiUpdate(); }
+function fiSelectIndoor(){ FI_PLANTS.forEach(p=>{document.getElementById('fic-'+p.id).checked=(p.loc==='indoor');}); fiUpdate(); }
+function fiSelectOutdoor(){FI_PLANTS.forEach(p=>{document.getElementById('fic-'+p.id).checked=(p.loc==='outdoor');}); fiUpdate(); }
+
+function fiOpenFromCalendar() {
+  const evtData = window._fiCalEvts;
+  if (!evtData) return;
+  const {fertEvs, bbEvs, date} = evtData;
+
+  gClosePanel();
+  showSection('acqua');
+
+  // Carica inventario
+  const inv = invLoad();
+
+  // Raccogli piante del giorno con i loro prodotti
+  // Per ogni pianta: trova nel inventario qty e volume vaso
+  const plantMap = {}; // id → {name, icon, pots, waterMl, products:[{prod, dose, dosePerL}]}
+
+  // Da eventi BioBizz: sappiamo quale prodotto specifico
+  bbEvs.forEach(e => {
+    const pid = e.plant.id;
+    if (!plantMap[pid]) plantMap[pid] = {id:pid, name:e.plant.name, icon:e.plant.icon||'🌿', pots:1, waterMl:500, products:[]};
+    const bbProd = BB_PRODUCTS[e.prod];
+    const dbEntry = FERT_DB.find(f => f.id === 'bb-'+e.prod);
+    const dosePerL = dbEntry ? dbEntry.dose : 2;
+    // Evita duplicati prodotto per la stessa pianta
+    if (!plantMap[pid].products.find(p => p.prod === e.prod)) {
+      plantMap[pid].products.push({
+        prod: e.prod,
+        prodId: 'bb-'+e.prod,
+        label: bbProd ? bbProd.label : e.prod,
+        color: bbProd ? bbProd.color : '#4a8a3a',
+        dosePerL: dosePerL,
+        doseFactor: e.sched && e.sched.dose ? (e.sched.dose.includes('¼')?0.25 : e.sched.dose.includes('½')?0.5 : e.sched.dose.includes('¾')?0.75 : 1) : 0.5,
+        doseLabel: e.sched ? e.sched.dose : '½ dose',
+      });
+    }
+  });
+
+  // Da eventi fertilizzazione generica: non hanno un prodotto BioBizz specifico
+  // Cerchiamo nel inventario quali concimi usa la pianta
+  fertEvs.forEach(e => {
+    const pid = e.plant.id;
+    if (!plantMap[pid]) plantMap[pid] = {id:pid, name:e.plant.name, icon:e.plant.icon||'🌿', pots:1, waterMl:500, products:[]};
+    // Se non ha già prodotti da bbEvs, cerca nell'inventario
+    if (!plantMap[pid].products.length) {
+      const invItems = inv.filter(it => sPlants[it.plantTypeIdx] && sPlants[it.plantTypeIdx].name === e.plant.name);
+      invItems.forEach(it => {
+        (it.fertilizers||[]).forEach(fid => {
+          const f = FERT_DB.find(x=>x.id===fid);
+          if (f && f.type === 'liquido' && !plantMap[pid].products.find(p=>p.prodId===fid)) {
+            plantMap[pid].products.push({
+              prod: fid, prodId: fid,
+              label: f.brand+' '+f.name, color: '#5a7a4a',
+              dosePerL: f.dose, doseFactor: 0.5, doseLabel: '½ dose',
+            });
+          }
+        });
+      });
+    }
+  });
+
+  // Arricchisci con dati dall'inventario: pots e volume vaso
+  Object.values(plantMap).forEach(pm => {
+    const invItems = inv.filter(it => {
+      const p = sPlants[it.plantTypeIdx];
+      return p && p.name === pm.name;
+    });
+    if (invItems.length) {
+      // Somma i vasi di tutti gli esemplari dello stesso tipo
+      pm.pots = invItems.reduce((s,it) => s + (it.qty||1), 0);
+      // Usa il volume del primo esemplare per l'acqua
+      const first = invItems[0];
+      const vol = first.potVol || invCalcVol(first.potShape||'cylinder', first.potDiam||25, first.potH||22);
+      // Acqua stimata: ~25-30% del volume del vaso come default ragionevole
+      pm.waterMl = Math.round(vol * 300);
+    } else {
+      // Fallback: cerca in FI_PLANTS
+      const fip = FI_PLANTS.find(f => f.id === pm.id);
+      if (fip) { pm.pots = 1; pm.waterMl = fip.waterMl; }
+    }
+  });
+
+  // Raggruppa per prodotto
+  const productGroups = {}; // prodId → {label, color, dosePerL, plants:[{name, icon, pots, waterMl, doseFactor, doseLabel}]}
+  Object.values(plantMap).forEach(pm => {
+    if (!pm.products.length) return;
+    pm.products.forEach(prod => {
+      if (!productGroups[prod.prodId]) {
+        productGroups[prod.prodId] = {
+          label: prod.label, color: prod.color, dosePerL: prod.dosePerL, plants: []
+        };
+      }
+      productGroups[prod.prodId].plants.push({
+        name: pm.name, icon: pm.icon, pots: pm.pots, waterMl: pm.waterMl,
+        doseFactor: prod.doseFactor, doseLabel: prod.doseLabel,
+      });
+    });
+  });
+
+  // Calcola totali e genera HTML
+  let groupsHtml = '';
+  let grandTotalWater = 0;
+  let grandTotalPots = 0;
+  const seenPots = new Set(); // Evita di contare i vasi 2 volte se una pianta usa 2 prodotti
+
+  Object.entries(productGroups).forEach(([prodId, group]) => {
+    let groupWater = 0, groupFert = 0, groupPots = 0;
+    const rows = group.plants.map(pl => {
+      const totalWater = pl.waterMl * pl.pots;
+      const fert = (totalWater / 1000) * group.dosePerL * pl.doseFactor;
+      groupWater += totalWater;
+      groupFert += fert;
+      groupPots += pl.pots;
+      if (!seenPots.has(pl.name)) { grandTotalPots += pl.pots; seenPots.add(pl.name); }
+      const waterStr = totalWater >= 1000 ? (totalWater/1000).toFixed(1)+' L' : totalWater+' ml';
+      const fertStr = fert < 1 ? fert.toFixed(2) : fert < 10 ? fert.toFixed(1) : Math.round(fert);
+      const perPot = pl.pots > 1 ? ` <span style="font-size:9px;color:var(--muted)">(${pl.pots}×${pl.waterMl}ml)</span>` : '';
+      return `<div style="display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;background:#fff;font-size:11px">
+        <span>${pl.icon}</span>
+        <span style="flex:1;font-weight:500">${pl.name}${pl.pots>1?' <span style=\"font-size:9px;background:#e0ecff;color:#2a5a8a;padding:1px 5px;border-radius:10px\">×'+pl.pots+'</span>':''}</span>
+        <span style="color:var(--muted)">${waterStr}${perPot}</span>
+        <span style="color:#2a5a8a;font-weight:500">→</span>
+        <span style="color:#2d7a3a;font-weight:600;min-width:50px;text-align:right">${fertStr} ml</span>
+        <span style="font-size:9px;color:var(--muted)">(${pl.doseLabel})</span>
+      </div>`;
+    }).join('');
+
+    grandTotalWater += groupWater;
+    const groupWaterStr = groupWater >= 1000 ? (groupWater/1000).toFixed(1)+' L' : groupWater+' ml';
+    const groupFertStr = groupFert < 1 ? groupFert.toFixed(2) : groupFert < 10 ? groupFert.toFixed(1) : Math.round(groupFert);
+
+    groupsHtml += `<div style="margin-bottom:14px;border:1px solid #b0c8e8;border-radius:10px;overflow:hidden">
+      <div style="background:${group.color};color:#fff;padding:8px 12px;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:space-between">
+        <span>💚 ${group.label}</span>
+        <span style="font-size:11px;opacity:.9">${groupPots} vasi · ${groupWaterStr} acqua · ${groupFertStr} ml prodotto</span>
+      </div>
+      <div style="padding:8px;display:flex;flex-direction:column;gap:3px">${rows}</div>
+      <div style="padding:6px 12px;background:#f0f5ff;font-size:11px;color:#2a5a8a">
+        📋 <b>Prepara:</b> ${groupWaterStr} di acqua + <b>${groupFertStr} ml</b> di ${group.label}
+      </div>
+    </div>`;
+  });
+
+  // Mostra il risultato
+  const calResult = document.getElementById('fi-cal-result');
+  const dayStr = date.getDate()+' '+gMonthNames[date.getMonth()]+' '+date.getFullYear();
+  document.getElementById('fi-cal-title').textContent = 'Fertirrigazione · '+dayStr;
+  const prodCount = Object.keys(productGroups).length;
+  document.getElementById('fi-cal-subtitle').textContent = prodCount > 1
+    ? `${prodCount} prodotti diversi — prepara le soluzioni separatamente`
+    : 'Soluzione unica';
+  document.getElementById('fi-cal-groups').innerHTML = groupsHtml;
+  document.getElementById('fi-cal-total-water').textContent = (grandTotalWater/1000) >= 10
+    ? Math.round(grandTotalWater/1000) : (grandTotalWater/1000).toFixed(1);
+  document.getElementById('fi-cal-total-pots').textContent = grandTotalPots;
+
+  // Tips
+  const tips = [];
+  if (prodCount === 1) {
+    tips.push('✅ <b>Un solo prodotto</b>: puoi preparare una soluzione unica e distribuirla a tutti i vasi.');
+  } else {
+    tips.push('⚠️ <b>Prodotti diversi</b>: prepara una soluzione separata per ogni prodotto. Non mescolare prodotti diversi nella stessa acqua.');
+  }
+  tips.push('💡 Bagna prima leggermente le piante con acqua pura, poi applica la soluzione per evitare shock alle radici.');
+  tips.push('📦 I dati dei vasi e dei concimi sono presi dalla sezione <b>I miei vasi</b>. Aggiorna l\'inventario per calcoli più precisi.');
+  document.getElementById('fi-cal-tips').innerHTML = tips.join('<br>');
+
+  calResult.style.display = 'block';
+
+  // Nascondi il risultato manuale
+  document.getElementById('fi-result').style.display = 'none';
+
+  // Scrolla al risultato
+  setTimeout(() => calResult.scrollIntoView({behavior:'smooth', block:'center'}), 200);
+}
+
+function fiUpdate() {
+  // Nascondi risultato da calendario se si usa il calcolatore manuale
+  const calRes = document.getElementById('fi-cal-result');
+  if (calRes) calRes.style.display = 'none';
+
+  // Show/hide custom dose
+  const prodSel = document.getElementById('fi-product');
+  const isCustom = prodSel.value === 'custom';
+  document.getElementById('fi-custom-dose').style.display = isCustom ? 'block' : 'none';
+
+  // Get product dose per liter
+  let dosePerLiter, unitType;
+  if (isCustom) {
+    dosePerLiter = +(document.getElementById('fi-custom-val').value) || 0;
+    unitType = document.getElementById('fi-custom-unit').value === 'g/L' ? 'g' : 'ml';
+  } else {
+    const opt = prodSel.options[prodSel.selectedIndex];
+    dosePerLiter = +(opt.dataset.dose) || 0;
+    unitType = 'ml';
+  }
+
+  // Toggle row highlight
+  FI_PLANTS.forEach(p => {
+    const checked = document.getElementById('fic-'+p.id).checked;
+    document.getElementById('fir-'+p.id).classList.toggle('selected', checked);
+  });
+
+  // Gather selected plants
+  const selected = FI_PLANTS.filter(p => document.getElementById('fic-'+p.id).checked).map(p => ({
+    ...p,
+    pots: +(document.getElementById('fin-'+p.id).value) || 1,
+    waterMl: +(document.getElementById('fiw-'+p.id).value) || 0,
+    doseFactor: +(document.getElementById('fid-'+p.id).value) || 1,
+  }));
+
+  const resultEl = document.getElementById('fi-result');
+  if (!selected.length || dosePerLiter <= 0) {
+    resultEl.style.display = 'none';
+    return;
+  }
+  resultEl.style.display = 'block';
+
+  // Calculate totals
+  const totalWaterMl = selected.reduce((s,p) => s + p.waterMl * p.pots, 0);
+  const totalWaterL = totalWaterMl / 1000;
+  const totalPots = selected.reduce((s,p) => s + p.pots, 0);
+
+  // Per-plant fertilizer
+  const breakdown = selected.map(p => {
+    const totalPlantWater = p.waterMl * p.pots;
+    const fertMl = (totalPlantWater / 1000) * dosePerLiter * p.doseFactor;
+    return { ...p, totalPlantWater, fertMl };
+  });
+  const totalFert = breakdown.reduce((s,p) => s + p.fertMl, 0);
+
+  // Weighted average dose factor
+  const avgDose = totalWaterMl > 0 ? breakdown.reduce((s,p) => s + p.doseFactor * p.totalPlantWater, 0) / totalWaterMl : 0;
+  // Effective concentration
+  const effectiveConc = totalWaterL > 0 ? totalFert / totalWaterL : 0;
+
+  // Can we use a single solution?
+  const allSameDose = breakdown.every(p => p.doseFactor === breakdown[0].doseFactor);
+
+  // Display
+  document.getElementById('fi-total-water').textContent = totalWaterL >= 10 ? Math.round(totalWaterL) : totalWaterL.toFixed(1);
+  const fertDisplay = totalFert < 1 ? totalFert.toFixed(2) : totalFert < 10 ? totalFert.toFixed(1) : Math.round(totalFert);
+  document.getElementById('fi-total-fert').textContent = fertDisplay;
+  document.getElementById('fi-total-fert-unit').textContent = unitType;
+
+  const prodName = isCustom ? 'prodotto' : prodSel.options[prodSel.selectedIndex].text.split('(')[0].trim();
+
+  if (allSameDose) {
+    document.getElementById('fi-summary').textContent = `Soluzione unica per ${totalPots} vasi: mescola tutto e distribuisci`;
+  } else {
+    document.getElementById('fi-summary').textContent = `${totalPots} vasi con dosi diverse: prepara per gruppo o misura per pianta`;
+  }
+
+  // Stats
+  document.getElementById('fi-stats').innerHTML = `
+    <div class="result-item" style="border-color:#b0c8e8"><div class="result-item-label">Piante</div><div class="result-item-val">${selected.length} specie · ${totalPots} vasi</div></div>
+    <div class="result-item" style="border-color:#b0c8e8"><div class="result-item-label">Prodotto</div><div class="result-item-val">${prodName}</div></div>
+    <div class="result-item" style="border-color:#b0c8e8"><div class="result-item-label">Concentrazione media</div><div class="result-item-val">${effectiveConc.toFixed(2)} ${unitType}/L</div></div>
+    <div class="result-item" style="border-color:#b0c8e8"><div class="result-item-label">Risparmio vs dose piena</div><div class="result-item-val">${avgDose<1 ? Math.round((1-avgDose)*100)+'% risparmiato' : 'Dose piena'}</div></div>`;
+
+  // Breakdown
+  document.getElementById('fi-breakdown').innerHTML = breakdown.map(p => {
+    const doseLabel = p.doseFactor===1?'piena':p.doseFactor===0.75?'¾':p.doseFactor===0.5?'½':'¼';
+    const totalWStr = p.totalPlantWater >= 1000 ? (p.totalPlantWater/1000).toFixed(1)+' L' : p.totalPlantWater+' ml';
+    const perPotStr = p.waterMl >= 1000 ? (p.waterMl/1000).toFixed(1)+' L' : p.waterMl+' ml';
+    const fertStr = p.fertMl < 1 ? p.fertMl.toFixed(2) : p.fertMl < 10 ? p.fertMl.toFixed(1) : Math.round(p.fertMl);
+    const potsInfo = p.pots > 1 ? `<span style="font-size:9px;color:var(--muted)"> (${p.pots}×${perPotStr})</span>` : '';
+    return `<div style="display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;background:#f8faff;font-size:11px">
+      <span>${p.icon}</span>
+      <span style="flex:1;font-weight:500">${p.name}${p.pots>1?' <span style=\"font-size:9px;background:#e0ecff;color:#2a5a8a;padding:1px 5px;border-radius:10px\">×'+p.pots+'</span>':''}</span>
+      <span style="color:var(--muted)">${totalWStr}${potsInfo}</span>
+      <span style="color:#2a5a8a;font-weight:500">→</span>
+      <span style="color:#2d7a3a;font-weight:600;min-width:50px;text-align:right">${fertStr} ${unitType}</span>
+      <span style="font-size:9px;color:var(--muted);min-width:32px">(${doseLabel})</span>
+    </div>`;
+  }).join('');
+
+  // Tips
+  const tips = [];
+  if (allSameDose) {
+    tips.push(`<b>Soluzione unica possibile!</b> Tutte le piante selezionate usano la stessa dose (${breakdown[0].doseFactor===1?'piena':breakdown[0].doseFactor===0.75?'¾':breakdown[0].doseFactor===0.5?'½':'¼'}). Prepara ${totalWaterL.toFixed(1)} L di acqua con ${fertDisplay} ${unitType} di ${prodName} e distribuisci ai ${totalPots} vasi.`);
+  } else {
+    tips.push('<b>Dosi diverse tra piante</b>: hai selezionato piante con fattori di dose diversi. Due opzioni:');
+    tips.push('&nbsp;&nbsp;① <b>Metodo semplice</b>: prepara la soluzione alla dose più bassa (¼) e dai più passate alle piante che richiedono dosi maggiori.');
+    tips.push('&nbsp;&nbsp;② <b>Metodo preciso</b>: prepara soluzioni separate raggruppando le piante per dose. Segui le quantità nella tabella sopra.');
+  }
+  if (totalFert < 1) {
+    tips.push('💉 <b>Quantità molto piccole</b>: usa una siringa graduata da 1-5 ml per dosare con precisione.');
+  }
+  tips.push('💡 <b>Ordine consigliato</b>: bagna prima leggermente le piante con acqua pura, poi applica la soluzione fertilizzante per evitare shock alle radici.');
+  document.getElementById('fi-tips').innerHTML = tips.join('<br>');
+}
+// ══════════════════════════════════════════════════════════════════════
+// ⑩ INVENTARIO VASI
+// ══════════════════════════════════════════════════════════════════════
+
+const FERT_DB = [
+  // BioBizz
+  {id:'bb-grow',    brand:'BioBizz',  name:'Bio·Grow',      npk:'4-3-6',   type:'liquido', dose:2,   unit:'ml/L', cat:'crescita'},
+  {id:'bb-bloom',   brand:'BioBizz',  name:'Bio·Bloom',     npk:'2-7-4',   type:'liquido', dose:2,   unit:'ml/L', cat:'fioritura'},
+  {id:'bb-topmax',  brand:'BioBizz',  name:'Top·Max',       npk:'0.1-0.01-0.1',type:'liquido',dose:1,unit:'ml/L', cat:'fioritura'},
+  {id:'bb-alg',     brand:'BioBizz',  name:'Alg·A·Mic',     npk:'0.1-0.1-0.1', type:'liquido',dose:1,unit:'ml/L', cat:'rinvigorente'},
+  {id:'bb-fish',    brand:'BioBizz',  name:'Fish·Mix',      npk:'5-1-4',   type:'liquido', dose:2,   unit:'ml/L', cat:'crescita'},
+  {id:'bb-calmag',  brand:'BioBizz',  name:'CalMag',        npk:'0-0-0',   type:'liquido', dose:1,   unit:'ml/L', cat:'integratore'},
+  {id:'bb-root',    brand:'BioBizz',  name:'Root·Juice',    npk:'0.1-0.1-0.1', type:'liquido',dose:1,unit:'ml/L', cat:'radicante'},
+  {id:'bb-worm',    brand:'BioBizz',  name:'Worm·Humus',    npk:'1-0-0',   type:'solido',  dose:0,   unit:'% substrato', cat:'ammendante'},
+  // COMPO
+  {id:'compo-univ',  brand:'COMPO',   name:'Universale',    npk:'7-5-6',   type:'liquido', dose:7,  unit:'ml/L', cat:'universale'},
+  {id:'compo-green', brand:'COMPO',   name:'Piante verdi',  npk:'7-3-6',   type:'liquido', dose:7,  unit:'ml/L', cat:'crescita'},
+  {id:'compo-fior',  brand:'COMPO',   name:'Piante fiorite',npk:'3-5-7',   type:'liquido', dose:7,  unit:'ml/L', cat:'fioritura'},
+  {id:'compo-agru',  brand:'COMPO',   name:'Agrumi e mediterranee',npk:'6-3-6',type:'liquido',dose:7,unit:'ml/L',cat:'agrumi'},
+  {id:'compo-cact',  brand:'COMPO',   name:'Cactus',        npk:'4-5-7',   type:'liquido', dose:7,  unit:'ml/L', cat:'succulente'},
+  {id:'compo-bons',  brand:'COMPO',   name:'Bonsai',        npk:'6-3-6',   type:'liquido', dose:7,  unit:'ml/L', cat:'bonsai'},
+  {id:'compo-orch',  brand:'COMPO',   name:'Orchidee',      npk:'3-6-6',   type:'liquido', dose:7,  unit:'ml/L', cat:'orchidee'},
+  {id:'compo-osmo',  brand:'COMPO',   name:'Osmocote universale',npk:'14-13-13',type:'granulare',dose:3,unit:'g/L substrato',cat:'lento rilascio'},
+  // Cifo
+  {id:'cifo-gran',   brand:'Cifo',    name:'Granverde universale',npk:'6-5-7',type:'liquido',dose:5,unit:'ml/L', cat:'universale'},
+  {id:'cifo-fior',   brand:'Cifo',    name:'Granverde fioritura', npk:'4-6-8',type:'liquido',dose:5,unit:'ml/L', cat:'fioritura'},
+  {id:'cifo-agru',   brand:'Cifo',    name:'Sinergon agrumi',npk:'6-5-5',  type:'liquido', dose:5,  unit:'ml/L', cat:'agrumi'},
+  {id:'cifo-orch',   brand:'Cifo',    name:'Orchidee',      npk:'4-6-6',   type:'liquido', dose:5,  unit:'ml/L', cat:'orchidee'},
+  {id:'cifo-ferro',  brand:'Cifo',    name:'Ferro chelato', npk:'0-0-0',   type:'liquido', dose:2,  unit:'ml/L', cat:'integratore'},
+  // KB / Scotts
+  {id:'kb-osmo',     brand:'KB/Scotts',name:'Osmocote Smart',npk:'11-11-18',type:'granulare',dose:3,unit:'g/L substrato',cat:'lento rilascio'},
+  {id:'kb-univ',     brand:'KB/Scotts',name:'Universale liquido',npk:'7-7-7',type:'liquido',dose:7,unit:'ml/L',cat:'universale'},
+  // Biogold
+  {id:'bio-orig',    brand:'Biogold',  name:'Original',     npk:'5.5-6.5-3.5',type:'granulare organico',dose:0,unit:'pallini/vaso',cat:'bonsai'},
+  {id:'bio-vital',   brand:'Biogold',  name:'Vital',        npk:'0-0-0',   type:'liquido', dose:2,  unit:'ml/L', cat:'rinvigorente'},
+  // Flortis
+  {id:'flor-univ',   brand:'Flortis',  name:'Universale Bio',npk:'5-5-5',  type:'liquido', dose:5,  unit:'ml/L', cat:'universale'},
+  {id:'flor-agru',   brand:'Flortis',  name:'Agrumi Bio',   npk:'6-4-5',   type:'liquido', dose:5,  unit:'ml/L', cat:'agrumi'},
+  {id:'flor-orch',   brand:'Flortis',  name:'Orchidee',     npk:'3-5-6',   type:'liquido', dose:5,  unit:'ml/L', cat:'orchidee'},
+  // Vigorplant
+  {id:'vigo-univ',   brand:'Vigorplant',name:'Fito universale',npk:'7-5-6',type:'liquido',dose:6,  unit:'ml/L', cat:'universale'},
+  {id:'vigo-acid',   brand:'Vigorplant',name:'Acidofile',    npk:'5-3-7',   type:'liquido', dose:6,  unit:'ml/L', cat:'acidofile'},
+  // Lupini
+  {id:'lupini',      brand:'Naturale', name:'Lupini macinati',npk:'5-0-0',  type:'granulare organico',dose:0,unit:'g/vaso',cat:'agrumi'},
+  // Stallatico
+  {id:'stallatico',  brand:'Naturale', name:'Stallatico pellettato',npk:'3-3-3',type:'granulare organico',dose:0,unit:'g/vaso',cat:'universale'},
+];
+
+const INV_DISEASE_LABELS = {
+  cocciniglia:'Cocciniglia',cocciniglia_cotonosa:'Cocciniglia cotonosa',ragnetto_rosso:'Ragnetto rosso',
+  afidi:'Afidi',mosca_bianca:'Mosca bianca',oidio:'Oidio',marciume_radicale:'Marciume radicale',
+  fumaggine:'Fumaggine',clorosi_ferrica:'Clorosi ferrica',minatore_fogliare:'Minatore fogliare',
+  alternaria:'Alternaria',altro:'Altro'
+};
+
+// localStorage persistence
+function invLoad(){ try { return JSON.parse(localStorage.getItem('inv_plants')||'[]'); } catch { return []; } }
+function invSaveAll(data){ try { localStorage.setItem('inv_plants', JSON.stringify(data)); } catch {} }
+
+let invTempDiseases = [];
+
+function invInit() {
+  // Populate plant type dropdown
+  const sel = document.getElementById('inv-plant-type');
+  sel.innerHTML = '<option value="">— Seleziona —</option>' + sPlants.map((p,i) =>
+    `<option value="${i}">${p.icon} ${p.name}</option>`
+  ).join('');
+  // Populate fertilizer grid
+  invRenderFertGrid();
+  invRender();
+}
+
+function invRenderFertGrid(filter='') {
+  const grid = document.getElementById('inv-fert-grid');
+  const fl = filter.toLowerCase();
+  grid.innerHTML = FERT_DB.filter(f =>
+    !fl || f.name.toLowerCase().includes(fl) || f.brand.toLowerCase().includes(fl) || f.cat.toLowerCase().includes(fl)
+  ).map(f => {
+    const info = f.type==='liquido' ? f.dose+' '+f.unit : f.type;
+    return `<div class="inv-fert-opt" id="invf-${f.id}" onclick="invToggleFert('${f.id}')">
+      <span>${f.name}</span><span class="fert-brand">${f.brand} · NPK ${f.npk}</span>
+    </div>`;
+  }).join('');
+}
+
+function invFilterFerts() {
+  const q = document.getElementById('inv-fert-search').value;
+  invRenderFertGrid(q);
+  // Re-highlight selected
+  const selFerts = invGetSelectedFerts();
+  selFerts.forEach(id => { const el=document.getElementById('invf-'+id); if(el) el.classList.add('selected'); });
+}
+
+function invToggleFert(id) {
+  const el = document.getElementById('invf-'+id);
+  if (el) el.classList.toggle('selected');
+}
+
+function invGetSelectedFerts() {
+  return [...document.querySelectorAll('.inv-fert-opt.selected')].map(el => el.id.replace('invf-',''));
+}
+
+function invAddDisease() {
+  const type = document.getElementById('inv-disease-type').value;
+  if (!type) return;
+  const note = document.getElementById('inv-disease-note').value.trim();
+  const today = new Date();
+  const dateStr = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  invTempDiseases.push({type, note, date:dateStr, resolved:false});
+  document.getElementById('inv-disease-type').value = '';
+  document.getElementById('inv-disease-note').value = '';
+  invRenderDiseaseList();
+}
+
+function invRemoveDisease(idx) {
+  invTempDiseases.splice(idx,1);
+  invRenderDiseaseList();
+}
+
+function invToggleResolved(idx) {
+  invTempDiseases[idx].resolved = !invTempDiseases[idx].resolved;
+  invRenderDiseaseList();
+}
+
+function invRenderDiseaseList() {
+  const list = document.getElementById('inv-disease-list');
+  if (!invTempDiseases.length) { list.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0">Nessuna malattia registrata</div>'; return; }
+  list.innerHTML = invTempDiseases.map((d,i) => {
+    const label = INV_DISEASE_LABELS[d.type]||d.type;
+    const cls = d.resolved ? 'resolved' : 'active';
+    return `<div class="inv-disease-row">
+      <span class="inv-disease-chip ${cls}">${d.resolved?'✅':'⚠️'} ${label}</span>
+      <span style="font-size:10px;color:var(--muted)">${d.date}</span>
+      <span style="flex:1;font-size:10px;color:var(--text)">${d.note||''}</span>
+      <button class="ctrl-btn" onclick="invToggleResolved(${i})" style="font-size:9px;padding:2px 6px">${d.resolved?'Riapri':'Risolto'}</button>
+      <button class="ctrl-btn" onclick="invRemoveDisease(${i})" style="font-size:9px;padding:2px 6px;color:#b04040">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function invOpenAdd() {
+  document.getElementById('inv-form-title').textContent = 'Aggiungi vaso';
+  document.getElementById('inv-edit-id').value = '';
+  document.getElementById('inv-plant-type').value = '';
+  document.getElementById('inv-qty').value = 1;
+  document.getElementById('inv-nickname').value = '';
+  document.getElementById('inv-location').value = 'indoor';
+  document.getElementById('inv-pot-shape').value = 'cylinder';
+  document.getElementById('inv-pot-mat').value = 'plastica';
+  document.getElementById('inv-pot-diam').value = 25;
+  document.getElementById('inv-pot-h').value = 22;
+  document.getElementById('inv-pot-vol').value = '';
+  document.getElementById('inv-substrate').value = 'universale_mix';
+  document.getElementById('inv-del-btn').style.display = 'none';
+  // Reset ferts
+  document.querySelectorAll('.inv-fert-opt.selected').forEach(el=>el.classList.remove('selected'));
+  document.getElementById('inv-fert-search').value = '';
+  invRenderFertGrid();
+  // Reset diseases
+  invTempDiseases = [];
+  invRenderDiseaseList();
+  // Open
+  document.getElementById('inv-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function invOpenEdit(id) {
+  const items = invLoad();
+  const item = items.find(i=>i.id===id);
+  if (!item) return;
+  document.getElementById('inv-form-title').textContent = 'Modifica vaso';
+  document.getElementById('inv-edit-id').value = id;
+  document.getElementById('inv-plant-type').value = item.plantTypeIdx;
+  document.getElementById('inv-qty').value = item.qty||1;
+  document.getElementById('inv-nickname').value = item.nickname||'';
+  document.getElementById('inv-location').value = item.location||'indoor';
+  document.getElementById('inv-pot-shape').value = item.potShape||'cylinder';
+  document.getElementById('inv-pot-mat').value = item.potMat||'plastica';
+  document.getElementById('inv-pot-diam').value = item.potDiam||25;
+  document.getElementById('inv-pot-h').value = item.potH||22;
+  document.getElementById('inv-pot-vol').value = item.potVol||'';
+  document.getElementById('inv-substrate').value = item.substrate||'universale_mix';
+  document.getElementById('inv-del-btn').style.display = 'inline-flex';
+  // Ferts
+  document.getElementById('inv-fert-search').value = '';
+  invRenderFertGrid();
+  (item.fertilizers||[]).forEach(fid => { const el=document.getElementById('invf-'+fid); if(el) el.classList.add('selected'); });
+  // Diseases
+  invTempDiseases = JSON.parse(JSON.stringify(item.diseases||[]));
+  invRenderDiseaseList();
+  // Open
+  document.getElementById('inv-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function invCloseForm() {
+  document.getElementById('inv-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function invSave() {
+  const plantIdx = document.getElementById('inv-plant-type').value;
+  if (plantIdx === '') { alert('Seleziona una pianta!'); return; }
+  const editId = document.getElementById('inv-edit-id').value;
+  const items = invLoad();
+  const entry = {
+    id: editId ? +editId : Date.now(),
+    plantTypeIdx: +plantIdx,
+    qty: +(document.getElementById('inv-qty').value)||1,
+    nickname: document.getElementById('inv-nickname').value.trim(),
+    location: document.getElementById('inv-location').value,
+    potShape: document.getElementById('inv-pot-shape').value,
+    potMat: document.getElementById('inv-pot-mat').value,
+    potDiam: +(document.getElementById('inv-pot-diam').value)||25,
+    potH: +(document.getElementById('inv-pot-h').value)||22,
+    potVol: document.getElementById('inv-pot-vol').value ? +(document.getElementById('inv-pot-vol').value) : null,
+    substrate: document.getElementById('inv-substrate').value,
+    fertilizers: invGetSelectedFerts(),
+    diseases: invTempDiseases,
+  };
+  if (editId) {
+    const idx = items.findIndex(i=>i.id===+editId);
+    if (idx>=0) items[idx] = entry;
+  } else {
+    items.push(entry);
+  }
+  invSaveAll(items);
+  invCloseForm();
+  invRender();
+}
+
+function invDelete() {
+  const editId = +document.getElementById('inv-edit-id').value;
+  if (!editId || !confirm('Eliminare questo vaso?')) return;
+  const items = invLoad().filter(i=>i.id!==editId);
+  invSaveAll(items);
+  invCloseForm();
+  invRender();
+}
+
+function invCalcVol(shape, diam, h) {
+  const r = diam/2;
+  if (shape==='square') return (diam*diam*h)/1000*0.85;
+  return (Math.PI*r*r*h)/1000*0.85;
+}
+
+const INV_LOC_LABELS = {indoor:'🏠 Interno',outdoor:'☀️ Esterno',balcone:'🏗️ Balcone'};
+const INV_SUB_LABELS = {universale_mix:'Universale',succulente_mix:'Succulente',orchidee_mix:'Orchidee',agrumi_mix:'Agrumi',bonsai_mix:'Bonsai',mediterranee_mix:'Mediterranee',tropicali_mix:'Tropicali',acidofile_mix:'Acidofile',arbusti_mix:'Arbusti',custom:'Personalizzato'};
+
+function invRender() {
+  const items = invLoad();
+  const search = (document.getElementById('inv-search')?.value||'').toLowerCase();
+  const locFilter = document.getElementById('inv-filter-loc')?.value||'';
+  const filtered = items.filter(it => {
+    const p = sPlants[it.plantTypeIdx];
+    if (!p) return false;
+    const nameMatch = !search || p.name.toLowerCase().includes(search) || (it.nickname||'').toLowerCase().includes(search);
+    const locMatch = !locFilter || it.location === locFilter;
+    return nameMatch && locMatch;
+  });
+  const countEl = document.getElementById('inv-count');
+  const totalPots = filtered.reduce((s,it)=>s+(it.qty||1),0);
+  if (countEl) countEl.textContent = filtered.length+' piante · '+totalPots+' vasi';
+  const grid = document.getElementById('inv-grid');
+  let html = '';
+  filtered.forEach(it => {
+    const p = sPlants[it.plantTypeIdx];
+    if (!p) return;
+    const vol = it.potVol || invCalcVol(it.potShape, it.potDiam, it.potH);
+    const activeDiseases = (it.diseases||[]).filter(d=>!d.resolved);
+    const ferts = (it.fertilizers||[]).slice(0,4).map(fid => {
+      const f = FERT_DB.find(x=>x.id===fid);
+      return f ? `<span class="inv-fert-chip">${f.name}</span>` : '';
+    }).join('');
+    const moreFerts = (it.fertilizers||[]).length > 4 ? `<span class="inv-fert-chip">+${it.fertilizers.length-4}</span>` : '';
+    html += `<div class="inv-card" onclick="invOpenEdit(${it.id})">
+      <div class="inv-card-head">
+        <div class="inv-card-icon">${p.icon}</div>
+        <div>
+          <div class="inv-card-title">${it.nickname || p.name}</div>
+          <div class="inv-card-sub">${p.name}${p.latin?' · '+p.latin:''}</div>
+        </div>
+      </div>
+      ${it.qty>1?`<div class="inv-card-qty">×${it.qty} vasi</div>`:''}
+      <div class="inv-detail-row"><span class="inv-lbl">Posizione</span><span class="inv-val">${INV_LOC_LABELS[it.location]||it.location}</span></div>
+      <div class="inv-detail-row"><span class="inv-lbl">Vaso</span><span class="inv-val">Ø${it.potDiam}cm × ${it.potH}cm · ${vol.toFixed(1)} L · ${it.potMat}</span></div>
+      <div class="inv-detail-row"><span class="inv-lbl">Substrato</span><span class="inv-val">${INV_SUB_LABELS[it.substrate]||it.substrate}</span></div>
+      ${ferts?`<div style="margin-top:4px">${ferts}${moreFerts}</div>`:''}
+      ${activeDiseases.length?`<div style="margin-top:4px">${activeDiseases.map(d=>`<span class="inv-disease-chip active">⚠️ ${INV_DISEASE_LABELS[d.type]||d.type}</span>`).join(' ')}</div>`:''}
+    </div>`;
+  });
+  // Add button
+  html += `<div class="inv-add-btn" onclick="invOpenAdd()">
+    <div style="font-size:28px;margin-bottom:4px">+</div>
+    Aggiungi vaso
+  </div>`;
+  if (!filtered.length && items.length) {
+    html = `<div class="inv-empty"><span class="empty-icon">🔍</span>Nessun risultato per i filtri attuali</div>` + html;
+  } else if (!items.length) {
+    html = `<div class="inv-empty"><span class="empty-icon">📦</span>Nessun vaso ancora registrato.<br>Inizia ad aggiungere le tue piante!</div>` + html;
+  }
+  grid.innerHTML = html;
+}
+
 // ══════════════════════════════════════════════════════════════════════
 // ⑥ CALENDARIO BIOBIZZ
 // ══════════════════════════════════════════════════════════════════════
@@ -2219,7 +3194,9 @@ const bbPlants = [
   {id:23, name:'Paulownia',       latin:'Paulownia tomentosa',  icon:'🌸', color:'#8060b0',
     schedules:[{prod:'grow',months:[3,4,5,6,7],interval:25,start:new Date(2026,2,15),dose:'dose piena',note:'Solo giovani piante — crescita esplosiva'},{prod:'fish',months:[3,4,5],interval:30,start:new Date(2026,2,22),dose:'dose piena',note:'Alternato con Bio·Grow in primavera'}]},
   {id:24, name:'Crassula Ovata',  latin:'Crassula ovata',       icon:'🪴', color:'#5a8a50',
-    schedules:[{prod:'alg',months:[4,5,6,7,8,9],interval:30,start:new Date(2026,3,12),dose:'¼ dose',note:"Unico prodotto adatto — mai Bio·Grow o Bio·Bloom"}]}
+    schedules:[{prod:'alg',months:[4,5,6,7,8,9],interval:30,start:new Date(2026,3,12),dose:'¼ dose',note:"Unico prodotto adatto — mai Bio·Grow o Bio·Bloom"}]},
+  {id:25, name:'Carmona Bonsai',  latin:'Carmona microphylla',  icon:'🌳', color:'#4a6a3a',
+    schedules:[{prod:'grow',months:[4,5,6,7,8,9],interval:18,start:new Date(2026,3,8),dose:'½ dose',note:'Non superare ½ dose — radici delicate'},{prod:'alg',months:[4,5,6,7,8,9],interval:25,start:new Date(2026,3,15),dose:'½ dose',note:'Anche come spray fogliare diluito per umidità'}]}
 
 ];
 
@@ -2263,6 +3240,9 @@ const trPlants = [
     schedules:[{prod:'zolfo',months:[4,5],interval:30,start:new Date(2026,3,12),dose:'3-5 g/L',note:'Preventivo oidio — trattare al mattino presto o alla sera'}]},
   {id:24, name:'Crassula Ovata',  latin:'Crassula ovata',        icon:'🪴', color:'#5a8a50',
     schedules:[{prod:'neem',months:[5,6,7,8],interval:35,start:new Date(2026,4,10),dose:'3 ml/L (dose ridotta)',note:'Cocciniglia cotonosa — controllare anche sotto le foglie e alla base del fusto'}]},
+  {id:25, name:'Carmona Bonsai',  latin:'Carmona microphylla',  icon:'🌳', color:'#4a6a3a',
+    schedules:[{prod:'neem',months:[4,5,6,7,8],interval:25,start:new Date(2026,3,8),dose:'3 ml/L (dose ridotta)',note:'Cocciniglia, ragnetto rosso e mosca bianca — molto sensibile in ambienti secchi'},{prod:'sapone',months:[5,6,7],interval:30,start:new Date(2026,4,5),dose:'8 g/L',note:'Alternare con neem. Più delicato sulle foglie piccole'}]}
+
 ];
 
 const trDateMap = {};
@@ -2340,6 +3320,9 @@ const waPlants = [
     schedules:[{months:[6,7,8],interval:3,note:'Estate: abbondante nei primi 2-3 anni'},{months:[4,5,9,10],interval:5,note:'Primavera/autunno: regolare (giovani)'}]},
   {id:24, name:'Crassula Ovata',  icon:'🪴', color:'#5a8a50', method:'Soak & dry — completamente asciutto',
     schedules:[{months:[5,6,7,8,9],interval:12,note:'Soak & dry: bagno abbondante, poi asciugatura completa'},{months:[10,11,12,1,2,3,4],interval:25,note:'Inverno: 1× al mese o meno'}]},
+  {id:25, name:'Carmona Bonsai',  icon:'🌳', color:'#4a6a3a', method:'Substrato leggermente umido, mai secco',
+    schedules:[{months:[6,7,8],interval:2,note:'Estate: controllare ogni giorno! Il vaso bonsai asciuga rapidamente'},{months:[4,5,9,10],interval:3,note:'Primavera/autunno: ogni 2-3 giorni'},{months:[11,12,1,2,3],interval:5,note:'Inverno: ogni 4-5 giorni se temp >18°C. Non far mai seccare completamente'}]}
+
 ];
 
 const waDateMap = {};
