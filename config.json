@@ -1,0 +1,23 @@
+{
+    "ecowitt": {
+        "application_key": "INSERISCI_QUI_LA_TUA_APPLICATION_KEY",
+        "api_key": "INSERISCI_QUI_LA_TUA_API_KEY",
+        "mac": "INSERISCI_QUI_IL_MAC_ADDRESS_DEL_GATEWAY",
+        "units": {
+            "temperature": "celsius",
+            "pressure": "hpa",
+            "wind": "kmh",
+            "rain": "mm"
+        }
+    },
+    "soglie_umidita": {
+        "succulente":    {"secco": 10, "ok_min": 10, "ok_max": 35, "umido": 40},
+        "tropicali":     {"secco": 25, "ok_min": 25, "ok_max": 55, "umido": 65},
+        "mediterranee":  {"secco": 15, "ok_min": 15, "ok_max": 40, "umido": 50},
+        "agrumi":        {"secco": 20, "ok_min": 20, "ok_max": 50, "umido": 60},
+        "bonsai":        {"secco": 20, "ok_min": 20, "ok_max": 50, "umido": 60},
+        "orchidee":      {"secco": 15, "ok_min": 15, "ok_max": 40, "umido": 50},
+        "aromatiche":    {"secco": 8,  "ok_min": 8,  "ok_max": 30, "umido": 35},
+        "universale":    {"secco": 20, "ok_min": 20, "ok_max": 50, "umido": 60}
+    }
+}

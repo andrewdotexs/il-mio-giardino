@@ -11,13 +11,32 @@ import sqlite3
 import json
 import os
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, urlencode
+from urllib.request import urlopen, Request
+from urllib.error import URLError
 from datetime import datetime
 
 # ── Configurazione ────────────────────────────────────────────────────
 PORT = 8765
 DB_FILE = os.path.join(os.path.dirname(__file__), "giardino.sqlite")
 HTML_FILE = os.path.join(os.path.dirname(__file__), "giardino_app.html")
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
+
+# ── Ecowitt Config ────────────────────────────────────────────────────
+def load_config():
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print("⚠️  config.json non trovato — Ecowitt disabilitato")
+        return {}
+
+CFG = load_config()
+ECOWITT_APP_KEY = CFG.get("ecowitt", {}).get("application_key", "")
+ECOWITT_API_KEY = CFG.get("ecowitt", {}).get("api_key", "")
+ECOWITT_MAC     = CFG.get("ecowitt", {}).get("mac", "")
+ECOWITT_ENABLED = all(k and not k.startswith("INSERISCI") for k in [ECOWITT_APP_KEY, ECOWITT_API_KEY, ECOWITT_MAC])
+ECOWITT_BASE    = "https://api.ecowitt.net/api/v3"
 
 
 # ── Database ──────────────────────────────────────────────────────────
@@ -124,6 +143,78 @@ class Handler(BaseHTTPRequestHandler):
                 "total": total,
                 "by_plant": [dict(r) for r in by_plant],
                 "by_op": [dict(r) for r in by_op]
+            })
+            return
+
+        # GET /api/ecowitt/realtime — dati in tempo reale dalla stazione meteo
+        if path == "/api/ecowitt/realtime":
+            if not ECOWITT_ENABLED:
+                self.send_json({"error": "Ecowitt non configurato. Inserisci le chiavi in config.json", "configured": False})
+                return
+            try:
+                params = urlencode({
+                    "application_key": ECOWITT_APP_KEY,
+                    "api_key": ECOWITT_API_KEY,
+                    "mac": ECOWITT_MAC,
+                    "call_back": "all",
+                    "temp_unitid": "1",
+                    "pressure_unitid": "3",
+                    "wind_speed_unitid": "6",
+                    "rainfall_unitid": "12",
+                })
+                url = f"{ECOWITT_BASE}/device/real_time?{params}"
+                req = Request(url, headers={"User-Agent": "GiardinoApp/1.0"})
+                with urlopen(req, timeout=10) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                data["configured"] = True
+                self.send_json(data)
+            except URLError as e:
+                self.send_json({"error": f"Errore connessione Ecowitt: {e}", "configured": True}, 502)
+            except Exception as e:
+                self.send_json({"error": str(e), "configured": True}, 500)
+            return
+
+        # GET /api/ecowitt/history?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD
+        if path == "/api/ecowitt/history":
+            if not ECOWITT_ENABLED:
+                self.send_json({"error": "Ecowitt non configurato", "configured": False})
+                return
+            try:
+                qp = parse_qs(parsed.query)
+                start = qp.get("start_date", [datetime.now().strftime("%Y-%m-%d")])[0]
+                end = qp.get("end_date", [datetime.now().strftime("%Y-%m-%d")])[0]
+                cb = qp.get("call_back", ["outdoor,indoor,soil"])[0]
+                params = urlencode({
+                    "application_key": ECOWITT_APP_KEY,
+                    "api_key": ECOWITT_API_KEY,
+                    "mac": ECOWITT_MAC,
+                    "start_date": start + " 00:00:00",
+                    "end_date": end + " 23:59:59",
+                    "call_back": cb,
+                    "temp_unitid": "1",
+                    "pressure_unitid": "3",
+                    "wind_speed_unitid": "6",
+                    "rainfall_unitid": "12",
+                    "cycle_type": "auto",
+                })
+                url = f"{ECOWITT_BASE}/device/history?{params}"
+                req = Request(url, headers={"User-Agent": "GiardinoApp/1.0"})
+                with urlopen(req, timeout=15) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                data["configured"] = True
+                self.send_json(data)
+            except URLError as e:
+                self.send_json({"error": f"Errore connessione: {e}", "configured": True}, 502)
+            except Exception as e:
+                self.send_json({"error": str(e), "configured": True}, 500)
+            return
+
+        # GET /api/ecowitt/config — restituisce soglie e stato configurazione
+        if path == "/api/ecowitt/config":
+            self.send_json({
+                "configured": ECOWITT_ENABLED,
+                "soglie": CFG.get("soglie_umidita", {}),
+                "mac": ECOWITT_MAC[:8] + "..." if ECOWITT_ENABLED else ""
             })
             return
 
@@ -239,6 +330,10 @@ if __name__ == "__main__":
     print(f"\n🌿 Giardino App Server avviato")
     print(f"   Apri il browser su:  http://localhost:{PORT}")
     print(f"   Database:            {DB_FILE}")
+    if ECOWITT_ENABLED:
+        print(f"   🌤️  Ecowitt:          Attivo (MAC: {ECOWITT_MAC[:8]}...)")
+    else:
+        print(f"   ⚠️  Ecowitt:          Non configurato (modifica config.json)")
     print(f"   Premi Ctrl+C per fermare il server\n")
     try:
         server.serve_forever()

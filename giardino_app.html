@@ -77,6 +77,33 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .inv-empty .empty-icon{font-size:36px;display:block;margin-bottom:8px}
 .inv-search{display:flex;gap:6px;max-width:900px;margin:0 auto .8rem;flex-wrap:wrap}
 .inv-search input,.inv-search select{border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;font-family:'DM Sans',sans-serif;background:var(--surface);flex:1;min-width:120px}
+/* Meteo section */
+.meteo-widget{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;text-align:center}
+.meteo-widget .mw-val{font-family:'Playfair Display',serif;font-size:26px;font-weight:600;line-height:1.1}
+.meteo-widget .mw-label{font-size:10px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.3px}
+.meteo-widget .mw-icon{font-size:22px;margin-bottom:2px}
+.soil-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px}
+.soil-card-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.soil-card-icon{font-size:18px}
+.soil-card-name{font-size:13px;font-weight:600;flex:1}
+.soil-card-ch{font-size:9px;color:var(--muted);padding:2px 6px;border-radius:10px;background:#f0ece4}
+.soil-bar{height:18px;border-radius:9px;background:#f0ece4;overflow:hidden;position:relative;margin-bottom:4px}
+.soil-bar-fill{height:100%;border-radius:9px;transition:width .5s}
+.soil-bar-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.3)}
+.soil-status{font-size:11px;font-weight:500}
+.soil-status.dry{color:#c04040}.soil-status.ok{color:var(--accent)}.soil-status.wet{color:#3a6abf}
+.alert-card{padding:10px 14px;border-radius:var(--radius);margin-bottom:6px;display:flex;align-items:flex-start;gap:8px;font-size:12px}
+.alert-card.warn{background:#fdf0e0;border:1px solid #e8c898;color:#854f0b}
+.alert-card.danger{background:#faeaea;border:1px solid #e0a0a0;color:#993030}
+.alert-card.info{background:#e6f1fb;border:1px solid #a0c8e8;color:#185fa5}
+.alert-card.good{background:#eaf3de;border:1px solid #b8d8a0;color:#3b6d11}
+.alert-icon{font-size:16px;flex-shrink:0;padding-top:1px}
+.alert-text{flex:1;line-height:1.5}
+.inv-soil-badge{display:flex;align-items:center;gap:4px;margin-top:5px;padding:4px 8px;border-radius:8px;font-size:10px;font-weight:500}
+.inv-soil-badge.dry{background:#faeaea;color:#c04040}
+.inv-soil-badge.ok{background:#eaf3de;color:#3b6d11}
+.inv-soil-badge.wet{background:#e6f1fb;color:#185fa5}
+.inv-soil-badge.offline{background:#f0ece4;color:#aaa}
 .treat-dot.done{opacity:.35;position:relative}
 .treat-dot.done::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:7px;color:#fff;background:rgba(0,0,0,.35);border-radius:2px}
 .tr-prod-legend{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;max-width:900px;margin:0 auto .7rem}
@@ -940,6 +967,33 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   </div>
 </div>
 
+<!-- ── SECTION: METEO E SENSORI ────────────────────────────── -->
+<div id="sec-meteo" class="section">
+  <div class="app-header">
+    <h1>Meteo e Sensori 🌤️</h1>
+    <p>Stazione Ecowitt · Umidità terreno · Allerte piante</p>
+  </div>
+  <div id="meteo-status" style="text-align:center;font-size:11px;margin-bottom:12px;color:var(--muted)"></div>
+
+  <!-- Widget meteo -->
+  <div id="meteo-weather" style="max-width:900px;margin:0 auto 1rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px"></div>
+
+  <!-- Allerte piante -->
+  <div id="meteo-alerts" style="max-width:900px;margin:0 auto 1rem"></div>
+
+  <!-- Umidità terreno per pianta -->
+  <div style="max-width:900px;margin:0 auto .6rem">
+    <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:500;margin-bottom:8px">💧 Umidità terreno in tempo reale</div>
+  </div>
+  <div id="meteo-soil" style="max-width:900px;margin:0 auto 1rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px"></div>
+
+  <!-- Grafici storici -->
+  <div style="max-width:900px;margin:0 auto .6rem">
+    <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:500;margin-bottom:8px">📊 Storico ultime 24 ore</div>
+  </div>
+  <div id="meteo-history" style="max-width:900px;margin:0 auto"></div>
+</div>
+
 <!-- ── SECTION: INVENTARIO VASI ────────────────────────────── -->
 <div id="sec-vasi" class="section">
   <div class="app-header">
@@ -1098,6 +1152,48 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
       </div>
 
       <div class="inv-form-card">
+        <div class="inv-form-card-title">📡 Sensore umidità terreno (WH51)</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:6px">Associa un sensore Ecowitt WH51 per monitorare l'umidità in tempo reale</div>
+        <div class="form-row">
+          <div class="form-field" style="max-width:160px">
+            <label>Canale WH51</label>
+            <select id="inv-wh51-ch">
+              <option value="">— Nessuno —</option>
+              <option value="1">Canale 1</option>
+              <option value="2">Canale 2</option>
+              <option value="3">Canale 3</option>
+              <option value="4">Canale 4</option>
+              <option value="5">Canale 5</option>
+              <option value="6">Canale 6</option>
+              <option value="7">Canale 7</option>
+              <option value="8">Canale 8</option>
+              <option value="9">Canale 9</option>
+              <option value="10">Canale 10</option>
+              <option value="11">Canale 11</option>
+              <option value="12">Canale 12</option>
+              <option value="13">Canale 13</option>
+              <option value="14">Canale 14</option>
+              <option value="15">Canale 15</option>
+              <option value="16">Canale 16</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Categoria soglie</label>
+            <select id="inv-wh51-cat">
+              <option value="universale">🌱 Universale</option>
+              <option value="succulente">🌵 Succulente / Cactus</option>
+              <option value="tropicali">🌳 Tropicali</option>
+              <option value="mediterranee">🌿 Mediterranee</option>
+              <option value="agrumi">🍋 Agrumi</option>
+              <option value="bonsai">💜 Bonsai</option>
+              <option value="orchidee">🌸 Orchidee</option>
+              <option value="aromatiche">🌿 Aromatiche</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="inv-form-card">
         <div class="inv-form-card-title">💚 Concimi utilizzati</div>
         <div style="font-size:10px;color:var(--muted);margin-bottom:6px">Seleziona i prodotti che usi per questa pianta</div>
         <div class="form-field" style="margin-bottom:6px">
@@ -1161,13 +1257,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   <button class="nav-tab" id="tab-vasi" data-sec="vasi" onclick="showSection('vasi')">
     <span class="nav-icon">📦</span>Vasi
   </button>
+  <button class="nav-tab" id="tab-meteo" data-sec="meteo" onclick="showSection('meteo')">
+    <span class="nav-icon">🌤️</span>Meteo
+  </button>
 </nav>
 
 <script>
 // ══════════════════════════════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════════════════════════════
-const sectionInited = {schede:false, mensile:false, giorni:false, diario:false, acqua:false, vasi:false};
+const sectionInited = {schede:false, mensile:false, giorni:false, diario:false, acqua:false, vasi:false, meteo:false};
 
 function showSection(name) {
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -1181,9 +1280,11 @@ function showSection(name) {
     else if (name==='diario') dInitDiario();
     else if (name==='acqua') wInitCalc();
     else if (name==='vasi') invInit();
+    else if (name==='meteo') meteoInit();
     sectionInited[name] = true;
   }
   if (name==='diario') dRender();
+  if (name==='meteo') meteoRefresh();
 }
 
 document.addEventListener('keydown', e => {
@@ -3140,6 +3241,8 @@ function invOpenAdd() {
   invShapeChange();
   document.getElementById('inv-substrate').value = 'universale_mix';
   invSubstrateChange();
+  document.getElementById('inv-wh51-ch').value = '';
+  document.getElementById('inv-wh51-cat').value = 'universale';
   document.getElementById('inv-del-btn').style.display = 'none';
   // Reset ferts
   document.querySelectorAll('.inv-fert-opt.selected').forEach(el=>el.classList.remove('selected'));
@@ -3185,6 +3288,8 @@ function invOpenEdit(id) {
   if (item.substrate === 'custom' && item.customSubstrate) {
     invSubLoadMix(item.customSubstrate);
   }
+  document.getElementById('inv-wh51-ch').value = item.wh51Ch||'';
+  document.getElementById('inv-wh51-cat').value = item.wh51Cat||'universale';
   document.getElementById('inv-del-btn').style.display = 'inline-flex';
   // Ferts
   document.getElementById('inv-fert-search').value = '';
@@ -3233,6 +3338,8 @@ function invSave() {
     potVolSq: document.getElementById('inv-pot-vol-sq').value ? +(document.getElementById('inv-pot-vol-sq').value) : null,
     substrate: document.getElementById('inv-substrate').value,
     customSubstrate: document.getElementById('inv-substrate').value === 'custom' ? invSubGetMix() : null,
+    wh51Ch: document.getElementById('inv-wh51-ch').value || null,
+    wh51Cat: document.getElementById('inv-wh51-cat').value || 'universale',
     fertilizers: invGetSelectedFerts(),
     diseases: invTempDiseases,
   };
@@ -3334,6 +3441,7 @@ function invRender() {
       <div class="inv-detail-row"><span class="inv-lbl">Substrato</span><span class="inv-val">${it.substrate==='custom'&&it.customSubstrate ? 'Personalizzato: '+Object.entries(it.customSubstrate).map(([k,v])=>{const s=wSubstrates.find(x=>x.id===k);return (s?s.name:k)+' '+v+'%';}).join(', ') : INV_SUB_LABELS[it.substrate]||it.substrate}</span></div>
       ${ferts?`<div style="margin-top:4px">${ferts}${moreFerts}</div>`:''}
       ${activeDiseases.length?`<div style="margin-top:4px">${activeDiseases.map(d=>`<span class="inv-disease-chip active">⚠️ ${INV_DISEASE_LABELS[d.type]||d.type}</span>`).join(' ')}</div>`:''}
+      ${it.wh51Ch?`<div class="inv-soil-badge offline" id="inv-soil-${it.id}">📡 CH${it.wh51Ch} · in attesa dati...</div>`:''}
     </div>`;
   });
   // Add button
@@ -3347,6 +3455,315 @@ function invRender() {
     html = `<div class="inv-empty"><span class="empty-icon">📦</span>Nessun vaso ancora registrato.<br>Inizia ad aggiungere le tue piante!</div>` + html;
   }
   grid.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ⑪ METEO E SENSORI ECOWITT
+// ══════════════════════════════════════════════════════════════════════
+
+const METEO_API = 'http://localhost:8765/api/ecowitt';
+let meteoData = null;
+let meteoConfig = null;
+let meteoTimer = null;
+
+const SOGLIE_DEFAULT = {
+  succulente:   {secco:10, ok_min:10, ok_max:35, umido:40},
+  tropicali:    {secco:25, ok_min:25, ok_max:55, umido:65},
+  mediterranee: {secco:15, ok_min:15, ok_max:40, umido:50},
+  agrumi:       {secco:20, ok_min:20, ok_max:50, umido:60},
+  bonsai:       {secco:20, ok_min:20, ok_max:50, umido:60},
+  orchidee:     {secco:15, ok_min:15, ok_max:40, umido:50},
+  aromatiche:   {secco:8,  ok_min:8,  ok_max:30, umido:35},
+  universale:   {secco:20, ok_min:20, ok_max:50, umido:60},
+};
+
+async function meteoInit() {
+  try {
+    const res = await fetch(METEO_API+'/config');
+    meteoConfig = await res.json();
+  } catch { meteoConfig = {configured:false, soglie:SOGLIE_DEFAULT}; }
+}
+
+async function meteoRefresh() {
+  const statusEl = document.getElementById('meteo-status');
+  if (!meteoConfig || !meteoConfig.configured) {
+    statusEl.innerHTML = '⚠️ Ecowitt non configurato — inserisci le chiavi API in <b>config.json</b> e riavvia il server';
+    document.getElementById('meteo-weather').innerHTML = meteoPlaceholderWidgets();
+    document.getElementById('meteo-soil').innerHTML = '<div style="text-align:center;color:var(--muted);padding:1rem;font-size:12px">Configura Ecowitt per vedere i dati dei sensori WH51</div>';
+    document.getElementById('meteo-alerts').innerHTML = '';
+    return;
+  }
+  statusEl.textContent = '⏳ Caricamento dati...';
+  try {
+    const res = await fetch(METEO_API+'/realtime');
+    meteoData = await res.json();
+    if (meteoData.code !== 0 && meteoData.code !== undefined) {
+      statusEl.textContent = '❌ Errore API: '+(meteoData.msg||meteoData.message||'sconosciuto');
+      return;
+    }
+    const now = new Date();
+    statusEl.textContent = '🟢 Ultimo aggiornamento: '+now.toLocaleTimeString('it-IT');
+    meteoRenderWeather();
+    meteoRenderSoil();
+    meteoRenderAlerts();
+    meteoUpdateInvBadges();
+    // Auto-refresh ogni 5 minuti
+    if (meteoTimer) clearInterval(meteoTimer);
+    meteoTimer = setInterval(meteoRefresh, 300000);
+  } catch(e) {
+    statusEl.textContent = '❌ Server non raggiungibile — avvia server.py';
+  }
+}
+
+function meteoPlaceholderWidgets() {
+  const items = [
+    {icon:'🌡️',label:'Temperatura',val:'--°C'},
+    {icon:'💧',label:'Umidità',val:'--%'},
+    {icon:'🌧️',label:'Pioggia oggi',val:'-- mm'},
+    {icon:'☀️',label:'Radiazione',val:'-- W/m²'},
+    {icon:'💨',label:'Vento',val:'-- km/h'},
+    {icon:'🏠',label:'Temp. interna',val:'--°C'},
+  ];
+  return items.map(i=>`<div class="meteo-widget"><div class="mw-icon">${i.icon}</div><div class="mw-val">${i.val}</div><div class="mw-label">${i.label}</div></div>`).join('');
+}
+
+function meteoGetVal(data, section, key) {
+  try {
+    const s = data.data[section];
+    if (!s) return null;
+    const item = s[key];
+    if (!item) return null;
+    return item.value !== undefined ? item.value : item;
+  } catch { return null; }
+}
+
+function meteoRenderWeather() {
+  if (!meteoData || !meteoData.data) return;
+  const d = meteoData.data;
+  const widgets = [];
+
+  // Temperatura esterna
+  const tempOut = meteoGetVal(meteoData,'outdoor','temperature');
+  const feelsLike = meteoGetVal(meteoData,'outdoor','feels_like');
+  widgets.push({icon:'🌡️', val:tempOut!==null?parseFloat(tempOut).toFixed(1)+'°C':'--', label:'Temperatura', sub:feelsLike?'Percepita: '+parseFloat(feelsLike).toFixed(1)+'°C':''});
+
+  // Umidità esterna
+  const humOut = meteoGetVal(meteoData,'outdoor','humidity');
+  widgets.push({icon:'💧', val:humOut!==null?humOut+'%':'--', label:'Umidità'});
+
+  // Pioggia
+  const rainDay = meteoGetVal(meteoData,'rainfall','daily');
+  const rainRate = meteoGetVal(meteoData,'rainfall','rain_rate');
+  widgets.push({icon:'🌧️', val:rainDay!==null?parseFloat(rainDay).toFixed(1)+' mm':'--', label:'Pioggia oggi', sub:rainRate&&parseFloat(rainRate)>0?'In corso: '+rainRate+' mm/h':''});
+
+  // Solare
+  const solar = meteoGetVal(meteoData,'solar_and_uvi','solar');
+  const uvi = meteoGetVal(meteoData,'solar_and_uvi','uvi');
+  widgets.push({icon:'☀️', val:solar!==null?parseFloat(solar).toFixed(0)+' W/m²':'--', label:'Radiazione solare', sub:uvi?'UV: '+uvi:''});
+
+  // Vento
+  const wind = meteoGetVal(meteoData,'wind','wind_speed');
+  const gust = meteoGetVal(meteoData,'wind','wind_gust');
+  widgets.push({icon:'💨', val:wind!==null?parseFloat(wind).toFixed(1)+' km/h':'--', label:'Vento', sub:gust?'Raffica: '+parseFloat(gust).toFixed(1)+' km/h':''});
+
+  // Temperatura interna
+  const tempIn = meteoGetVal(meteoData,'indoor','temperature');
+  const humIn = meteoGetVal(meteoData,'indoor','humidity');
+  widgets.push({icon:'🏠', val:tempIn!==null?parseFloat(tempIn).toFixed(1)+'°C':'--', label:'Temp. interna', sub:humIn?'Umidità: '+humIn+'%':''});
+
+  // Pressione
+  const press = meteoGetVal(meteoData,'pressure','relative');
+  widgets.push({icon:'🌀', val:press!==null?parseFloat(press).toFixed(1)+' hPa':'--', label:'Pressione'});
+
+  document.getElementById('meteo-weather').innerHTML = widgets.map(w =>
+    `<div class="meteo-widget"><div class="mw-icon">${w.icon}</div><div class="mw-val">${w.val}</div><div class="mw-label">${w.label}</div>${w.sub?`<div style="font-size:9px;color:var(--muted);margin-top:2px">${w.sub}</div>`:''}</div>`
+  ).join('');
+}
+
+function meteoRenderSoil() {
+  if (!meteoData || !meteoData.data) return;
+  const inv = invLoad();
+  const soglie = (meteoConfig && meteoConfig.soglie) || SOGLIE_DEFAULT;
+  const soilData = {};
+
+  // Estrai i dati soil moisture dall'API (cercali in varie possibili posizioni)
+  for (let ch=1; ch<=16; ch++) {
+    const key = 'soilmoisture'+ch;
+    // Cerca in data.soil (cloud API) oppure in data direttamente
+    let val = meteoGetVal(meteoData,'soil',key);
+    if (val === null) {
+      // Prova anche soil_ch${ch}
+      val = meteoGetVal(meteoData,'soil','soil_ch'+ch);
+    }
+    if (val !== null) soilData[ch] = parseFloat(val);
+  }
+
+  // Associa ogni sensore al vaso corrispondente
+  const cards = [];
+  inv.forEach(it => {
+    if (!it.wh51Ch) return;
+    const ch = parseInt(it.wh51Ch);
+    const moisture = soilData[ch];
+    const p = sPlants[it.plantTypeIdx];
+    if (!p) return;
+    const cat = it.wh51Cat || 'universale';
+    const thresh = soglie[cat] || SOGLIE_DEFAULT.universale;
+
+    let status, statusText, barColor;
+    if (moisture === undefined) {
+      status = 'offline'; statusText = 'Sensore offline'; barColor = '#ccc';
+    } else if (moisture < thresh.secco) {
+      status = 'dry'; statusText = '🔴 Troppo secco — annaffia!'; barColor = '#c04040';
+    } else if (moisture <= thresh.ok_max) {
+      status = 'ok'; statusText = '🟢 Umidità ottimale'; barColor = '#5a7a4a';
+    } else {
+      status = 'wet'; statusText = '🔵 Troppo umido — aspetta'; barColor = '#3a6abf';
+    }
+
+    cards.push({it, p, ch, moisture, status, statusText, barColor, thresh});
+  });
+
+  // Aggiungi anche i canali attivi senza associazione
+  Object.entries(soilData).forEach(([ch, val]) => {
+    if (!cards.find(c => c.ch === parseInt(ch))) {
+      cards.push({it:null, p:null, ch:parseInt(ch), moisture:val, status:'ok', statusText:'Non associato a un vaso', barColor:'#aaa', thresh:SOGLIE_DEFAULT.universale});
+    }
+  });
+
+  if (!cards.length) {
+    document.getElementById('meteo-soil').innerHTML = '<div style="text-align:center;color:var(--muted);padding:1rem;font-size:12px">Nessun sensore WH51 rilevato. Associa i canali nella sezione 📦 Vasi.</div>';
+    return;
+  }
+
+  document.getElementById('meteo-soil').innerHTML = cards.map(c => {
+    const name = c.p ? (c.it.nickname || c.p.name) : 'Canale '+c.ch;
+    const icon = c.p ? c.p.icon : '📡';
+    const mVal = c.moisture !== undefined ? c.moisture+'%' : '--';
+    const barW = c.moisture !== undefined ? Math.min(100, c.moisture) : 0;
+    return `<div class="soil-card">
+      <div class="soil-card-head">
+        <span class="soil-card-icon">${icon}</span>
+        <span class="soil-card-name">${name}</span>
+        <span class="soil-card-ch">CH${c.ch}</span>
+      </div>
+      <div class="soil-bar">
+        <div class="soil-bar-fill" style="width:${barW}%;background:${c.barColor}"></div>
+        <div class="soil-bar-label">${mVal}</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="soil-status ${c.status}">${c.statusText}</span>
+        ${c.thresh?`<span style="font-size:9px;color:var(--muted)">Soglie: ${c.thresh.secco}% – ${c.thresh.ok_max}%</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function meteoRenderAlerts() {
+  if (!meteoData || !meteoData.data) return;
+  const inv = invLoad();
+  const soglie = (meteoConfig && meteoConfig.soglie) || SOGLIE_DEFAULT;
+  const alerts = [];
+
+  // Temp esterna
+  const tempOut = meteoGetVal(meteoData,'outdoor','temperature');
+  if (tempOut !== null) {
+    const t = parseFloat(tempOut);
+    if (t < 5) alerts.push({type:'danger', icon:'🥶', text:`<b>Temperatura ${t.toFixed(1)}°C!</b> Porta dentro Carmona (<12°C), Stella di Natale, Tradescantia, e proteggi il Limone (<5°C).`});
+    else if (t < 10) alerts.push({type:'warn', icon:'❄️', text:`<b>Temperatura ${t.toFixed(1)}°C</b> — il Carmona Bonsai e la Stella di Natale non devono stare fuori sotto i 12°C.`});
+    else if (t > 35) alerts.push({type:'warn', icon:'🔥', text:`<b>Temperatura ${t.toFixed(1)}°C!</b> Sposta le piante in ombra e aumenta le annaffiature. Nebulizza le foglie la sera.`});
+  }
+
+  // Pioggia
+  const rainDay = meteoGetVal(meteoData,'rainfall','daily');
+  if (rainDay !== null && parseFloat(rainDay) > 5) {
+    alerts.push({type:'info', icon:'🌧️', text:`<b>Pioggia oggi: ${parseFloat(rainDay).toFixed(1)} mm</b> — puoi saltare l'annaffiatura delle piante all'esterno.`});
+  }
+
+  // Vento forte
+  const gust = meteoGetVal(meteoData,'wind','wind_gust');
+  if (gust !== null && parseFloat(gust) > 50) {
+    alerts.push({type:'warn', icon:'💨', text:`<b>Raffiche a ${parseFloat(gust).toFixed(0)} km/h!</b> Proteggi i bonsai e le piante alte. Ripara i vasi leggeri.`});
+  }
+
+  // Umidità interna bassa
+  const humIn = meteoGetVal(meteoData,'indoor','humidity');
+  if (humIn !== null && parseInt(humIn) < 40) {
+    alerts.push({type:'info', icon:'🏠', text:`<b>Umidità interna ${humIn}%</b> — bassa per orchidee e Carmona (ideale >50%). Nebulizza o usa un vassoio con argilla espansa.`});
+  }
+
+  // Suolo secco per piante con sensore
+  const soilData = {};
+  for (let ch=1; ch<=16; ch++) {
+    let val = meteoGetVal(meteoData,'soil','soilmoisture'+ch);
+    if (val === null) val = meteoGetVal(meteoData,'soil','soil_ch'+ch);
+    if (val !== null) soilData[ch] = parseFloat(val);
+  }
+
+  const dryPlants = [];
+  const wetPlants = [];
+  inv.forEach(it => {
+    if (!it.wh51Ch) return;
+    const ch = parseInt(it.wh51Ch);
+    const m = soilData[ch];
+    if (m === undefined) return;
+    const p = sPlants[it.plantTypeIdx];
+    if (!p) return;
+    const cat = it.wh51Cat || 'universale';
+    const thresh = soglie[cat] || SOGLIE_DEFAULT.universale;
+    const name = it.nickname || p.name;
+    if (m < thresh.secco) dryPlants.push(`${p.icon} ${name} (${m}%)`);
+    if (m > thresh.umido) wetPlants.push(`${p.icon} ${name} (${m}%)`);
+  });
+
+  if (dryPlants.length) {
+    alerts.push({type:'danger', icon:'🏜️', text:`<b>Terreno troppo secco!</b> Annaffia: ${dryPlants.join(', ')}`});
+  }
+  if (wetPlants.length) {
+    alerts.push({type:'info', icon:'💦', text:`<b>Terreno troppo umido</b> — aspetta prima di annaffiare: ${wetPlants.join(', ')}`});
+  }
+
+  if (!alerts.length) {
+    alerts.push({type:'good', icon:'✅', text:'Tutto nella norma — nessuna allerta attiva.'});
+  }
+
+  document.getElementById('meteo-alerts').innerHTML = alerts.map(a =>
+    `<div class="alert-card ${a.type}"><span class="alert-icon">${a.icon}</span><span class="alert-text">${a.text}</span></div>`
+  ).join('');
+}
+
+function meteoUpdateInvBadges() {
+  if (!meteoData || !meteoData.data) return;
+  const inv = invLoad();
+  const soglie = (meteoConfig && meteoConfig.soglie) || SOGLIE_DEFAULT;
+
+  const soilData = {};
+  for (let ch=1; ch<=16; ch++) {
+    let val = meteoGetVal(meteoData,'soil','soilmoisture'+ch);
+    if (val === null) val = meteoGetVal(meteoData,'soil','soil_ch'+ch);
+    if (val !== null) soilData[ch] = parseFloat(val);
+  }
+
+  inv.forEach(it => {
+    const badge = document.getElementById('inv-soil-'+it.id);
+    if (!badge || !it.wh51Ch) return;
+    const ch = parseInt(it.wh51Ch);
+    const m = soilData[ch];
+    const cat = it.wh51Cat || 'universale';
+    const thresh = soglie[cat] || SOGLIE_DEFAULT.universale;
+
+    if (m === undefined) {
+      badge.className = 'inv-soil-badge offline';
+      badge.textContent = '📡 CH'+ch+' · sensore offline';
+      return;
+    }
+
+    let cls, text;
+    if (m < thresh.secco) { cls='dry'; text=`🔴 ${m}% — annaffia!`; }
+    else if (m <= thresh.ok_max) { cls='ok'; text=`🟢 ${m}% — OK`; }
+    else { cls='wet'; text=`🔵 ${m}% — troppo umido`; }
+    badge.className = 'inv-soil-badge '+cls;
+    badge.textContent = '📡 CH'+ch+' · '+text;
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════════
