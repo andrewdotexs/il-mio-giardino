@@ -3061,9 +3061,99 @@ const INV_DISEASE_LABELS = {
   alternaria:'Alternaria',altro:'Altro'
 };
 
-// localStorage persistence
-function invLoad(){ try { return JSON.parse(localStorage.getItem('inv_plants')||'[]'); } catch { return []; } }
-function invSaveAll(data){ try { localStorage.setItem('inv_plants', JSON.stringify(data)); } catch {} }
+// Inventory persistence — API SQLite con fallback localStorage
+const INV_API = 'http://localhost:8765/api/inventory';
+let invUseAPI = false;
+let invCache = null;
+
+function invLSLoad(){ try { return JSON.parse(localStorage.getItem('inv_plants')||'[]'); } catch { return []; } }
+function invLSSave(data){ try { localStorage.setItem('inv_plants', JSON.stringify(data)); } catch {} }
+
+function invDbToJs(row) {
+  return {
+    id: row.id, plantTypeIdx: row.plant_type_idx, qty: row.qty, nickname: row.nickname||'',
+    location: row.location, potShape: row.pot_shape, potMat: row.pot_mat,
+    potDiam: row.pot_diam, potH: row.pot_h, potVol: row.pot_vol,
+    potDiamTop: row.pot_diam_top, potDiamBot: row.pot_diam_bot,
+    potHTrunc: row.pot_h_trunc, potVolTrunc: row.pot_vol_trunc,
+    potW: row.pot_w, potD: row.pot_d, potHSq: row.pot_h_sq, potVolSq: row.pot_vol_sq,
+    substrate: row.substrate, customSubstrate: row.custom_substrate,
+    wh51Ch: row.wh51_ch, wh51Cat: row.wh51_cat,
+    fertilizers: row.fertilizers||[], diseases: row.diseases||[],
+  };
+}
+
+async function invPingAPI() {
+  try {
+    const res = await fetch(INV_API, {signal: AbortSignal.timeout(1200)});
+    invUseAPI = res.ok;
+  } catch { invUseAPI = false; }
+}
+
+function invLoad() {
+  if (invCache !== null) return invCache;
+  return invLSLoad();
+}
+
+async function invLoadFromAPI() {
+  if (invUseAPI) {
+    try {
+      const res = await fetch(INV_API);
+      const data = await res.json();
+      const items = (data.items||[]).map(invDbToJs);
+      invCache = items;
+      invLSSave(items);
+      return items;
+    } catch { invUseAPI = false; }
+  }
+  invCache = invLSLoad();
+  return invCache;
+}
+
+async function invAPIAdd(entry) {
+  if (invUseAPI) {
+    try {
+      const res = await fetch(INV_API, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(entry)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return invDbToJs(data.item);
+      }
+    } catch { invUseAPI = false; }
+  }
+  const items = invLSLoad();
+  entry.id = Date.now();
+  items.push(entry);
+  invLSSave(items);
+  return entry;
+}
+
+async function invAPIUpdate(id, entry) {
+  if (invUseAPI) {
+    try {
+      const res = await fetch(INV_API+'/'+id, {
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(entry)
+      });
+      if (res.ok) return true;
+    } catch { invUseAPI = false; }
+  }
+  const items = invLSLoad();
+  const idx = items.findIndex(i=>i.id===id);
+  if (idx>=0) { Object.assign(items[idx], entry); invLSSave(items); }
+  return true;
+}
+
+async function invAPIDelete(id) {
+  if (invUseAPI) {
+    try { await fetch(INV_API+'/'+id, {method:'DELETE'}); } catch { invUseAPI = false; }
+  } else {
+    const items = invLSLoad().filter(i=>i.id!==id);
+    invLSSave(items);
+  }
+}
 
 let invTempDiseases = [];
 
@@ -3136,7 +3226,10 @@ function invSubLoadMix(mix) {
   invSubUpdateTotal();
 }
 
-function invInit() {
+async function invInit() {
+  // Ping API
+  await invPingAPI();
+  await invLoadFromAPI();
   // Populate plant type dropdown
   const sel = document.getElementById('inv-plant-type');
   sel.innerHTML = '<option value="">— Seleziona —</option>' + sPlants.map((p,i) =>
@@ -3308,30 +3401,25 @@ function invCloseForm() {
   document.body.style.overflow = '';
 }
 
-function invSave() {
+async function invSave() {
   const plantIdx = document.getElementById('inv-plant-type').value;
   if (plantIdx === '') { alert('Seleziona una pianta!'); return; }
   const editId = document.getElementById('inv-edit-id').value;
-  const items = invLoad();
   const shape = document.getElementById('inv-pot-shape').value;
   const entry = {
-    id: editId ? +editId : Date.now(),
     plantTypeIdx: +plantIdx,
     qty: +(document.getElementById('inv-qty').value)||1,
     nickname: document.getElementById('inv-nickname').value.trim(),
     location: document.getElementById('inv-location').value,
     potShape: shape,
     potMat: document.getElementById('inv-pot-mat').value,
-    // Cylinder
     potDiam: +(document.getElementById('inv-pot-diam').value)||25,
     potH: +(document.getElementById('inv-pot-h').value)||22,
     potVol: document.getElementById('inv-pot-vol').value ? +(document.getElementById('inv-pot-vol').value) : null,
-    // Truncated
     potDiamTop: +(document.getElementById('inv-pot-diam-top').value)||25,
     potDiamBot: +(document.getElementById('inv-pot-diam-bot').value)||18,
     potHTrunc: +(document.getElementById('inv-pot-h-trunc').value)||22,
     potVolTrunc: document.getElementById('inv-pot-vol-trunc').value ? +(document.getElementById('inv-pot-vol-trunc').value) : null,
-    // Square
     potW: +(document.getElementById('inv-pot-w').value)||25,
     potD: +(document.getElementById('inv-pot-d').value)||25,
     potHSq: +(document.getElementById('inv-pot-h-sq').value)||22,
@@ -3344,21 +3432,22 @@ function invSave() {
     diseases: invTempDiseases,
   };
   if (editId) {
-    const idx = items.findIndex(i=>i.id===+editId);
-    if (idx>=0) items[idx] = entry;
+    await invAPIUpdate(+editId, entry);
   } else {
-    items.push(entry);
+    await invAPIAdd(entry);
   }
-  invSaveAll(items);
+  invCache = null;
+  await invLoadFromAPI();
   invCloseForm();
   invRender();
 }
 
-function invDelete() {
+async function invDelete() {
   const editId = +document.getElementById('inv-edit-id').value;
   if (!editId || !confirm('Eliminare questo vaso?')) return;
-  const items = invLoad().filter(i=>i.id!==editId);
-  invSaveAll(items);
+  await invAPIDelete(editId);
+  invCache = null;
+  await invLoadFromAPI();
   invCloseForm();
   invRender();
 }

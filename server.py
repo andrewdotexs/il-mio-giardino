@@ -57,6 +57,35 @@ def init_db():
                 created   TEXT    DEFAULT (datetime('now','localtime'))
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS inventory (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                plant_type_idx  INTEGER NOT NULL,
+                qty             INTEGER DEFAULT 1,
+                nickname        TEXT    DEFAULT '',
+                location        TEXT    DEFAULT 'indoor',
+                pot_shape       TEXT    DEFAULT 'cylinder',
+                pot_mat         TEXT    DEFAULT 'plastica',
+                pot_diam        REAL    DEFAULT 25,
+                pot_h           REAL    DEFAULT 22,
+                pot_vol         REAL,
+                pot_diam_top    REAL,
+                pot_diam_bot    REAL,
+                pot_h_trunc     REAL,
+                pot_vol_trunc   REAL,
+                pot_w           REAL,
+                pot_d           REAL,
+                pot_h_sq        REAL,
+                pot_vol_sq      REAL,
+                substrate       TEXT    DEFAULT 'universale_mix',
+                custom_substrate TEXT,
+                wh51_ch         TEXT,
+                wh51_cat        TEXT    DEFAULT 'universale',
+                fertilizers     TEXT    DEFAULT '[]',
+                diseases        TEXT    DEFAULT '[]',
+                created         TEXT    DEFAULT (datetime('now','localtime'))
+            )
+        """)
         conn.commit()
     print(f"✅ Database pronto: {DB_FILE}")
 
@@ -146,6 +175,22 @@ class Handler(BaseHTTPRequestHandler):
             })
             return
 
+        # GET /api/inventory — restituisce tutti i vasi
+        if path == "/api/inventory":
+            with get_db() as conn:
+                rows = conn.execute("SELECT * FROM inventory ORDER BY id").fetchall()
+            items = []
+            for r in rows:
+                item = dict(r)
+                # Deserializza i campi JSON
+                for jf in ('fertilizers', 'diseases', 'custom_substrate'):
+                    if item.get(jf):
+                        try: item[jf] = json.loads(item[jf])
+                        except: pass
+                items.append(item)
+            self.send_json({"items": items})
+            return
+
         # GET /api/ecowitt/realtime — dati in tempo reale dalla stazione meteo
         if path == "/api/ecowitt/realtime":
             if not ECOWITT_ENABLED:
@@ -220,106 +265,186 @@ class Handler(BaseHTTPRequestHandler):
 
         self.send_json({"error": "Not found"}, 404)
 
+    def _read_json_body(self):
+        length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(length)
+        try:
+            return json.loads(body)
+        except json.JSONDecodeError:
+            return None
+
+    def _inv_row_to_dict(self, row):
+        item = dict(row)
+        for jf in ('fertilizers', 'diseases', 'custom_substrate'):
+            if item.get(jf):
+                try: item[jf] = json.loads(item[jf])
+                except: pass
+        return item
+
+    def _inv_fields(self, data):
+        return {
+            "plant_type_idx": data.get("plantTypeIdx", 0),
+            "qty": data.get("qty", 1),
+            "nickname": data.get("nickname", ""),
+            "location": data.get("location", "indoor"),
+            "pot_shape": data.get("potShape", "cylinder"),
+            "pot_mat": data.get("potMat", "plastica"),
+            "pot_diam": data.get("potDiam", 25),
+            "pot_h": data.get("potH", 22),
+            "pot_vol": data.get("potVol"),
+            "pot_diam_top": data.get("potDiamTop"),
+            "pot_diam_bot": data.get("potDiamBot"),
+            "pot_h_trunc": data.get("potHTrunc"),
+            "pot_vol_trunc": data.get("potVolTrunc"),
+            "pot_w": data.get("potW"),
+            "pot_d": data.get("potD"),
+            "pot_h_sq": data.get("potHSq"),
+            "pot_vol_sq": data.get("potVolSq"),
+            "substrate": data.get("substrate", "universale_mix"),
+            "custom_substrate": json.dumps(data["customSubstrate"]) if data.get("customSubstrate") else None,
+            "wh51_ch": data.get("wh51Ch"),
+            "wh51_cat": data.get("wh51Cat", "universale"),
+            "fertilizers": json.dumps(data.get("fertilizers", [])),
+            "diseases": json.dumps(data.get("diseases", [])),
+        }
+
     def do_POST(self):
-        if self.path != "/api/diary":
-            self.send_json({"error": "Not found"}, 404)
-            return
+        parsed = urlparse(self.path)
+        path = parsed.path
 
-        length = int(self.headers.get("Content-Length", 0))
-        body   = self.rfile.read(length)
-        try:
-            data = json.loads(body)
-        except json.JSONDecodeError:
-            self.send_json({"error": "JSON non valido"}, 400)
-            return
-
-        date  = data.get("date", "").strip()
-        plant = data.get("plant", "").strip()
-        op    = data.get("op", "").strip()
-        note  = data.get("note", "").strip()
-
-        if not date or not plant or not op:
-            self.send_json({"error": "Campi obbligatori: date, plant, op"}, 400)
-            return
-
-        with get_db() as conn:
-            cur = conn.execute(
-                "INSERT INTO diary (date, plant, op, note) VALUES (?, ?, ?, ?)",
-                (date, plant, op, note)
-            )
-            conn.commit()
-            new_id = cur.lastrowid
-            row = conn.execute("SELECT * FROM diary WHERE id = ?", (new_id,)).fetchone()
-
-        print(f"  ➕ Nuova voce: {plant} — {op} — {date}")
-        self.send_json({"entry": dict(row)}, 201)
-
-    def do_PUT(self):
-        # PUT /api/diary/123
-        parts = self.path.strip("/").split("/")
-        if len(parts) != 3 or parts[0] != "api" or parts[1] != "diary":
-            self.send_json({"error": "Not found"}, 404)
-            return
-        try:
-            entry_id = int(parts[2])
-        except ValueError:
-            self.send_json({"error": "ID non valido"}, 400)
-            return
-
-        length = int(self.headers.get("Content-Length", 0))
-        body   = self.rfile.read(length)
-        try:
-            data = json.loads(body)
-        except json.JSONDecodeError:
-            self.send_json({"error": "JSON non valido"}, 400)
-            return
-
-        with get_db() as conn:
-            row = conn.execute("SELECT * FROM diary WHERE id = ?", (entry_id,)).fetchone()
-            if not row:
-                self.send_json({"error": "Voce non trovata"}, 404)
+        # POST /api/diary
+        if path == "/api/diary":
+            data = self._read_json_body()
+            if data is None:
+                self.send_json({"error": "JSON non valido"}, 400)
                 return
-
-            date  = data.get("date",  row["date"]).strip()
-            plant = data.get("plant", row["plant"]).strip()
-            op    = data.get("op",    row["op"]).strip()
-            note  = data.get("note",  row["note"]).strip()
-
+            date  = data.get("date", "").strip()
+            plant = data.get("plant", "").strip()
+            op    = data.get("op", "").strip()
+            note  = data.get("note", "").strip()
             if not date or not plant or not op:
                 self.send_json({"error": "Campi obbligatori: date, plant, op"}, 400)
                 return
+            with get_db() as conn:
+                cur = conn.execute(
+                    "INSERT INTO diary (date, plant, op, note) VALUES (?, ?, ?, ?)",
+                    (date, plant, op, note)
+                )
+                conn.commit()
+                new_id = cur.lastrowid
+                row = conn.execute("SELECT * FROM diary WHERE id = ?", (new_id,)).fetchone()
+            print(f"  ➕ Nuova voce diario: {plant} — {op} — {date}")
+            self.send_json({"entry": dict(row)}, 201)
+            return
 
-            conn.execute(
-                "UPDATE diary SET date=?, plant=?, op=?, note=? WHERE id=?",
-                (date, plant, op, note, entry_id)
-            )
-            conn.commit()
-            updated = conn.execute("SELECT * FROM diary WHERE id = ?", (entry_id,)).fetchone()
+        # POST /api/inventory
+        if path == "/api/inventory":
+            data = self._read_json_body()
+            if data is None:
+                self.send_json({"error": "JSON non valido"}, 400)
+                return
+            fields = self._inv_fields(data)
+            cols = ", ".join(fields.keys())
+            placeholders = ", ".join(["?"] * len(fields))
+            with get_db() as conn:
+                cur = conn.execute(
+                    f"INSERT INTO inventory ({cols}) VALUES ({placeholders})",
+                    list(fields.values())
+                )
+                conn.commit()
+                new_id = cur.lastrowid
+                row = conn.execute("SELECT * FROM inventory WHERE id = ?", (new_id,)).fetchone()
+            print(f"  ➕ Nuovo vaso: idx={fields['plant_type_idx']} — {fields['nickname'] or 'senza nome'}")
+            self.send_json({"item": self._inv_row_to_dict(row)}, 201)
+            return
 
-        print(f"  ✏️  Voce modificata: id={entry_id} — {plant} — {op} — {date}")
-        self.send_json({"entry": dict(updated)})
+        self.send_json({"error": "Not found"}, 404)
 
-    def do_DELETE(self):
-        # DELETE /api/diary/123
+    def do_PUT(self):
         parts = self.path.strip("/").split("/")
-        if len(parts) != 3 or parts[0] != "api" or parts[1] != "diary":
+        if len(parts) != 3 or parts[0] != "api":
             self.send_json({"error": "Not found"}, 404)
             return
+        table = parts[1]
         try:
             entry_id = int(parts[2])
         except ValueError:
             self.send_json({"error": "ID non valido"}, 400)
             return
 
+        data = self._read_json_body()
+        if data is None:
+            self.send_json({"error": "JSON non valido"}, 400)
+            return
+
+        # PUT /api/diary/:id
+        if table == "diary":
+            with get_db() as conn:
+                row = conn.execute("SELECT * FROM diary WHERE id = ?", (entry_id,)).fetchone()
+                if not row:
+                    self.send_json({"error": "Voce non trovata"}, 404)
+                    return
+                date  = data.get("date",  row["date"]).strip()
+                plant = data.get("plant", row["plant"]).strip()
+                op    = data.get("op",    row["op"]).strip()
+                note  = data.get("note",  row["note"]).strip()
+                if not date or not plant or not op:
+                    self.send_json({"error": "Campi obbligatori: date, plant, op"}, 400)
+                    return
+                conn.execute(
+                    "UPDATE diary SET date=?, plant=?, op=?, note=? WHERE id=?",
+                    (date, plant, op, note, entry_id)
+                )
+                conn.commit()
+                updated = conn.execute("SELECT * FROM diary WHERE id = ?", (entry_id,)).fetchone()
+            print(f"  ✏️  Diario modificato: id={entry_id}")
+            self.send_json({"entry": dict(updated)})
+            return
+
+        # PUT /api/inventory/:id
+        if table == "inventory":
+            with get_db() as conn:
+                row = conn.execute("SELECT * FROM inventory WHERE id = ?", (entry_id,)).fetchone()
+                if not row:
+                    self.send_json({"error": "Vaso non trovato"}, 404)
+                    return
+                fields = self._inv_fields(data)
+                sets = ", ".join(f"{k}=?" for k in fields)
+                conn.execute(f"UPDATE inventory SET {sets} WHERE id=?", list(fields.values()) + [entry_id])
+                conn.commit()
+                updated = conn.execute("SELECT * FROM inventory WHERE id = ?", (entry_id,)).fetchone()
+            print(f"  ✏️  Vaso modificato: id={entry_id}")
+            self.send_json({"item": self._inv_row_to_dict(updated)})
+            return
+
+        self.send_json({"error": "Not found"}, 404)
+
+    def do_DELETE(self):
+        parts = self.path.strip("/").split("/")
+        if len(parts) != 3 or parts[0] != "api":
+            self.send_json({"error": "Not found"}, 404)
+            return
+        table = parts[1]
+        try:
+            entry_id = int(parts[2])
+        except ValueError:
+            self.send_json({"error": "ID non valido"}, 400)
+            return
+
+        if table not in ("diary", "inventory"):
+            self.send_json({"error": "Not found"}, 404)
+            return
+
         with get_db() as conn:
-            row = conn.execute("SELECT id FROM diary WHERE id = ?", (entry_id,)).fetchone()
+            row = conn.execute(f"SELECT id FROM {table} WHERE id = ?", (entry_id,)).fetchone()
             if not row:
-                self.send_json({"error": "Voce non trovata"}, 404)
+                self.send_json({"error": "Elemento non trovato"}, 404)
                 return
-            conn.execute("DELETE FROM diary WHERE id = ?", (entry_id,))
+            conn.execute(f"DELETE FROM {table} WHERE id = ?", (entry_id,))
             conn.commit()
 
-        print(f"  🗑️  Voce eliminata: id={entry_id}")
+        label = "Voce diario" if table == "diary" else "Vaso"
+        print(f"  🗑️  {label} eliminato: id={entry_id}")
         self.send_json({"deleted": entry_id})
 
 
