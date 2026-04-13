@@ -1974,6 +1974,8 @@ function gInitGiorni() {
     item.onclick=()=>{if(waHiddenPlants.has(p.id))waHiddenPlants.delete(p.id);else waHiddenPlants.add(p.id);item.classList.toggle('hidden-plant');gRenderCalendar();};
     wl.appendChild(item);
   });
+  // Build curative events from inventory diseases
+  buildCurativeEvents();
   // Set initial filter button style
   gSetFilter('all');
 }
@@ -2020,8 +2022,9 @@ function gRenderCalendar(){
     const fertEvs=(gFilter==='all'||gFilter==='fert')?(gDateMap[key]||[]).filter(e=>!gHiddenPlants.has(e.plant.id)):[];
     const bbEvs=(gFilter==='all'||gFilter==='biobizz')?(bbDateMap[key]||[]).filter(e=>!bbHiddenProds.has(e.prod)):[];
     const trEvs=(gFilter==='all'||gFilter==='tratt')?(trDateMap[key]||[]).filter(e=>!trHiddenProds.has(e.prod)):[];
+    const cureEvs=(gFilter==='all'||gFilter==='tratt')?(cureDateMap[key]||[]):[];
     const waEvs=(gFilter==='all'||gFilter==='acqua')?(waDateMap[key]||[]).filter(e=>!waHiddenPlants.has(e.plant.id)):[];
-    const hasAny=fertEvs.length||bbEvs.length||trEvs.length||waEvs.length;
+    const hasAny=fertEvs.length||bbEvs.length||trEvs.length||cureEvs.length||waEvs.length;
     const isToday=date.toDateString()===gTODAY.toDateString();
     const cell=document.createElement('div');
     cell.className='day-cell'+(isToday?' today':'')+(hasAny?' has-events':'')+(date.getDay()===0?' sunday':'');
@@ -2030,8 +2033,9 @@ function gRenderCalendar(){
       const fertDone=fertEvs.every(e=>gIsDone(date,e.plant.id));
       const bbDone=bbEvs.every(e=>bbIsDone(date,e.plant.id,e.prod));
       const trDone=trEvs.every(e=>trIsDone(date,e.plant.id,e.prod));
+      const cureDone=cureEvs.every(e=>cureIsDone(date,e.invId,e.disease.type));
       const waDone=waEvs.every(e=>waIsDone(date,e.plant.id));
-      if((!fertEvs.length||fertDone)&&(!bbEvs.length||bbDone)&&(!trEvs.length||trDone)&&(!waEvs.length||waDone))cell.classList.add('all-done');
+      if((!fertEvs.length||fertDone)&&(!bbEvs.length||bbDone)&&(!trEvs.length||trDone)&&(!cureEvs.length||cureDone)&&(!waEvs.length||waDone))cell.classList.add('all-done');
       const dots=document.createElement('div');dots.className='dots-container';
       // Circular dots = fertilizzazioni
       fertEvs.slice(0,4).forEach(e=>{
@@ -2047,11 +2051,18 @@ function gRenderCalendar(){
         dot.style.background=p.color;dot.textContent=done?'':p.abbr;dot.title=e.plant.name+' '+p.label;
         dots.appendChild(dot);
       });
-      // Diamond dots = trattamenti
+      // Diamond dots = trattamenti preventivi
       trEvs.slice(0,4).forEach(e=>{
         const p=TR_PRODUCTS[e.prod];const done=trIsDone(date,e.plant.id,e.prod);
         const dot=document.createElement('div');dot.className='treat-dot'+(done?' done':'');
         dot.style.background=p.color;dot.innerHTML=done?'':`<span class="treat-abbr">${p.abbr}</span>`;dot.title=e.plant.name+' '+p.label;
+        dots.appendChild(dot);
+      });
+      // Red diamond dots = trattamenti curativi
+      cureEvs.slice(0,3).forEach(e=>{
+        const done=cureIsDone(date,e.invId,e.disease.type);
+        const dot=document.createElement('div');dot.className='treat-dot'+(done?' done':'');
+        dot.style.background=e.color;dot.innerHTML=done?'':`<span class="treat-abbr">!</span>`;dot.title=e.plant.name+' — '+e.diseaseLabel;
         dots.appendChild(dot);
       });
       // Drop dots = annaffiature
@@ -2061,7 +2072,7 @@ function gRenderCalendar(){
         dot.innerHTML=done?'':'<span class="wa-abbr">'+e.plant.icon+'</span>';dot.title=e.plant.name+' annaffiatura';
         dots.appendChild(dot);
       });
-      const overflow=(fertEvs.length>4?fertEvs.length-4:0)+(bbEvs.length>4?bbEvs.length-4:0)+(trEvs.length>4?trEvs.length-4:0)+(waEvs.length>3?waEvs.length-3:0);
+      const overflow=(fertEvs.length>4?fertEvs.length-4:0)+(bbEvs.length>4?bbEvs.length-4:0)+(trEvs.length>4?trEvs.length-4:0)+(cureEvs.length>3?cureEvs.length-3:0)+(waEvs.length>3?waEvs.length-3:0);
       if(overflow){const m=document.createElement('div');m.className='dot-count';m.textContent='+'+overflow;dots.appendChild(m);}
       cell.appendChild(dots);
       cell.onclick=()=>gOpenDay(date,fertEvs,bbEvs,trEvs,waEvs);
@@ -2076,12 +2087,14 @@ function gOpenDay(date, fertEvs, bbEvs, trEvs, waEvs) {
   if(!trEvs) trEvs=(gFilter==='all'||gFilter==='tratt')?(trDateMap[gDateKey(date)]||[]).filter(e=>!trHiddenProds.has(e.prod)):[];
   if(!waEvs) waEvs=(gFilter==='all'||gFilter==='acqua')?(waDateMap[gDateKey(date)]||[]).filter(e=>!waHiddenPlants.has(e.plant.id)):[];
   document.getElementById('g-panel-title').textContent=gWeekdays[date.getDay()]+' '+date.getDate()+' '+gMonthNames[date.getMonth()];
-  const allEvs=[...fertEvs,...bbEvs,...trEvs,...waEvs];
+  const cureEvs2 = (cureDateMap[gDateKey(date)] || []);
+  const allEvs=[...fertEvs,...bbEvs,...trEvs,...cureEvs2,...waEvs];
   const fertDone=fertEvs.filter(e=>gIsDone(date,e.plant.id)).length;
   const bbDone=bbEvs.filter(e=>bbIsDone(date,e.plant.id,e.prod)).length;
   const trDoneCount=trEvs.filter(e=>trIsDone(date,e.plant.id,e.prod)).length;
+  const cureDoneCount=cureEvs2.filter(e=>cureIsDone(date,e.invId,e.disease.type)).length;
   const waDoneCount=waEvs.filter(e=>waIsDone(date,e.plant.id)).length;
-  const totDone=fertDone+bbDone+trDoneCount+waDoneCount;
+  const totDone=fertDone+bbDone+trDoneCount+cureDoneCount+waDoneCount;
   document.getElementById('g-panel-subtitle').textContent=totDone+'/'+allEvs.length+' completate';
   const pct=allEvs.length?Math.round(totDone/allEvs.length*100):0;
   let html=`<div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%"></div></div>`;
@@ -2151,7 +2164,7 @@ function gOpenDay(date, fertEvs, bbEvs, trEvs, waEvs) {
     trEvs.forEach(e=>{if(!byProd[e.prod])byProd[e.prod]=[];byProd[e.prod].push(e);});
     Object.entries(byProd).forEach(([prod,evs])=>{
       const p=TR_PRODUCTS[prod];
-      html+=`<div class="event-group"><div class="event-group-title" style="background:${p.color}">🛡️ ${p.label}</div>`;
+      html+=`<div class="event-group"><div class="event-group-title" style="background:${p.color}">🛡️ ${p.label} <span style="font-size:10px;opacity:.8">(preventivo)</span></div>`;
       evs.forEach(e=>{
         const done=trIsDone(date,e.plant.id,e.prod);
         const dy=date.getFullYear(),dm=date.getMonth(),dd=date.getDate();
@@ -2171,6 +2184,45 @@ function gOpenDay(date, fertEvs, bbEvs, trEvs, waEvs) {
         </div>`;
       });
       html+=`</div>`;
+    });
+  }
+
+  // ── Sezione trattamenti curativi (da malattie inventario)
+  const cureEvs = (cureDateMap[gDateKey(date)] || []);
+  if(cureEvs.length){
+    // Raggruppa per malattia
+    const byDisease = {};
+    cureEvs.forEach(e => {
+      const key = e.disease.type + '_' + e.invId;
+      if (!byDisease[key]) byDisease[key] = {disease: e.disease, label: e.diseaseLabel, color: e.color, plant: e.plant, invId: e.invId, events: []};
+      byDisease[key].events.push(e);
+    });
+    Object.values(byDisease).forEach(group => {
+      html += `<div class="event-group"><div class="event-group-title" style="background:${group.color}">🔴 ${group.label} <span style="font-size:10px;opacity:.8">(curativo)</span></div>`;
+      group.events.forEach(e => {
+        const done = cureIsDone(date, e.invId, e.disease.type);
+        const dy = date.getFullYear(), dm = date.getMonth(), dd = date.getDate();
+        const prodLabel = TR_PRODUCTS[e.prod]?.label || CURE_EXTRA_PRODUCTS[e.prod]?.label || e.prod;
+        html += `<div class="event-row${done ? ' done' : ''}">
+          <div class="event-icon">${e.plant.icon}</div>
+          <div class="event-content">
+            <div class="event-name">${e.plant.name}</div>
+            <div style="margin-bottom:3px">
+              <span class="event-prod" style="background:${group.color}">${group.label}</span>
+              <span style="font-size:9px;color:var(--muted);margin-left:4px">Passo ${e.step}/${e.totalSteps}</span>
+            </div>
+            <div class="event-info">
+              <strong>Prodotto:</strong> ${prodLabel}<br>
+              <strong>Dose:</strong> ${e.dose}
+              ${e.note ? `<br>${e.note}` : ''}
+              ${e.disease.note ? `<br><span style="color:var(--muted)">📝 ${e.disease.note}</span>` : ''}
+            </div>
+          </div>
+          <button class="check-btn${done ? ' done' : ''}" style="${done ? 'background:' + group.color + ';border-color:' + group.color : ''}"
+            onclick="cureToggleDone(${dy},${dm},${dd},${e.invId},'${e.disease.type}')">✓</button>
+        </div>`;
+      });
+      html += `</div>`;
     });
   }
 
@@ -2208,8 +2260,9 @@ function gOpenDay(date, fertEvs, bbEvs, trEvs, waEvs) {
     const nf=(gFilter==='all'||gFilter==='fert')?(gDateMap[nk]||[]).filter(e=>!gHiddenPlants.has(e.plant.id)):[];
     const nb=(gFilter==='all'||gFilter==='biobizz')?(bbDateMap[nk]||[]).filter(e=>!bbHiddenProds.has(e.prod)):[];
     const nt=(gFilter==='all'||gFilter==='tratt')?(trDateMap[nk]||[]).filter(e=>!trHiddenProds.has(e.prod)):[];
+    const nc=(gFilter==='all'||gFilter==='tratt')?(cureDateMap[nk]||[]):[];
     const nw=(gFilter==='all'||gFilter==='acqua')?(waDateMap[nk]||[]).filter(e=>!waHiddenPlants.has(e.plant.id)):[];
-    if(nf.length||nb.length||nt.length||nw.length)upcoming.push({date:nd,fert:nf,bb:nb,tr:nt,wa:nw});
+    if(nf.length||nb.length||nt.length||nc.length||nw.length)upcoming.push({date:nd,fert:nf,bb:nb,tr:nt,cure:nc,wa:nw});
   }
   if(upcoming.length){
     html+=`<div class="next-section"><div class="next-title">Prossimi 7 giorni</div>`;
@@ -2217,6 +2270,7 @@ function gOpenDay(date, fertEvs, bbEvs, trEvs, waEvs) {
       u.fert.forEach(e=>{html+=`<div class="next-row"><div class="next-icon">${e.plant.icon}</div><div class="next-name">${e.plant.name}</div><div class="next-days">${gWeekdays[u.date.getDay()].slice(0,3)} ${u.date.getDate()}/${u.date.getMonth()+1}</div></div>`;});
       u.bb.forEach(e=>{const p=BB_PRODUCTS[e.prod];html+=`<div class="next-row"><span class="next-prod-badge" style="background:${p.color}">${p.abbr}</span><span style="font-size:12px">${e.plant.icon}</span><div class="next-name">${e.plant.name}</div><div class="next-days">${gWeekdays[u.date.getDay()].slice(0,3)} ${u.date.getDate()}/${u.date.getMonth()+1}</div></div>`;});
       u.tr.forEach(e=>{const p=TR_PRODUCTS[e.prod];html+=`<div class="next-row"><span class="next-prod-badge" style="background:${p.color}">${p.abbr}</span><span style="font-size:12px">${e.plant.icon}</span><div class="next-name">${e.plant.name}</div><div class="next-days">${gWeekdays[u.date.getDay()].slice(0,3)} ${u.date.getDate()}/${u.date.getMonth()+1}</div></div>`;});
+      u.cure.forEach(e=>{html+=`<div class="next-row"><span class="next-prod-badge" style="background:${e.color}">!</span><span style="font-size:12px">${e.plant.icon}</span><div class="next-name">${e.plant.name} — ${e.diseaseLabel}</div><div class="next-days">${gWeekdays[u.date.getDay()].slice(0,3)} ${u.date.getDate()}/${u.date.getMonth()+1}</div></div>`;});
       u.wa.forEach(e=>{html+=`<div class="next-row"><span class="next-prod-badge" style="background:#3a8abf">💧</span><span style="font-size:12px">${e.plant.icon}</span><div class="next-name">${e.plant.name}</div><div class="next-days">${gWeekdays[u.date.getDay()].slice(0,3)} ${u.date.getDate()}/${u.date.getMonth()+1}</div></div>`;});
     });
     html+=`</div>`;
@@ -3818,6 +3872,7 @@ async function invSave() {
   await invLoadFromAPI();
   invCloseForm();
   invRender();
+  if (typeof buildCurativeEvents === 'function') buildCurativeEvents();
 }
 
 async function invDelete() {
@@ -3828,6 +3883,7 @@ async function invDelete() {
   await invLoadFromAPI();
   invCloseForm();
   invRender();
+  if (typeof buildCurativeEvents === 'function') buildCurativeEvents();
 }
 
 function invCalcVol(shape, diam, h) {
@@ -4492,6 +4548,116 @@ const trPlants = [
 
 const trDateMap = {};
 let trHiddenProds = new Set();
+
+// ── Protocolli curativi per malattia/parassita ──
+const CURE_PROTOCOLS = {
+  cocciniglia:          {steps:[{prod:'obianco',dose:'15 ml/L',note:'Trattamento d\'urto — coprire bene pagina inferiore foglie'},{prod:'sapone',dose:'10 g/L',note:'Lavaggio dopo 3gg dal trattamento olio'},{prod:'obianco',dose:'15 ml/L',note:'Secondo trattamento — eliminare le ninfatrici'}], interval:7, total:3, color:'#a04040'},
+  cocciniglia_cotonosa: {steps:[{prod:'obianco',dose:'15 ml/L',note:'Coprire zona colpita e ascelle foglie'},{prod:'sapone',dose:'10 g/L',note:'Rimuovere manualmente i batuffoli con cotton fioc + alcol'},{prod:'obianco',dose:'15 ml/L',note:'Ripetere — controllare anche radici e fusto'}], interval:7, total:3, color:'#a04040'},
+  ragnetto_rosso:       {steps:[{prod:'neem',dose:'5 ml/L',note:'Nebulizzare su tutta la chioma, pagina inf. foglie'},{prod:'sapone',dose:'8 g/L',note:'Alternare con neem — aumentare umidità ambiente'},{prod:'neem',dose:'5 ml/L',note:'Terzo passaggio — verificare assenza ragnatele'}], interval:5, total:3, color:'#c06030'},
+  afidi:                {steps:[{prod:'sapone',dose:'10 g/L',note:'Spruzzare su colonie — getto forte d\'acqua prima del trattamento'},{prod:'neem',dose:'5 ml/L',note:'Trattamento sistemico dopo il lavaggio'}], interval:5, total:2, color:'#6a8a30'},
+  mosca_bianca:         {steps:[{prod:'neem',dose:'5 ml/L',note:'Trattare la sera — le mosche bianche sono più attive di giorno'},{prod:'sapone',dose:'8 g/L',note:'Alternare con neem'},{prod:'neem',dose:'5 ml/L',note:'Terzo passaggio — posizionare trappole gialle adesive'}], interval:7, total:3, color:'#b0a020'},
+  oidio:                {steps:[{prod:'zolfo',dose:'3 g/L',note:'Non trattare sopra i 32°C — rischio fitotossicità'},{prod:'rame',dose:'Polt. bordolese 10 g/L',note:'Alternare con zolfo'},{prod:'zolfo',dose:'3 g/L',note:'Ripetere — rimuovere foglie molto colpite'},{prod:'rame',dose:'Polt. bordolese 10 g/L',note:'Quarto passaggio se necessario'}], interval:10, total:4, color:'#8a6a20'},
+  fumaggine:            {steps:[{prod:'sapone',dose:'10 g/L',note:'Lavare le foglie dalla fumaggine nera — trattare poi la causa (cocciniglia/afidi)'},{prod:'sapone',dose:'10 g/L',note:'Secondo lavaggio — controllare l\'insetto causa'}], interval:10, total:2, color:'#4a4a4a'},
+  clorosi_ferrica:      {steps:[{prod:'ferro',dose:'Ferro chelato 2 ml/L',note:'Trattamento fogliare + irrigazione. Controllare pH substrato (deve essere <7)'},{prod:'ferro',dose:'Ferro chelato 2 ml/L',note:'Ripetere dopo 15gg se le foglie sono ancora gialle'}], interval:15, total:2, color:'#8a8a20'},
+  minatore_fogliare:    {steps:[{prod:'neem',dose:'5 ml/L',note:'Trattamento sistemico — rimuovere le foglie con gallerie visibili'},{prod:'neem',dose:'5 ml/L',note:'Secondo trattamento'},{prod:'neem',dose:'5 ml/L',note:'Terzo passaggio — le larve hanno cicli di 2-3 settimane'}], interval:10, total:3, color:'#5a7a3a'},
+  alternaria:           {steps:[{prod:'rame',dose:'Polt. bordolese 10 g/L',note:'Rimuovere tutte le foglie con macchie — non compostare'},{prod:'rame',dose:'Polt. bordolese 10 g/L',note:'Ripetere — ridurre bagnatura fogliare'},{prod:'rame',dose:'Polt. bordolese 10 g/L',note:'Terzo passaggio'}], interval:10, total:3, color:'#6a4a20'},
+  marciume_radicale:    {steps:[{prod:'rame',dose:'Rame in irrigazione 3 g/L',note:'⚠️ Rinvasare subito: rimuovere radici marce, substrato drenante, vaso pulito. Ridurre annaffiature drasticamente'},{prod:'rame',dose:'Rame in irrigazione 3 g/L',note:'Seconda irrigazione con rame dopo 15gg — non annaffiare fino a substrato quasi asciutto'}], interval:15, total:2, color:'#6a3a20'},
+};
+
+// Prodotti aggiuntivi per cure (non nei preventivi)
+const CURE_EXTRA_PRODUCTS = {
+  ferro: {label:'Ferro chelato', color:'#8a8a20', abbr:'Fe'},
+};
+
+const cureDateMap = {};
+
+function buildCurativeEvents() {
+  // Pulisci la mappa
+  Object.keys(cureDateMap).forEach(k => delete cureDateMap[k]);
+
+  const inv = invLoad();
+  if (!inv.length) return;
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  inv.forEach(it => {
+    const diseases = it.diseases || [];
+    const activeDiseases = diseases.filter(d => !d.resolved && d.date);
+    if (!activeDiseases.length) return;
+
+    const p = sPlants[it.plantTypeIdx];
+    if (!p) return;
+
+    activeDiseases.forEach(disease => {
+      const protocol = CURE_PROTOCOLS[disease.type];
+      if (!protocol) return;
+
+      const startDate = new Date(disease.date + 'T00:00:00');
+      if (isNaN(startDate.getTime())) return;
+
+      // Genera le date dei trattamenti
+      for (let step = 0; step < protocol.total; step++) {
+        const treatDate = new Date(startDate.getTime() + step * protocol.interval * 86400000);
+        // Solo date da oggi in poi (o max 3 giorni nel passato per recuperare)
+        const threeDaysAgo = new Date(today.getTime() - 3 * 86400000);
+        if (treatDate < threeDaysAgo) continue;
+        // Max 3 mesi in avanti
+        const threeMonths = new Date(today.getTime() + 90 * 86400000);
+        if (treatDate > threeMonths) continue;
+
+        const key = gDateKey(treatDate);
+        if (!cureDateMap[key]) cureDateMap[key] = [];
+
+        const stepInfo = protocol.steps[Math.min(step, protocol.steps.length - 1)];
+        cureDateMap[key].push({
+          plant: {id: it.plant_type_idx !== undefined ? it.plant_type_idx : it.plantTypeIdx, name: it.nickname || p.name, icon: p.icon, latin: p.latin},
+          disease: disease,
+          diseaseLabel: INV_DISEASE_LABELS[disease.type] || disease.type,
+          prod: stepInfo.prod,
+          dose: stepInfo.dose,
+          note: stepInfo.note,
+          step: step + 1,
+          totalSteps: protocol.total,
+          color: protocol.color,
+          invId: it.id,
+        });
+      }
+    });
+  });
+}
+
+function cureCompKey(d, invId, diseaseType) {
+  return 'cure_' + d.getFullYear() + '-' + (d.getMonth()+1) + '-' + d.getDate() + '_' + invId + '_' + diseaseType;
+}
+function cureIsDone(d, invId, diseaseType) {
+  try { return localStorage.getItem(cureCompKey(d, invId, diseaseType)) === '1'; } catch { return false; }
+}
+function cureSetDone(d, invId, diseaseType, v) {
+  try { if(v) localStorage.setItem(cureCompKey(d, invId, diseaseType), '1'); else localStorage.removeItem(cureCompKey(d, invId, diseaseType)); } catch {}
+}
+function cureToggleDone(dy, dm, dd, invId, diseaseType) {
+  const date = new Date(dy, dm, dd);
+  const wasDone = cureIsDone(date, invId, diseaseType);
+  cureSetDone(date, invId, diseaseType, !wasDone);
+  if (!wasDone) {
+    const evs = cureDateMap[gDateKey(date)] || [];
+    const ev = evs.find(e => e.invId === invId && e.disease.type === diseaseType);
+    if (ev) {
+      const prodLabel = TR_PRODUCTS[ev.prod]?.label || CURE_EXTRA_PRODUCTS[ev.prod]?.label || ev.prod;
+      _autoDiary(date, ev.plant.name, 'trattamento curativo', '🔴 ' + ev.diseaseLabel + ' — ' + prodLabel + ' ' + ev.dose + (ev.note ? ' — ' + ev.note : ''));
+    }
+  }
+  gRenderCalendar();
+  if (document.getElementById('g-overlay').classList.contains('open')) {
+    const k = gDateKey(date);
+    const fe = (gFilter==='all'||gFilter==='fert') ? (gDateMap[k]||[]).filter(e=>!gHiddenPlants.has(e.plant.id)) : [];
+    const be = (gFilter==='all'||gFilter==='biobizz') ? (bbDateMap[k]||[]).filter(e=>!bbHiddenProds.has(e.prod)) : [];
+    const te = (gFilter==='all'||gFilter==='tratt') ? (trDateMap[k]||[]).filter(e=>!trHiddenProds.has(e.prod)) : [];
+    const we = (gFilter==='all'||gFilter==='acqua') ? (waDateMap[k]||[]).filter(e=>!waHiddenPlants.has(e.plant.id)) : [];
+    gOpenDay(date, fe, be, te, we);
+  }
+}
 
 function trDateKey(d){return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
 function trCompKey(d,pid,prod){return 'tr_'+trDateKey(d)+'_'+pid+'_'+prod;}
