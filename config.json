@@ -10,6 +10,13 @@
             "rain": "mm"
         }
     },
+    "sms": {
+        "telefono": "INSERISCI_QUI_IL_TUO_NUMERO_+39",
+        "riepilogo_mattutino": true,
+        "allerta_gelo": true,
+        "allerta_terreno_secco": true,
+        "allerta_pioggia": true
+    },
     "soglie_umidita": {
         "succulente":    {"secco": 10, "ok_min": 10, "ok_max": 35, "umido": 40},
         "tropicali":     {"secco": 25, "ok_min": 25, "ok_max": 55, "umido": 65},
