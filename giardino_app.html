@@ -2,8 +2,16 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#5a7a4a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Giardino">
+<meta name="description" content="Dashboard gestione giardino — piante, irrigazione, sensori meteo">
 <title>Il mio Giardino 🌿</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icons/icon-192x192.png" type="image/png">
+<link rel="apple-touch-icon" href="/icons/icon-192x192.png">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -14,6 +22,11 @@
   --radius:12px; --nav-h:64px;
 }
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+/* PWA standalone: safe areas per notch/barra di stato */
+@media (display-mode: standalone) {
+  body{padding-top:env(safe-area-inset-top)}
+  .app-nav{padding-bottom:env(safe-area-inset-bottom)}
+}
 .section{display:none;padding:1.2rem 1rem calc(var(--nav-h) + 1.5rem);min-height:100vh}
 .section.active{display:block}
 
@@ -390,11 +403,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 </head>
 <body>
 
+<!-- Barra offline -->
+<div id="offline-bar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#c04040;color:#fff;padding:6px 16px;font-size:12px;font-weight:500;align-items:center;justify-content:center;gap:6px;font-family:'DM Sans',sans-serif">
+  <span>📡 Offline — i dati meteo e le modifiche non saranno sincronizzate</span>
+</div>
+
 <!-- ── SECTION: SCHEDE ─────────────────────────────────────────────── -->
 <div id="sec-schede" class="section">
   <div class="app-header">
     <h1>Le mie piante 🌿</h1>
     <p>Concimazione · Substrato · Esposizione · Cure · Terreno vivo</p>
+    <button id="pwa-install-btn" onclick="pwaInstall()" style="display:none;margin-top:6px;padding:6px 14px;font-size:11px;border:1px solid var(--accent);background:var(--accent-light);color:var(--accent);border-radius:20px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500">📲 Installa app</button>
   </div>
   <input type="text" placeholder="Cerca pianta o caratteristica..." oninput="sFilter(this.value)" />
   <p class="count-label" id="s-count">20 piante</p>
@@ -4112,6 +4131,56 @@ function bbVisibleEvents(date){
 
 // ══════════════════════════════════════════════════════════════════════
 // INIT
+// ══════════════════════════════════════════════════════════════════════
+// ⑫ PWA — Service Worker + Offline
+// ══════════════════════════════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => {
+        console.log('🌿 SW registrato:', reg.scope);
+        // Controlla aggiornamenti ogni 30 minuti
+        setInterval(() => reg.update(), 1800000);
+      })
+      .catch(err => console.log('SW errore:', err));
+  });
+}
+
+// Indicatore online/offline
+function updateOnlineStatus() {
+  const bar = document.getElementById('offline-bar');
+  if (!bar) return;
+  if (navigator.onLine) {
+    bar.style.display = 'none';
+  } else {
+    bar.style.display = 'flex';
+  }
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+
+// Prompt installazione PWA
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const btn = document.getElementById('pwa-install-btn');
+  if (btn) btn.style.display = 'inline-flex';
+});
+
+function pwaInstall() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(result => {
+    if (result.outcome === 'accepted') {
+      console.log('🌿 App installata!');
+    }
+    deferredPrompt = null;
+    const btn = document.getElementById('pwa-install-btn');
+    if (btn) btn.style.display = 'none';
+  });
+}
+
 // ══════════════════════════════════════════════════════════════════════
 showSection('schede');
 </script>

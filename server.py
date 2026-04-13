@@ -136,6 +136,47 @@ class Handler(BaseHTTPRequestHandler):
             self.send_html()
             return
 
+        # ── File statici PWA ──────────────────────────────────────────
+        STATIC_FILES = {
+            "/manifest.json":  ("manifest.json",  "application/manifest+json"),
+            "/sw.js":          ("sw.js",           "application/javascript"),
+            "/favicon.ico":    ("icons/favicon.ico","image/x-icon"),
+        }
+        if path in STATIC_FILES:
+            fname, ctype = STATIC_FILES[path]
+            fpath = os.path.join(os.path.dirname(__file__), fname)
+            try:
+                with open(fpath, "rb") as f:
+                    body = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", ctype)
+                self.send_header("Content-Length", len(body))
+                if path == "/sw.js":
+                    self.send_header("Service-Worker-Allowed", "/")
+                self.end_headers()
+                self.wfile.write(body)
+            except FileNotFoundError:
+                self.send_response(404)
+                self.end_headers()
+            return
+
+        # Icone PWA: /icons/icon-192x192.png ecc.
+        if path.startswith("/icons/") and path.endswith(".png"):
+            fpath = os.path.join(os.path.dirname(__file__), path.lstrip("/"))
+            try:
+                with open(fpath, "rb") as f:
+                    body = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "image/png")
+                self.send_header("Content-Length", len(body))
+                self.send_header("Cache-Control", "public, max-age=604800")
+                self.end_headers()
+                self.wfile.write(body)
+            except FileNotFoundError:
+                self.send_response(404)
+                self.end_headers()
+            return
+
         # GET /api/diary — restituisce tutte le voci (opzionale: ?plant=X&op=Y)
         if path == "/api/diary":
             params = parse_qs(parsed.query)
