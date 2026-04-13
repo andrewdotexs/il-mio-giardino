@@ -1,23 +1,24 @@
 #!/usr/bin/env python3
 """
-Giardino App — Sistema Notifiche SMS
-=====================================
-Controlla il calendario e i sensori, invia SMS con le allerte e gli eventi del giorno.
+Giardino App — Sistema Notifiche
+=================================
+Controlla il calendario e i sensori, invia notifiche/SMS con allerte e eventi del giorno.
 
 Modalità:
-  python notifier.py              →  Controlla e invia se necessario
-  python notifier.py --test       →  Invia un SMS di prova
-  python notifier.py --cron       →  Installa il job cron in Termux (mattina ore 8)
+  python notifier.py              →  Controlla e invia allerte se necessario
+  python notifier.py --test       →  Invia una notifica di prova
+  python notifier.py --cron       →  Installa il job cron in Termux
   python notifier.py --summary    →  Forza l'invio del riepilogo giornaliero
 
-Metodo di invio SMS (in ordine di priorità):
-  1. Termux:API  (termux-sms-send) — Gratis, usa la SIM del telefono
-  2. Fallback: salva il messaggio su file notifications.log
+Metodo di invio (configurabile in config.json → sms → metodo):
+  "notifica"  →  Notifica Android via termux-notification (default, consigliato)
+                  Non richiede permesso SMS, funziona subito
+  "sms"       →  SMS via termux-sms-send
+                  Richiede permesso SMS su Termux:API + numero in config.json
 
 Setup Termux:
   pkg install termux-api
   + installare l'app Termux:API da F-Droid
-  + abilitare permesso SMS: Android > Impostazioni > App > Termux > Permessi > SMS
 """
 
 import json
@@ -44,7 +45,8 @@ def load_config():
 
 CFG = load_config()
 SMS_NUMBER = CFG.get("sms", {}).get("telefono", "")
-SMS_ENABLED = bool(SMS_NUMBER and not SMS_NUMBER.startswith("INSERISCI"))
+NOTIFY_METHOD = CFG.get("sms", {}).get("metodo", "notifica")  # "notifica" o "sms"
+SMS_ENABLED = bool(SMS_NUMBER and not SMS_NUMBER.startswith("INSERISCI")) if NOTIFY_METHOD == "sms" else True
 ECOWITT_ENABLED = all(
     CFG.get("ecowitt", {}).get(k, "").strip() and not CFG.get("ecowitt", {}).get(k, "").startswith("INSERISCI")
     for k in ["application_key", "api_key", "mac"]
@@ -62,44 +64,80 @@ SOGLIE = CFG.get("soglie_umidita", {
 })
 
 
-# ── SMS Sender ────────────────────────────────────────────────────────
+# ── Notifiche ─────────────────────────────────────────────────────────
 def is_termux():
     """Controlla se siamo in Termux"""
     return os.path.exists("/data/data/com.termux") or "TERMUX" in os.environ.get("PREFIX", "")
+
+def send_notification(title, message, priority="high"):
+    """Invia una notifica Android via termux-notification"""
+    if not is_termux():
+        log(f"[NON TERMUX] Notifica salvata nel log")
+        log(f"  Titolo: {title}")
+        log(f"  Messaggio: {message}")
+        return False
+
+    try:
+        cmd = [
+            "termux-notification",
+            "--title", title,
+            "--content", message[:4000],
+            "--priority", priority,
+            "--vibrate", "500,200,500",
+            "--led-color", "00ff00",
+            "--group", "giardino",
+            "--id", "giardino_" + str(hash(title) % 10000),
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            log(f"[NOTIFICA OK] {title} ({len(message)} car.)")
+            return True
+        else:
+            log(f"[NOTIFICA ERRORE] {result.stderr}")
+            return False
+    except FileNotFoundError:
+        log("[NOTIFICA ERRORE] termux-notification non trovato. Installa: pkg install termux-api")
+        return False
+    except Exception as e:
+        log(f"[NOTIFICA ERRORE] {e}")
+        return False
 
 def send_sms(number, message):
     """Invia SMS via Termux:API"""
     if not number:
         log(f"[SKIP] Nessun numero configurato")
         return False
-
-    # Tronca a 1600 caratteri (limite SMS concatenati)
     if len(message) > 1600:
         message = message[:1597] + "..."
-
-    if is_termux():
-        try:
-            result = subprocess.run(
-                ["termux-sms-send", "-n", number, message],
-                capture_output=True, text=True, timeout=30
-            )
-            if result.returncode == 0:
-                log(f"[SMS OK] Inviato a {number} ({len(message)} car.)")
-                return True
-            else:
-                log(f"[SMS ERRORE] {result.stderr}")
-                return False
-        except FileNotFoundError:
-            log("[SMS ERRORE] termux-sms-send non trovato. Installa: pkg install termux-api")
-            return False
-        except Exception as e:
-            log(f"[SMS ERRORE] {e}")
-            return False
-    else:
-        log(f"[NON TERMUX] SMS salvato nel log (non in ambiente Termux)")
+    if not is_termux():
+        log(f"[NON TERMUX] SMS salvato nel log")
         log(f"  Destinatario: {number}")
         log(f"  Messaggio: {message}")
         return False
+    try:
+        result = subprocess.run(
+            ["termux-sms-send", "-n", number, message],
+            capture_output=True, text=True, timeout=30
+        )
+        if result.returncode == 0:
+            log(f"[SMS OK] Inviato a {number} ({len(message)} car.)")
+            return True
+        else:
+            log(f"[SMS ERRORE] {result.stderr}")
+            return False
+    except FileNotFoundError:
+        log("[SMS ERRORE] termux-sms-send non trovato. Installa: pkg install termux-api")
+        return False
+    except Exception as e:
+        log(f"[SMS ERRORE] {e}")
+        return False
+
+def notify(message, title="🌿 Giardino", priority="high"):
+    """Dispatcher: invia tramite il metodo configurato (notifica o sms)"""
+    if NOTIFY_METHOD == "sms":
+        return send_sms(SMS_NUMBER, f"{title}\n\n{message}")
+    else:
+        return send_notification(title, message, priority)
 
 def log(msg):
     """Log su file e console"""
@@ -368,18 +406,22 @@ def install_cron():
 def main():
     args = sys.argv[1:]
 
-    if not SMS_ENABLED:
-        print("⚠️  SMS non configurato!")
-        print(f"   Aggiungi il tuo numero in config.json nella sezione 'sms'")
-        print(f'   Esempio: "sms": {{"telefono": "+393331234567"}}')
+    if NOTIFY_METHOD == "sms" and not SMS_ENABLED:
+        print("⚠️  SMS configurato ma numero mancante!")
+        print(f'   Aggiungi il tuo numero in config.json: "sms": {{"telefono": "+393331234567"}}')
+        print(f'   Oppure usa le notifiche Android: "sms": {{"metodo": "notifica"}}')
         if "--test" not in args:
             return
 
     if "--test" in args:
-        number = SMS_NUMBER or input("Inserisci il numero di telefono (+39...): ").strip()
-        msg = "🌿 Test Giardino App — se ricevi questo SMS, le notifiche funzionano! ✅"
-        print(f"\nInvio SMS di test a {number}...")
-        send_sms(number, msg)
+        msg = "🌿 Test Giardino App — se ricevi questo messaggio, le notifiche funzionano! ✅"
+        if NOTIFY_METHOD == "sms":
+            number = SMS_NUMBER or input("Inserisci il numero (+39...): ").strip()
+            print(f"\nInvio SMS di test a {number}...")
+            send_sms(number, msg)
+        else:
+            print(f"\nInvio notifica di test...")
+            send_notification("🌿 Test Giardino", msg)
         return
 
     if "--cron" in args:
@@ -390,7 +432,7 @@ def main():
         log("=== Riepilogo giornaliero ===")
         msg = build_daily_summary()
         log(f"Messaggio ({len(msg)} car.):\n{msg}")
-        send_sms(SMS_NUMBER, msg)
+        notify(msg, "🌿 Riepilogo Giardino")
         return
 
     # Modalità default: controlla allerte critiche
@@ -399,11 +441,10 @@ def main():
     # Check gelo
     frost_msg = build_frost_alert()
     if frost_msg:
-        # Evita di inviare la stessa allerta più volte (controlla il log)
         last_frost = _last_alert_time("GELO")
         if not last_frost or (datetime.now() - last_frost).total_seconds() > 3600:
             log("⚠️  Allerta gelo rilevata!")
-            send_sms(SMS_NUMBER, frost_msg)
+            notify(frost_msg, "🥶 Allerta Gelo!")
             _save_alert_time("GELO")
         else:
             log("Allerta gelo già inviata nell'ultima ora, skip")
@@ -414,7 +455,7 @@ def main():
         last_soil = _last_alert_time("SECCO")
         if not last_soil or (datetime.now() - last_soil).total_seconds() > 7200:
             log("⚠️  Allerta terreno secco!")
-            send_sms(SMS_NUMBER, soil_msg)
+            notify(soil_msg, "🏜️ Terreno Secco!")
             _save_alert_time("SECCO")
         else:
             log("Allerta terreno secco già inviata nelle ultime 2 ore, skip")
@@ -429,7 +470,7 @@ def _last_alert_time(alert_type):
         with open(LOG_FILE, "r") as f:
             lines = f.readlines()
         for line in reversed(lines):
-            if f"Allerta {alert_type.lower()}" in line.lower() and "[SMS OK]" in line:
+            if f"allerta {alert_type.lower()}" in line.lower() and ("[SMS OK]" in line or "[NOTIFICA OK]" in line):
                 ts = line[1:20]
                 return datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
     except:

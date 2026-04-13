@@ -11,7 +11,8 @@
         }
     },
     "sms": {
-        "telefono": "INSERISCI_QUI_IL_TUO_NUMERO_+39",
+        "metodo": "notifica",
+        "telefono": "",
         "riepilogo_mattutino": true,
         "allerta_gelo": true,
         "allerta_terreno_secco": true,
