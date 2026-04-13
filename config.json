@@ -10,6 +10,11 @@
             "rain": "mm"
         }
     },
+    "posizione": {
+        "latitudine": 41.9028,
+        "longitudine": 12.4964,
+        "nome": "Roma"
+    },
     "sms": {
         "metodo": "notifica",
         "telefono": "",

@@ -300,8 +300,35 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({
                 "configured": ECOWITT_ENABLED,
                 "soglie": CFG.get("soglie_umidita", {}),
-                "mac": ECOWITT_MAC[:8] + "..." if ECOWITT_ENABLED else ""
+                "mac": ECOWITT_MAC[:8] + "..." if ECOWITT_ENABLED else "",
+                "posizione": CFG.get("posizione", {})
             })
+            return
+
+        # GET /api/forecast — previsioni meteo 7 giorni via Open-Meteo (gratis, no API key)
+        if path == "/api/forecast":
+            pos = CFG.get("posizione", {})
+            lat = pos.get("latitudine", 41.9028)
+            lon = pos.get("longitudine", 12.4964)
+            try:
+                params = urlencode({
+                    "latitude": lat,
+                    "longitude": lon,
+                    "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,weather_code",
+                    "hourly": "temperature_2m,precipitation,wind_speed_10m",
+                    "timezone": "auto",
+                    "forecast_days": "7",
+                })
+                url = f"https://api.open-meteo.com/v1/forecast?{params}"
+                req = Request(url, headers={"User-Agent": "GiardinoApp/1.0"})
+                with urlopen(req, timeout=10) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                data["posizione"] = pos.get("nome", "")
+                self.send_json(data)
+            except URLError as e:
+                self.send_json({"error": f"Errore Open-Meteo: {e}"}, 502)
+            except Exception as e:
+                self.send_json({"error": str(e)}, 500)
             return
 
         self.send_json({"error": "Not found"}, 404)

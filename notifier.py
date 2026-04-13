@@ -291,6 +291,13 @@ def build_daily_summary():
         parts.append("⚠️ ALLERTE:")
         parts.extend(alerts)
 
+    # ── Previsioni
+    fc_alerts = build_forecast_alerts()
+    if fc_alerts:
+        parts.append("")
+        parts.append("🔮 PREVISIONI:")
+        parts.extend(fc_alerts)
+
     # Nota sul calendario
     parts.append("")
     parts.append("📆 Controlla il calendario nell'app per le attività di oggi")
@@ -400,6 +407,75 @@ def install_cron():
             print(f"❌ Errore: {proc.stderr}")
     except FileNotFoundError:
         print("⚠️  crontab non trovato. Installa: pkg install cronie && sv-enable crond")
+
+
+# ── Previsioni Open-Meteo ─────────────────────────────────────────────
+def fetch_forecast():
+    """Recupera previsioni 7 giorni da Open-Meteo (gratis, no API key)"""
+    pos = CFG.get("posizione", {})
+    lat = pos.get("latitudine", 41.9028)
+    lon = pos.get("longitudine", 12.4964)
+    try:
+        url = (
+            f"https://api.open-meteo.com/v1/forecast?"
+            f"latitude={lat}&longitude={lon}"
+            f"&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_gusts_10m_max,weather_code"
+            f"&timezone=auto&forecast_days=7"
+        )
+        req = Request(url, headers={"User-Agent": "GiardinoNotifier/1.0"})
+        with urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        return data.get("daily")
+    except Exception as e:
+        log(f"[FORECAST ERRORE] {e}")
+        return None
+
+
+def build_forecast_alerts():
+    """Genera allerte predittive dalla previsione 7 giorni"""
+    daily = fetch_forecast()
+    if not daily or not daily.get("time"):
+        return None
+
+    DAYS_IT = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab']
+    alerts = []
+
+    for i in range(len(daily["time"])):
+        d = datetime.strptime(daily["time"][i], "%Y-%m-%d")
+        day_label = DAYS_IT[d.weekday()] + " " + str(d.day) + "/" + str(d.month)
+        if i == 0: day_label = "Oggi"
+        elif i == 1: day_label = "Domani"
+
+        t_min = daily["temperature_2m_min"][i]
+        t_max = daily["temperature_2m_max"][i]
+        rain = daily["precipitation_sum"][i]
+
+        # Gelo
+        if t_min < 0:
+            alerts.append(f"🥶 GELO {day_label}: {t_min:.0f}°C! Porta dentro le tropicali")
+        elif t_min < 5:
+            alerts.append(f"❄️ Freddo {day_label}: min {t_min:.0f}°C — proteggi Carmona e Limone")
+
+        # Caldo
+        if t_max > 35:
+            alerts.append(f"🔥 Caldo {day_label}: max {t_max:.0f}°C — aumenta annaffiature")
+
+        # Pioggia forte
+        if rain > 30:
+            alerts.append(f"⛈️ Pioggia intensa {day_label}: {rain:.0f}mm — verifica drenaggio")
+
+    # Gelata tardiva/precoce (primavera/autunno)
+    month = datetime.now().month
+    if month in (3,4,5,9,10,11):
+        for i in range(len(daily["time"])):
+            t_min = daily["temperature_2m_min"][i]
+            if 0 <= t_min < 2:
+                tipo = "tardiva" if month <= 5 else "precoce"
+                d = datetime.strptime(daily["time"][i], "%Y-%m-%d")
+                alerts.append(f"🌡️ Gelata {tipo} possibile: {t_min:.1f}°C — proteggi talee e rinvasi recenti")
+                break
+
+    return alerts if alerts else None
 
 
 # ── Main ──────────────────────────────────────────────────────────────

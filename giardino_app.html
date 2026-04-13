@@ -124,6 +124,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .wa-smart-badge.urgent{background:#faeaea;color:#b04040}
 .wa-smart-badge.adjust{background:#fdf5e0;color:#8a6a20}
 .wa-smart-badge.info{background:#f0ece4;color:#6a6050}
+.param-hint{font-size:9px;color:var(--muted);margin-top:2px;line-height:1.3}
+/* Forecast */
+.fc-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+@media(max-width:600px){.fc-grid{grid-template-columns:repeat(4,1fr)}}
+.fc-day{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 8px;text-align:center;transition:all .15s}
+.fc-day.today{border-color:var(--accent);background:var(--accent-light)}
+.fc-day.alert-frost{border-color:#c04040;background:#faeaea}
+.fc-day.alert-heat{border-color:#d48a20;background:#fdf5e0}
+.fc-day.alert-rain{border-color:#3a6abf;background:#e6f1fb}
+.fc-day-name{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+.fc-day-date{font-size:11px;color:var(--text);margin-bottom:4px}
+.fc-day-icon{font-size:22px;margin:4px 0}
+.fc-day-temps{display:flex;justify-content:center;gap:6px;font-size:12px;font-weight:600}
+.fc-day-max{color:#c04040}.fc-day-min{color:#3a6abf}
+.fc-day-rain{font-size:9px;color:#3a6abf;margin-top:2px}
+.fc-day-wind{font-size:9px;color:var(--muted);margin-top:1px}
 .treat-dot.done{opacity:.35;position:relative}
 .treat-dot.done::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:7px;color:#fff;background:rgba(0,0,0,.35);border-radius:2px}
 .tr-prod-legend{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;max-width:900px;margin:0 auto .7rem}
@@ -1027,6 +1043,83 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   </div>
 </div>
 
+<!-- ── SECTION: PARAMETRI ──────────────────────────────────── -->
+<div id="sec-params" class="section">
+  <div class="app-header">
+    <h1>Parametri ⚙️</h1>
+    <p>Regola i fattori di calcolo per il tuo microclima e le tue piante</p>
+  </div>
+
+  <!-- Calcolatore Acqua -->
+  <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
+    <div class="calc-card-title">💧 Calcolatore Acqua</div>
+    <div class="calc-row">
+      <div class="calc-field"><label>Fattore drenaggio</label><input type="number" id="p-drenaggio" step="0.05" min="1" max="1.5"><div class="param-hint">Extra acqua per garantire il drenaggio (1.0=nessuno, 1.2=+20%)</div></div>
+      <div class="calc-field"><label>Base frequenza (giorni)</label><input type="number" id="p-freq-base" step="1" min="1" max="30"><div class="param-hint">Intervallo base tra annaffiature, poi moltiplicato per i fattori</div></div>
+    </div>
+  </div>
+
+  <!-- ET₀ -->
+  <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
+    <div class="calc-card-title">🌤️ Evapotraspirazione (ET₀)</div>
+    <div class="calc-row">
+      <div class="calc-field"><label>ET₀ di riferimento (mm/g)</label><input type="number" id="p-et0-ref" step="0.1" min="1" max="8"><div class="param-hint">Giornata primaverile "media" (20°C, 60% umidità). 2.5-3.5 per Italia</div></div>
+      <div class="calc-field"><label>Conversione solare</label><input type="number" id="p-solar-conv" step="0.002" min="0.02" max="0.06"><div class="param-hint">W/m² istantanei → MJ/m²/giorno. Dipende dalla latitudine e ore di luce</div></div>
+    </div>
+    <div class="calc-row">
+      <div class="calc-field"><label>Fattore ET₀ minimo</label><input type="number" id="p-et0-min" step="0.05" min="0.1" max="0.5"><div class="param-hint">Limite inferiore (inverno/pioggia): non scende sotto questo valore</div></div>
+      <div class="calc-field"><label>Fattore ET₀ massimo</label><input type="number" id="p-et0-max" step="0.1" min="1.5" max="4"><div class="param-hint">Limite superiore (ondata calore): non sale sopra questo valore</div></div>
+    </div>
+  </div>
+
+  <!-- Fertirrigazione -->
+  <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
+    <div class="calc-card-title">🧪 Fertirrigazione</div>
+    <div class="calc-row">
+      <div class="calc-field"><label>Riduzione acqua (%)</label><input type="number" id="p-ferti-reduction" step="5" min="30" max="100"><div class="param-hint">% dell'acqua normale da usare in fertirrigazione (70%=meno acqua, più concentrato)</div></div>
+    </div>
+  </div>
+
+  <!-- Allerte Meteo -->
+  <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
+    <div class="calc-card-title">⚠️ Soglie Allerte Meteo</div>
+    <div class="calc-row">
+      <div class="calc-field"><label>Allerta gelo (°C)</label><input type="number" id="p-alert-frost" step="1" min="-5" max="10"><div class="param-hint">Sotto questa temperatura: notifica gelo</div></div>
+      <div class="calc-field"><label>Allerta caldo (°C)</label><input type="number" id="p-alert-heat" step="1" min="25" max="45"><div class="param-hint">Sopra questa temperatura: notifica caldo</div></div>
+    </div>
+    <div class="calc-row">
+      <div class="calc-field"><label>Allerta vento (km/h)</label><input type="number" id="p-alert-wind" step="5" min="20" max="100"><div class="param-hint">Sopra questa velocità: proteggi i vasi leggeri</div></div>
+      <div class="calc-field"><label>Umidità interna min (%)</label><input type="number" id="p-alert-hum-in" step="5" min="20" max="60"><div class="param-hint">Sotto questa: nebulizza orchidee e tropicali</div></div>
+    </div>
+  </div>
+
+  <!-- Irrigazione Smart -->
+  <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
+    <div class="calc-card-title">📅 Irrigazione Smart (Calendario)</div>
+    <div class="calc-row">
+      <div class="calc-field"><label>Pioggia "salta" (mm)</label><input type="number" id="p-rain-skip" step="1" min="1" max="20"><div class="param-hint">Pioggia giornaliera sopra cui suggerisce di saltare l'annaffiatura esterna</div></div>
+      <div class="calc-field"><label>Pioggia "sicuro" (mm)</label><input type="number" id="p-rain-sure" step="1" min="5" max="50"><div class="param-hint">Pioggia giornaliera sopra cui salta sicuramente</div></div>
+    </div>
+    <div class="calc-row">
+      <div class="calc-field"><label>ET₀ soglia "anticipa"</label><input type="number" id="p-et0-anticipa" step="0.1" min="1.1" max="2.5"><div class="param-hint">Fattore ET₀ sopra cui suggerisce di anticipare la prossima annaffiatura</div></div>
+      <div class="calc-field"><label>ET₀ soglia "ritarda"</label><input type="number" id="p-et0-ritarda" step="0.1" min="0.1" max="0.8"><div class="param-hint">Fattore ET₀ sotto cui suggerisce di ritardare</div></div>
+    </div>
+  </div>
+
+  <!-- Soglie Umidità Terreno -->
+  <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
+    <div class="calc-card-title">📡 Soglie Umidità Terreno (WH51)</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Percentuali di umidità per ogni categoria di pianta. "Secco" = sotto cui annaffiare, "Umido" = sopra cui è troppo bagnato.</div>
+    <div id="p-soglie-grid" style="display:flex;flex-direction:column;gap:6px"></div>
+  </div>
+
+  <div style="max-width:700px;margin:12px auto;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+    <button class="save-btn" onclick="paramsSave()" style="padding:10px 24px">💾 Salva parametri</button>
+    <button class="ctrl-btn" onclick="paramsReset()" style="padding:10px 16px;color:#b04040">🔄 Ripristina default</button>
+  </div>
+  <div id="p-save-msg" style="text-align:center;font-size:12px;color:var(--accent);margin-top:6px;display:none">✅ Parametri salvati!</div>
+</div>
+
 <!-- ── SECTION: METEO E SENSORI ────────────────────────────── -->
 <div id="sec-meteo" class="section">
   <div class="app-header">
@@ -1052,6 +1145,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:500;margin-bottom:8px">📊 Storico ultime 24 ore</div>
   </div>
   <div id="meteo-history" style="max-width:900px;margin:0 auto"></div>
+
+  <!-- Previsioni 7 giorni -->
+  <div style="max-width:900px;margin:1.2rem auto .6rem">
+    <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:500;margin-bottom:4px">🔮 Previsioni 7 giorni</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Fonte: Open-Meteo (modelli ECMWF, DWD, NOAA)</div>
+  </div>
+  <div id="meteo-forecast" style="max-width:900px;margin:0 auto 10px"></div>
+
+  <!-- Allerte predittive -->
+  <div id="meteo-forecast-alerts" style="max-width:900px;margin:0 auto 1rem"></div>
 </div>
 
 <!-- ── SECTION: INVENTARIO VASI ────────────────────────────── -->
@@ -1320,13 +1423,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   <button class="nav-tab" id="tab-meteo" data-sec="meteo" onclick="showSection('meteo')">
     <span class="nav-icon">🌤️</span>Meteo
   </button>
+  <button class="nav-tab" id="tab-params" data-sec="params" onclick="showSection('params')">
+    <span class="nav-icon">⚙️</span>Parametri
+  </button>
 </nav>
 
 <script>
 // ══════════════════════════════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════════════════════════════
-const sectionInited = {schede:false, mensile:false, giorni:false, diario:false, acqua:false, vasi:false, meteo:false};
+const sectionInited = {schede:false, mensile:false, giorni:false, diario:false, acqua:false, vasi:false, meteo:false, params:false};
 
 function showSection(name) {
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -1341,6 +1447,7 @@ function showSection(name) {
     else if (name==='acqua') wInitCalc();
     else if (name==='vasi') invInit();
     else if (name==='meteo') meteoInit();
+    else if (name==='params') paramsInit();
     sectionInited[name] = true;
   }
   if (name==='diario') dRender();
@@ -2600,8 +2707,7 @@ function calcET0(temp, humidity, solarWm2, windKmh) {
   const RH = Math.max(10, Math.min(100, humidity));  // %
   // Ecowitt dà radiazione istantanea in W/m². Per stimare il totale giornaliero:
   // ~8-10 ore di sole effettivo, ma il picco non è costante.
-  // Fattore 0.032 ≈ 9h equivalenti × 3600 / 1e6
-  const Rs = Math.max(0, solarWm2) * 0.032;         // W/m² istantanei → MJ/m²/day stimato
+  const Rs = Math.max(0, solarWm2) * PARAMS.solarConv;  // W/m² istantanei → MJ/m²/day stimato
   const u2 = Math.max(0, windKmh) / 3.6;            // km/h → m/s
 
   // Pressione atmosferica approssimata (livello mare)
@@ -2640,13 +2746,12 @@ function calcET0(temp, humidity, solarWm2, windKmh) {
   et0 = Math.min(15, et0);
 
   // ET₀ di riferimento per giornata "media" di primavera
-  // (20°C, 60% umidità, 350 W/m², 8 km/h) ≈ 3.0 mm/day
-  const et0Ref = 3.0;
+  const et0Ref = PARAMS.et0Ref;
 
   // Fattore: rapporto tra ET₀ attuale e ET₀ di riferimento
   // Questo sostituisce seasFactor × expFactor
   let factor = et0 / et0Ref;
-  factor = Math.max(0.25, Math.min(2.5, factor));  // Clamp 0.25-2.5×
+  factor = Math.max(PARAMS.et0Min, Math.min(PARAMS.et0Max, factor));  // Clamp
 
   // Descrizione condizioni
   let desc = '';
@@ -2693,15 +2798,14 @@ function wCalculate() {
   const waterCapacity = wVolLiters * 1000 * whc;
 
   // Quantità da dare per annaffiatura: saturazione target × fattori
-  // Aggiungiamo ~20% extra per garantire il drenaggio completo
-  const baseWater = waterCapacity * 1.20;
+  // Aggiungiamo extra per garantire il drenaggio completo
+  const baseWater = waterCapacity * PARAMS.drenaggio;
   const adjustedWater = baseWater * potFactor * plantFactor;
   const waterMl = Math.round(adjustedWater / 10) * 10; // arrotonda a 10ml
 
   // Frequenza stimata (giorni tra una annaffiatura e l'altra)
-  // Base: 7 giorni × stagione × esposizione × pianta × substrato
   const subRetentionFactor = whc / 0.45; // normalizzato su terriccio standard
-  const freqBase = 7;
+  const freqBase = PARAMS.freqBase;
   const freqDays = Math.round(freqBase * (1/seasFactor) * (1/expFactor) * (1/stageFactor) * subRetentionFactor * potFactor);
   const freqClamped = Math.max(1, Math.min(60, freqDays));
 
@@ -3035,8 +3139,8 @@ function fiOpenFromCalendar() {
         }
         const potFactor = POT_MAT_FACTOR[it.potMat] || 1.0;
         const plantFactor = PLANT_WATER_FACTOR[pm.id] || 1.0;
-        const normalWater = vol * 1000 * whc * 1.2 * potFactor * plantFactor;
-        const waterMl = Math.round(normalWater * 0.7);
+        const normalWater = vol * 1000 * whc * PARAMS.drenaggio * potFactor * plantFactor;
+        const waterMl = Math.round(normalWater * (PARAMS.fertiReduction / 100));
         const pots = it.qty || 1;
         const label = it.nickname || (invItems.length > 1 ? pm.name + ' #' + (idx+1) : pm.name);
         const dimsStr = it.potShape === 'square'
@@ -3854,6 +3958,8 @@ async function meteoRefresh() {
     document.getElementById('meteo-weather').innerHTML = meteoPlaceholderWidgets();
     document.getElementById('meteo-soil').innerHTML = '<div style="text-align:center;color:var(--muted);padding:1rem;font-size:12px">Configura Ecowitt per vedere i dati dei sensori WH51</div>';
     document.getElementById('meteo-alerts').innerHTML = '';
+    // Le previsioni Open-Meteo funzionano anche senza Ecowitt
+    meteoFetchForecast();
     return;
   }
   statusEl.textContent = '⏳ Caricamento dati...';
@@ -3870,6 +3976,7 @@ async function meteoRefresh() {
     meteoRenderSoil();
     meteoRenderAlerts();
     meteoUpdateInvBadges();
+    meteoFetchForecast();
     // Auto-refresh ogni 5 minuti
     if (meteoTimer) clearInterval(meteoTimer);
     meteoTimer = setInterval(meteoRefresh, 300000);
@@ -3946,7 +4053,7 @@ function meteoRenderWeather() {
 function meteoRenderSoil() {
   if (!meteoData || !meteoData.data) return;
   const inv = invLoad();
-  const soglie = (meteoConfig && meteoConfig.soglie) || SOGLIE_DEFAULT;
+  const soglie = PARAMS.soglie || SOGLIE_DEFAULT;
   const soilData = {};
 
   // Estrai i dati soil moisture dall'API (cercali in varie possibili posizioni)
@@ -4024,33 +4131,33 @@ function meteoRenderSoil() {
 function meteoRenderAlerts() {
   if (!meteoData || !meteoData.data) return;
   const inv = invLoad();
-  const soglie = (meteoConfig && meteoConfig.soglie) || SOGLIE_DEFAULT;
+  const soglie = PARAMS.soglie || SOGLIE_DEFAULT;
   const alerts = [];
 
   // Temp esterna
   const tempOut = meteoGetVal(meteoData,'outdoor','temperature');
   if (tempOut !== null) {
     const t = parseFloat(tempOut);
-    if (t < 5) alerts.push({type:'danger', icon:'🥶', text:`<b>Temperatura ${t.toFixed(1)}°C!</b> Porta dentro Carmona (<12°C), Stella di Natale, Tradescantia, e proteggi il Limone (<5°C).`});
-    else if (t < 10) alerts.push({type:'warn', icon:'❄️', text:`<b>Temperatura ${t.toFixed(1)}°C</b> — il Carmona Bonsai e la Stella di Natale non devono stare fuori sotto i 12°C.`});
-    else if (t > 35) alerts.push({type:'warn', icon:'🔥', text:`<b>Temperatura ${t.toFixed(1)}°C!</b> Sposta le piante in ombra e aumenta le annaffiature. Nebulizza le foglie la sera.`});
+    if (t < PARAMS.alertFrost) alerts.push({type:'danger', icon:'🥶', text:`<b>Temperatura ${t.toFixed(1)}°C!</b> Porta dentro Carmona (<12°C), Stella di Natale, Tradescantia, e proteggi il Limone (<5°C).`});
+    else if (t < PARAMS.alertFrost + 5) alerts.push({type:'warn', icon:'❄️', text:`<b>Temperatura ${t.toFixed(1)}°C</b> — il Carmona Bonsai e la Stella di Natale non devono stare fuori sotto i 12°C.`});
+    else if (t > PARAMS.alertHeat) alerts.push({type:'warn', icon:'🔥', text:`<b>Temperatura ${t.toFixed(1)}°C!</b> Sposta le piante in ombra e aumenta le annaffiature. Nebulizza le foglie la sera.`});
   }
 
   // Pioggia
   const rainDay = meteoGetVal(meteoData,'rainfall','daily');
-  if (rainDay !== null && parseFloat(rainDay) > 5) {
+  if (rainDay !== null && parseFloat(rainDay) > PARAMS.rainSkip) {
     alerts.push({type:'info', icon:'🌧️', text:`<b>Pioggia oggi: ${parseFloat(rainDay).toFixed(1)} mm</b> — puoi saltare l'annaffiatura delle piante all'esterno.`});
   }
 
   // Vento forte
   const gust = meteoGetVal(meteoData,'wind','wind_gust');
-  if (gust !== null && parseFloat(gust) > 50) {
+  if (gust !== null && parseFloat(gust) > PARAMS.alertWind) {
     alerts.push({type:'warn', icon:'💨', text:`<b>Raffiche a ${parseFloat(gust).toFixed(0)} km/h!</b> Proteggi i bonsai e le piante alte. Ripara i vasi leggeri.`});
   }
 
   // Umidità interna bassa
   const humIn = meteoGetVal(meteoData,'indoor','humidity');
-  if (humIn !== null && parseInt(humIn) < 40) {
+  if (humIn !== null && parseInt(humIn) < PARAMS.alertHumIn) {
     alerts.push({type:'info', icon:'🏠', text:`<b>Umidità interna ${humIn}%</b> — bassa per orchidee e Carmona (ideale >50%). Nebulizza o usa un vassoio con argilla espansa.`});
   }
 
@@ -4097,7 +4204,7 @@ function meteoRenderAlerts() {
 function meteoUpdateInvBadges() {
   if (!meteoData || !meteoData.data) return;
   const inv = invLoad();
-  const soglie = (meteoConfig && meteoConfig.soglie) || SOGLIE_DEFAULT;
+  const soglie = PARAMS.soglie || SOGLIE_DEFAULT;
 
   const soilData = {};
   for (let ch=1; ch<=16; ch++) {
@@ -4127,6 +4234,146 @@ function meteoUpdateInvBadges() {
     badge.className = 'inv-soil-badge '+cls;
     badge.textContent = '📡 CH'+ch+' · '+text;
   });
+}
+
+// ── Previsioni 7 giorni (Open-Meteo) ─────────────────────────────────
+const WMO_ICONS = {0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌧️',55:'🌧️',56:'🌨️',57:'🌨️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌨️',67:'🌨️',71:'🌨️',73:'❄️',75:'❄️',77:'❄️',80:'🌦️',81:'🌧️',82:'⛈️',85:'❄️',86:'❄️',95:'⛈️',96:'⛈️',99:'⛈️'};
+const WMO_LABELS = {0:'Sereno',1:'Prev. sereno',2:'Parz. nuvoloso',3:'Coperto',45:'Nebbia',48:'Nebbia gelata',51:'Pioggerella',53:'Pioggia leggera',55:'Pioggia',61:'Pioggia leggera',63:'Pioggia moderata',65:'Pioggia forte',66:'Pioggia gelata',71:'Neve leggera',73:'Neve',75:'Neve forte',80:'Rovesci',81:'Rovesci forti',82:'Temporale',85:'Neve a rovesci',95:'Temporale',96:'Temporale con grandine',99:'Temporale violento'};
+const FC_DAYS_IT = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+
+async function meteoFetchForecast() {
+  const fcEl = document.getElementById('meteo-forecast');
+  const alertsEl = document.getElementById('meteo-forecast-alerts');
+  if (!fcEl) return;
+
+  try {
+    const res = await fetch('http://localhost:8765/api/forecast');
+    const data = await res.json();
+    if (data.error) {
+      fcEl.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:11px;padding:1rem">❌ ${data.error}</div>`;
+      return;
+    }
+
+    const daily = data.daily;
+    if (!daily || !daily.time) {
+      fcEl.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:11px;padding:1rem">Nessun dato previsione disponibile</div>';
+      return;
+    }
+
+    const todayStr = new Date().toISOString().slice(0,10);
+
+    // Render forecast cards
+    let html = '<div class="fc-grid">';
+    for (let i = 0; i < daily.time.length; i++) {
+      const d = new Date(daily.time[i] + 'T12:00');
+      const dayName = FC_DAYS_IT[d.getDay()];
+      const dateStr = d.getDate() + '/' + (d.getMonth()+1);
+      const tMax = daily.temperature_2m_max[i];
+      const tMin = daily.temperature_2m_min[i];
+      const rain = daily.precipitation_sum[i];
+      const rainProb = daily.precipitation_probability_max ? daily.precipitation_probability_max[i] : null;
+      const windMax = daily.wind_speed_10m_max ? daily.wind_speed_10m_max[i] : null;
+      const gustMax = daily.wind_gusts_10m_max ? daily.wind_gusts_10m_max[i] : null;
+      const wcode = daily.weather_code ? daily.weather_code[i] : 0;
+      const icon = WMO_ICONS[wcode] || '🌡️';
+      const isToday = daily.time[i] === todayStr;
+
+      // Alert classes
+      let alertClass = '';
+      if (tMin < PARAMS.alertFrost) alertClass = 'alert-frost';
+      else if (tMax > PARAMS.alertHeat) alertClass = 'alert-heat';
+      else if (rain > PARAMS.rainSure) alertClass = 'alert-rain';
+
+      html += `<div class="fc-day ${isToday?'today':''} ${alertClass}">
+        <div class="fc-day-name">${dayName}</div>
+        <div class="fc-day-date">${dateStr}</div>
+        <div class="fc-day-icon">${icon}</div>
+        <div class="fc-day-temps">
+          <span class="fc-day-max">${Math.round(tMax)}°</span>
+          <span class="fc-day-min">${Math.round(tMin)}°</span>
+        </div>
+        ${rain > 0.1 ? `<div class="fc-day-rain">🌧️ ${rain.toFixed(1)}mm${rainProb?' ('+Math.round(rainProb)+'%)':''}</div>` : ''}
+        ${windMax && windMax > 30 ? `<div class="fc-day-wind">💨 ${Math.round(windMax)} km/h</div>` : ''}
+      </div>`;
+    }
+    html += '</div>';
+    fcEl.innerHTML = html;
+
+    // Generate predictive alerts
+    const alerts = [];
+
+    // Check frost in next 7 days
+    for (let i = 0; i < daily.time.length; i++) {
+      const tMin = daily.temperature_2m_min[i];
+      const d = new Date(daily.time[i] + 'T12:00');
+      const dayLabel = i === 0 ? 'Oggi' : i === 1 ? 'Domani' : FC_DAYS_IT[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth()+1);
+
+      if (tMin < 0) {
+        alerts.push({type:'danger', icon:'🥶', text:`<b>GELO PREVISTO ${dayLabel}: ${Math.round(tMin)}°C</b> — temperatura sotto zero! Porta dentro tutte le piante tropicali (Carmona, Stella di Natale, Tradescantia), copri Limone e Oleandro con tessuto non tessuto.`});
+      } else if (tMin < PARAMS.alertFrost) {
+        alerts.push({type:'warn', icon:'❄️', text:`<b>Freddo ${dayLabel}: min ${Math.round(tMin)}°C</b> — porta al riparo Carmona (<12°C) e le piante tropicali. Controlla che il Limone sia protetto.`});
+      }
+    }
+
+    // Check heat waves (3+ days above threshold)
+    let heatDays = 0;
+    for (let i = 0; i < daily.time.length; i++) {
+      if (daily.temperature_2m_max[i] > PARAMS.alertHeat) heatDays++;
+    }
+    if (heatDays >= 3) {
+      alerts.push({type:'warn', icon:'🔥', text:`<b>Ondata di calore in arrivo: ${heatDays} giorni sopra ${PARAMS.alertHeat}°C</b> — prepara ombreggiatura, aumenta frequenza annaffiature, nebulizza le foglie la sera. Le piante in vasi piccoli (bonsai) soffrono di più.`});
+    } else if (heatDays >= 1) {
+      const maxT = Math.max(...daily.temperature_2m_max);
+      alerts.push({type:'info', icon:'☀️', text:`<b>Giornate calde previste: max ${Math.round(maxT)}°C</b> — monitora l'umidità del terreno con i sensori WH51 e annaffia nelle ore fresche.`});
+    }
+
+    // Check heavy rain
+    const totalRain = daily.precipitation_sum.reduce((s,v) => s + v, 0);
+    const maxDayRain = Math.max(...daily.precipitation_sum);
+    if (maxDayRain > 30) {
+      const rainDay = daily.time[daily.precipitation_sum.indexOf(maxDayRain)];
+      const rd = new Date(rainDay + 'T12:00');
+      alerts.push({type:'warn', icon:'⛈️', text:`<b>Pioggia intensa prevista ${FC_DAYS_IT[rd.getDay()]} ${rd.getDate()}/${rd.getMonth()+1}: ${maxDayRain.toFixed(0)}mm</b> — rischio ristagno. Verifica il drenaggio dei vasi e proteggi le piante sensibili.`});
+    } else if (totalRain > 40) {
+      alerts.push({type:'info', icon:'🌧️', text:`<b>Settimana piovosa: ${totalRain.toFixed(0)}mm totali</b> — riduci le annaffiature delle piante all'esterno. Attento al rischio oidio con umidità prolungata.`});
+    }
+
+    // Check strong wind
+    if (daily.wind_gusts_10m_max) {
+      const maxGust = Math.max(...daily.wind_gusts_10m_max);
+      if (maxGust > PARAMS.alertWind) {
+        const gustDay = daily.time[daily.wind_gusts_10m_max.indexOf(maxGust)];
+        const gd = new Date(gustDay + 'T12:00');
+        alerts.push({type:'warn', icon:'💨', text:`<b>Raffiche fino a ${Math.round(maxGust)} km/h previste ${FC_DAYS_IT[gd.getDay()]} ${gd.getDate()}/${gd.getMonth()+1}</b> — metti al riparo i bonsai, ancora i vasi alti e leggeri.`});
+      }
+    }
+
+    // Late/early frost detection (spring/autumn context)
+    const month = new Date().getMonth() + 1;
+    if ((month >= 3 && month <= 5) || (month >= 9 && month <= 11)) {
+      for (let i = 0; i < daily.time.length; i++) {
+        if (daily.temperature_2m_min[i] < 2 && daily.temperature_2m_min[i] >= 0) {
+          const d = new Date(daily.time[i] + 'T12:00');
+          const label = month <= 5 ? 'tardiva' : 'precoce';
+          alerts.push({type:'warn', icon:'🌡️', text:`<b>Possibile gelata ${label} ${FC_DAYS_IT[d.getDay()]} ${d.getDate()}/${d.getMonth()+1}: ${daily.temperature_2m_min[i].toFixed(1)}°C</b> — prossimo allo zero! Se hai piante appena rinvasate o talee in radicazione, proteggile.`});
+          break; // solo una allerta gelata tardiva/precoce
+        }
+      }
+    }
+
+    // No alerts
+    if (!alerts.length) {
+      alerts.push({type:'good', icon:'✅', text:'Nessun evento meteo estremo previsto nei prossimi 7 giorni.'});
+    }
+
+    if (alertsEl) {
+      alertsEl.innerHTML = '<div style="font-family:\'Playfair Display\',serif;font-size:14px;font-weight:500;margin-bottom:6px">🔮 Allerte predittive</div>' +
+        alerts.map(a => `<div class="alert-card ${a.type}"><span class="alert-icon">${a.icon}</span><span class="alert-text">${a.text}</span></div>`).join('');
+    }
+
+  } catch(e) {
+    fcEl.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:11px;padding:1rem">❌ Errore caricamento previsioni</div>`;
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -4402,12 +4649,12 @@ async function waAnalyzeMeteo(waEvs, date) {
   banner.innerHTML = bannerParts.join(' · ');
   banner.style.background = bannerClass; banner.style.color = bannerColor;
 
-  // Pioggia globale: se > 5mm salta piante esterne
-  const rainSkip = rainDay && rainDay > 5;
-  const rainHeavy = rainDay && rainDay > 15;
+  // Pioggia globale: se > soglia salta piante esterne
+  const rainSkip = rainDay && rainDay > PARAMS.rainSkip;
+  const rainHeavy = rainDay && rainDay > PARAMS.rainSure;
 
   // Soglie umidità
-  const soglie = SOGLIE_DEFAULT || {};
+  const soglie = PARAMS.soglie || SOGLIE_DEFAULT;
 
   // Per ogni annaffiatura: analizza e aggiorna badge
   waEvs.forEach(e => {
@@ -4458,17 +4705,17 @@ async function waAnalyzeMeteo(waEvs, date) {
     }
 
     // 3. ET₀: suggerisci anticipo/ritardo della prossima annaffiatura
-    if (et0Result.factor > 1.4) {
+    if (et0Result.factor > PARAMS.et0Anticipa) {
       badges.push(`<span class="wa-smart-badge adjust">☀️ ET₀ alta (${et0Result.factor.toFixed(1)}×) — anticipa la prossima</span>`);
-    } else if (et0Result.factor < 0.5) {
+    } else if (et0Result.factor < PARAMS.et0Ritarda) {
       badges.push(`<span class="wa-smart-badge adjust">☁️ ET₀ bassa (${et0Result.factor.toFixed(1)}×) — puoi ritardare</span>`);
     }
 
     // 4. Temperatura estrema
     if (temp !== null) {
-      if (temp > 35) badges.push(`<span class="wa-smart-badge urgent">🔥 ${temp.toFixed(0)}°C — annaffia sera/mattina</span>`);
-      else if (temp < 5 && !plantIsOutdoor) {} // indoor, non rilevante
-      else if (temp < 5) badges.push(`<span class="wa-smart-badge info">❄️ ${temp.toFixed(0)}°C — riduci acqua, terreno asciuga lento</span>`);
+      if (temp > PARAMS.alertHeat) badges.push(`<span class="wa-smart-badge urgent">🔥 ${temp.toFixed(0)}°C — annaffia sera/mattina</span>`);
+      else if (temp < PARAMS.alertFrost && !plantIsOutdoor) {} // indoor, non rilevante
+      else if (temp < PARAMS.alertFrost) badges.push(`<span class="wa-smart-badge info">❄️ ${temp.toFixed(0)}°C — riduci acqua, terreno asciuga lento</span>`);
     }
 
     // Render badges
@@ -4518,6 +4765,157 @@ function bbVisibleEvents(date){
 
 // ══════════════════════════════════════════════════════════════════════
 // INIT
+// ══════════════════════════════════════════════════════════════════════
+// ⑬ PARAMETRI CONFIGURABILI
+// ══════════════════════════════════════════════════════════════════════
+
+const PARAMS_DEFAULTS = {
+  // Calcolatore Acqua
+  drenaggio: 1.20,
+  freqBase: 7,
+  // ET₀
+  et0Ref: 3.0,
+  solarConv: 0.032,
+  et0Min: 0.25,
+  et0Max: 2.5,
+  // Fertirrigazione
+  fertiReduction: 70,
+  // Allerte meteo
+  alertFrost: 5,
+  alertHeat: 35,
+  alertWind: 50,
+  alertHumIn: 40,
+  // Irrigazione smart
+  rainSkip: 5,
+  rainSure: 15,
+  et0Anticipa: 1.4,
+  et0Ritarda: 0.5,
+  // Soglie umidità terreno
+  soglie: {
+    succulente:   {secco:10, ok_max:35, umido:40},
+    tropicali:    {secco:25, ok_max:55, umido:65},
+    mediterranee: {secco:15, ok_max:40, umido:50},
+    agrumi:       {secco:20, ok_max:50, umido:60},
+    bonsai:       {secco:20, ok_max:50, umido:60},
+    orchidee:     {secco:15, ok_max:40, umido:50},
+    aromatiche:   {secco:8,  ok_max:30, umido:35},
+    universale:   {secco:20, ok_max:50, umido:60},
+  }
+};
+
+const SOGLIE_LABELS = {
+  succulente:'🌵 Succulente/Cactus', tropicali:'🌳 Tropicali', mediterranee:'🌿 Mediterranee',
+  agrumi:'🍋 Agrumi', bonsai:'💜 Bonsai', orchidee:'🌸 Orchidee',
+  aromatiche:'🌿 Aromatiche', universale:'🌱 Universale'
+};
+
+let PARAMS = {};
+
+function paramsLoad() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('giardino_params') || '{}');
+    PARAMS = {...JSON.parse(JSON.stringify(PARAMS_DEFAULTS))};
+    // Merge saved over defaults (shallow for simple, deep for soglie)
+    Object.keys(PARAMS_DEFAULTS).forEach(k => {
+      if (k === 'soglie') {
+        if (saved.soglie) {
+          Object.keys(PARAMS.soglie).forEach(cat => {
+            if (saved.soglie[cat]) Object.assign(PARAMS.soglie[cat], saved.soglie[cat]);
+          });
+        }
+      } else if (saved[k] !== undefined) {
+        PARAMS[k] = saved[k];
+      }
+    });
+  } catch {
+    PARAMS = JSON.parse(JSON.stringify(PARAMS_DEFAULTS));
+  }
+}
+
+function paramsSaveToStorage() {
+  try { localStorage.setItem('giardino_params', JSON.stringify(PARAMS)); } catch {}
+}
+
+function paramsInit() {
+  // Fill inputs from PARAMS
+  document.getElementById('p-drenaggio').value = PARAMS.drenaggio;
+  document.getElementById('p-freq-base').value = PARAMS.freqBase;
+  document.getElementById('p-et0-ref').value = PARAMS.et0Ref;
+  document.getElementById('p-solar-conv').value = PARAMS.solarConv;
+  document.getElementById('p-et0-min').value = PARAMS.et0Min;
+  document.getElementById('p-et0-max').value = PARAMS.et0Max;
+  document.getElementById('p-ferti-reduction').value = PARAMS.fertiReduction;
+  document.getElementById('p-alert-frost').value = PARAMS.alertFrost;
+  document.getElementById('p-alert-heat').value = PARAMS.alertHeat;
+  document.getElementById('p-alert-wind').value = PARAMS.alertWind;
+  document.getElementById('p-alert-hum-in').value = PARAMS.alertHumIn;
+  document.getElementById('p-rain-skip').value = PARAMS.rainSkip;
+  document.getElementById('p-rain-sure').value = PARAMS.rainSure;
+  document.getElementById('p-et0-anticipa').value = PARAMS.et0Anticipa;
+  document.getElementById('p-et0-ritarda').value = PARAMS.et0Ritarda;
+
+  // Soglie grid
+  const grid = document.getElementById('p-soglie-grid');
+  grid.innerHTML = Object.entries(SOGLIE_LABELS).map(([cat, label]) => {
+    const s = PARAMS.soglie[cat] || PARAMS_DEFAULTS.soglie[cat];
+    return `<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;background:var(--bg);border:1px solid var(--border)">
+      <span style="font-size:11px;font-weight:500;min-width:130px">${label}</span>
+      <div style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--muted)">
+        <span>Secco&lt;</span><input type="number" id="ps-${cat}-secco" value="${s.secco}" min="0" max="50" style="width:42px;border:1px solid var(--border);border-radius:5px;padding:3px;font-size:11px;text-align:center">
+        <span>OK&lt;</span><input type="number" id="ps-${cat}-ok" value="${s.ok_max}" min="10" max="80" style="width:42px;border:1px solid var(--border);border-radius:5px;padding:3px;font-size:11px;text-align:center">
+        <span>Umido&gt;</span><input type="number" id="ps-${cat}-umido" value="${s.umido}" min="20" max="90" style="width:42px;border:1px solid var(--border);border-radius:5px;padding:3px;font-size:11px;text-align:center">
+        <span>%</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function paramsSave() {
+  PARAMS.drenaggio = +(document.getElementById('p-drenaggio').value) || PARAMS_DEFAULTS.drenaggio;
+  PARAMS.freqBase = +(document.getElementById('p-freq-base').value) || PARAMS_DEFAULTS.freqBase;
+  PARAMS.et0Ref = +(document.getElementById('p-et0-ref').value) || PARAMS_DEFAULTS.et0Ref;
+  PARAMS.solarConv = +(document.getElementById('p-solar-conv').value) || PARAMS_DEFAULTS.solarConv;
+  PARAMS.et0Min = +(document.getElementById('p-et0-min').value) || PARAMS_DEFAULTS.et0Min;
+  PARAMS.et0Max = +(document.getElementById('p-et0-max').value) || PARAMS_DEFAULTS.et0Max;
+  PARAMS.fertiReduction = +(document.getElementById('p-ferti-reduction').value) || PARAMS_DEFAULTS.fertiReduction;
+  PARAMS.alertFrost = +(document.getElementById('p-alert-frost').value);
+  PARAMS.alertHeat = +(document.getElementById('p-alert-heat').value) || PARAMS_DEFAULTS.alertHeat;
+  PARAMS.alertWind = +(document.getElementById('p-alert-wind').value) || PARAMS_DEFAULTS.alertWind;
+  PARAMS.alertHumIn = +(document.getElementById('p-alert-hum-in').value) || PARAMS_DEFAULTS.alertHumIn;
+  PARAMS.rainSkip = +(document.getElementById('p-rain-skip').value) || PARAMS_DEFAULTS.rainSkip;
+  PARAMS.rainSure = +(document.getElementById('p-rain-sure').value) || PARAMS_DEFAULTS.rainSure;
+  PARAMS.et0Anticipa = +(document.getElementById('p-et0-anticipa').value) || PARAMS_DEFAULTS.et0Anticipa;
+  PARAMS.et0Ritarda = +(document.getElementById('p-et0-ritarda').value) || PARAMS_DEFAULTS.et0Ritarda;
+
+  // Soglie
+  Object.keys(SOGLIE_LABELS).forEach(cat => {
+    PARAMS.soglie[cat] = {
+      secco: +(document.getElementById(`ps-${cat}-secco`).value) || 20,
+      ok_max: +(document.getElementById(`ps-${cat}-ok`).value) || 50,
+      umido: +(document.getElementById(`ps-${cat}-umido`).value) || 60,
+    };
+  });
+
+  paramsSaveToStorage();
+  const msg = document.getElementById('p-save-msg');
+  msg.style.display = 'block';
+  setTimeout(() => msg.style.display = 'none', 2500);
+}
+
+function paramsReset() {
+  if (!confirm('Ripristinare tutti i parametri ai valori di fabbrica?')) return;
+  PARAMS = JSON.parse(JSON.stringify(PARAMS_DEFAULTS));
+  paramsSaveToStorage();
+  paramsInit();
+  const msg = document.getElementById('p-save-msg');
+  msg.textContent = '🔄 Parametri ripristinati ai valori default';
+  msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; msg.textContent = '✅ Parametri salvati!'; }, 2500);
+}
+
+// Carica parametri all'avvio
+paramsLoad();
+
 // ══════════════════════════════════════════════════════════════════════
 // ⑫ PWA — Service Worker + Offline
 // ══════════════════════════════════════════════════════════════════════
