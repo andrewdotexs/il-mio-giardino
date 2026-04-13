@@ -117,6 +117,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .inv-soil-badge.ok{background:#eaf3de;color:#3b6d11}
 .inv-soil-badge.wet{background:#e6f1fb;color:#185fa5}
 .inv-soil-badge.offline{background:#f0ece4;color:#aaa}
+/* Smart watering badges */
+.wa-smart-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:3px 8px;border-radius:12px;font-weight:500;margin-right:4px;margin-bottom:2px}
+.wa-smart-badge.skip{background:#ddf0dd;color:#2a6a2a}
+.wa-smart-badge.ok{background:#edf5ff;color:#2a5a8a}
+.wa-smart-badge.urgent{background:#faeaea;color:#b04040}
+.wa-smart-badge.adjust{background:#fdf5e0;color:#8a6a20}
+.wa-smart-badge.info{background:#f0ece4;color:#6a6050}
 .treat-dot.done{opacity:.35;position:relative}
 .treat-dot.done::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:7px;color:#fff;background:rgba(0,0,0,.35);border-radius:2px}
 .tr-prod-legend{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;max-width:900px;margin:0 auto .7rem}
@@ -770,7 +777,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <div class="calc-row" style="margin-top:8px">
       <div class="calc-field">
         <label>Esposizione / Ventilazione</label>
-        <select id="w-exposure">
+        <select id="w-exposure" onchange="wCheckET0Override()">
           <option value="0.85">Interno ombreggiato</option>
           <option value="1.0" selected>Interno luminoso / Balcone</option>
           <option value="1.2">Esterno soleggiato</option>
@@ -787,6 +794,39 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
         </select>
       </div>
     </div>
+
+    <!-- Toggle ET₀ Live -->
+    <div id="w-et0-toggle" style="margin-top:12px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:10px;cursor:pointer" onclick="wToggleET0()">
+      <div style="width:40px;height:22px;border-radius:11px;background:var(--border);position:relative;transition:background .2s;flex-shrink:0" id="w-et0-switch">
+        <div style="width:18px;height:18px;border-radius:9px;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)" id="w-et0-knob"></div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--text)">🌤️ Usa dati meteo live (ET₀)</div>
+        <div style="font-size:10px;color:var(--muted)">Sostituisce i fattori stagione ed esposizione con l'evapotraspirazione reale dalla stazione Ecowitt</div>
+      </div>
+    </div>
+
+    <!-- Pannello ET₀ (nascosto finché non attivato) -->
+    <div id="w-et0-panel" style="display:none;margin-top:8px;padding:12px 14px;border-radius:10px;border:1px solid #b0c8e8;background:#edf5ff">
+      <div id="w-et0-loading" style="text-align:center;color:var(--muted);font-size:11px;padding:8px">⏳ Caricamento dati meteo...</div>
+      <div id="w-et0-data" style="display:none">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+          <div style="font-size:11px;color:#2a5a8a"><span style="font-weight:600">🌡️</span> <span id="w-et0-temp">--</span>°C</div>
+          <div style="font-size:11px;color:#2a5a8a"><span style="font-weight:600">💧</span> <span id="w-et0-hum">--</span>%</div>
+          <div style="font-size:11px;color:#2a5a8a"><span style="font-weight:600">☀️</span> <span id="w-et0-solar">--</span> W/m²</div>
+          <div style="font-size:11px;color:#2a5a8a"><span style="font-weight:600">💨</span> <span id="w-et0-wind">--</span> km/h</div>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <div style="font-size:10px;color:#2a5a8a;text-transform:uppercase;letter-spacing:.4px">ET₀ giornaliera</div>
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:600;color:#2a5a8a" id="w-et0-value">--</div>
+          <div style="font-size:11px;color:#5a7a9a">mm/giorno</div>
+          <div style="flex:1"></div>
+          <div style="font-size:11px;font-weight:600;color:#2d7a3a" id="w-et0-factor">Fattore: --</div>
+        </div>
+        <div style="font-size:10px;color:#5a7a9a;margin-top:4px" id="w-et0-desc"></div>
+      </div>
+    </div>
+
     <button class="calc-btn" onclick="wCalculate()">Calcola acqua necessaria</button>
   </div>
 
@@ -802,6 +842,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
       <div class="result-item"><div class="result-item-label">Ritenzione substrato</div><div class="result-item-val" id="r-ret">—</div></div>
       <div class="result-item"><div class="result-item-label">Frequenza stimata</div><div class="result-item-val" id="r-freq">—</div></div>
       <div class="result-item"><div class="result-item-label">Capacità idrica</div><div class="result-item-val" id="r-cap">—</div></div>
+      <div class="result-item" id="r-et0-item" style="display:none;border-color:#b0c8e8"><div class="result-item-label">ET₀ live</div><div class="result-item-val" id="r-et0">—</div></div>
     </div>
     <div class="result-tips" id="r-tips"></div>
   </div>
@@ -2026,26 +2067,31 @@ function gOpenDay(date, fertEvs, bbEvs, trEvs, waEvs) {
     });
   }
 
-  // ── Sezione annaffiature
+  // ── Sezione annaffiature con meteo intelligente
   if(waEvs.length){
     html+=`<div class="event-group"><div class="event-group-title" style="background:#3a8abf">💧 Annaffiature</div>`;
+    // Banner meteo (aggiornato async)
+    html+=`<div id="wa-meteo-banner" style="padding:6px 12px;font-size:11px;color:#5a7a9a;background:#edf5ff;border-bottom:1px solid #d0e0f0">⏳ Analisi condizioni meteo...</div>`;
     waEvs.forEach(e=>{
       const done=waIsDone(date,e.plant.id);
       const dy=date.getFullYear(),dm=date.getMonth(),dd=date.getDate();
       const nextDate=e.plant._waDates?e.plant._waDates.find(nd=>nd>date):null;
       const nextStr=nextDate?('Prossima: '+nextDate.getDate()+' '+gMonthNames[nextDate.getMonth()]):'Fine stagione';
-      html+=`<div class="event-row${done?' done':''}">
+      html+=`<div class="event-row${done?' done':''}" id="wa-row-${e.plant.id}">
         <div class="event-icon">${e.plant.icon}</div>
         <div class="event-content">
           <div class="event-name">${e.plant.name}</div>
           <div class="event-info"><strong>Metodo:</strong> ${e.plant.method}${e.note?`<br>${e.note}`:''}
           <br><span style="color:var(--muted)">${nextStr}</span></div>
+          <div id="wa-badge-${e.plant.id}" style="margin-top:4px"></div>
         </div>
         <button class="check-btn${done?' done':''}" style="${done?'background:#3a8abf;border-color:#3a8abf':''}"
           onclick="waToggleDone(${dy},${dm},${dd},${e.plant.id})">✓</button>
       </div>`;
     });
     html+=`</div>`;
+    // Trigger async meteo analysis after render
+    setTimeout(()=>waAnalyzeMeteo(waEvs, date), 50);
   }
 
   // ── Prossimi 7 giorni
@@ -2454,6 +2500,165 @@ function wCalcVol() {
   if (preview) preview.textContent = wVolLiters.toFixed(1) + ' L (' + Math.round(wVolLiters*1000) + ' ml)';
 }
 
+// ── ET₀ Penman-Monteith ──────────────────────────────────────────────
+let wET0Enabled = false;
+let wET0Data = null;  // {temp, hum, solar, wind, et0, factor}
+
+function wToggleET0() {
+  wET0Enabled = !wET0Enabled;
+  const sw = document.getElementById('w-et0-switch');
+  const knob = document.getElementById('w-et0-knob');
+  const panel = document.getElementById('w-et0-panel');
+  const seasSel = document.getElementById('w-season');
+  const expSel = document.getElementById('w-exposure');
+
+  if (wET0Enabled) {
+    sw.style.background = 'var(--accent)';
+    knob.style.left = '20px';
+    panel.style.display = 'block';
+    seasSel.disabled = true; seasSel.style.opacity = '0.4';
+    expSel.disabled = true;  expSel.style.opacity = '0.4';
+    wFetchET0();
+  } else {
+    sw.style.background = 'var(--border)';
+    knob.style.left = '2px';
+    panel.style.display = 'none';
+    seasSel.disabled = false; seasSel.style.opacity = '1';
+    expSel.disabled = false;  expSel.style.opacity = '1';
+    wET0Data = null;
+  }
+}
+
+function wCheckET0Override() {
+  // Se ET₀ è attivo, i select manuali sono disabilitati
+  if (wET0Enabled) {
+    document.getElementById('w-season').disabled = true;
+    document.getElementById('w-exposure').disabled = true;
+  }
+}
+
+async function wFetchET0() {
+  const loading = document.getElementById('w-et0-loading');
+  const dataDiv = document.getElementById('w-et0-data');
+  loading.style.display = 'block';
+  dataDiv.style.display = 'none';
+
+  try {
+    const res = await fetch('http://localhost:8765/api/ecowitt/realtime');
+    const json = await res.json();
+    if (!json.configured) {
+      loading.innerHTML = '⚠️ Ecowitt non configurato — inserisci le chiavi in <b>config.json</b>';
+      return;
+    }
+    if (json.code !== 0) {
+      loading.innerHTML = '❌ Errore API: ' + (json.msg || 'sconosciuto');
+      return;
+    }
+
+    // Estrai valori
+    const getVal = (section, key) => {
+      try { const v = json.data[section][key]; return v ? parseFloat(v.value || v) : null; }
+      catch { return null; }
+    };
+
+    const temp = getVal('outdoor', 'temperature');
+    const hum = getVal('outdoor', 'humidity');
+    const solar = getVal('solar_and_uvi', 'solar');
+    const windKmh = getVal('wind', 'wind_speed');
+
+    if (temp === null) {
+      loading.innerHTML = '❌ Dati temperatura non disponibili';
+      return;
+    }
+
+    // Calcola ET₀ FAO Penman-Monteith semplificata
+    const et0Result = calcET0(temp, hum || 50, solar || 0, windKmh || 0);
+
+    wET0Data = et0Result;
+
+    // Aggiorna UI
+    document.getElementById('w-et0-temp').textContent = temp.toFixed(1);
+    document.getElementById('w-et0-hum').textContent = hum !== null ? Math.round(hum) : '--';
+    document.getElementById('w-et0-solar').textContent = solar !== null ? Math.round(solar) : '--';
+    document.getElementById('w-et0-wind').textContent = windKmh !== null ? windKmh.toFixed(1) : '--';
+    document.getElementById('w-et0-value').textContent = et0Result.et0.toFixed(2);
+    document.getElementById('w-et0-factor').textContent = 'Fattore: ' + et0Result.factor.toFixed(2) + '×';
+    document.getElementById('w-et0-desc').textContent = et0Result.desc;
+
+    loading.style.display = 'none';
+    dataDiv.style.display = 'block';
+  } catch(e) {
+    loading.innerHTML = '❌ Server non raggiungibile — avvia server.py';
+  }
+}
+
+function calcET0(temp, humidity, solarWm2, windKmh) {
+  // FAO Penman-Monteith semplificata per stima giornaliera
+  // Riferimento: FAO Irrigation and Drainage Paper 56
+
+  const T = temp;                           // °C
+  const RH = Math.max(10, Math.min(100, humidity));  // %
+  // Ecowitt dà radiazione istantanea in W/m². Per stimare il totale giornaliero:
+  // ~8-10 ore di sole effettivo, ma il picco non è costante.
+  // Fattore 0.032 ≈ 9h equivalenti × 3600 / 1e6
+  const Rs = Math.max(0, solarWm2) * 0.032;         // W/m² istantanei → MJ/m²/day stimato
+  const u2 = Math.max(0, windKmh) / 3.6;            // km/h → m/s
+
+  // Pressione atmosferica approssimata (livello mare)
+  const P = 101.3;  // kPa
+
+  // Costante psicrometrica
+  const gamma = 0.0665 * P / 100;  // kPa/°C (semplificata)
+
+  // Pressione di vapore di saturazione
+  const es = 0.6108 * Math.exp((17.27 * T) / (T + 237.3));
+
+  // Pressione di vapore effettiva
+  const ea = es * (RH / 100);
+
+  // Deficit di pressione di vapore
+  const vpd = Math.max(0, es - ea);
+
+  // Pendenza della curva di saturazione
+  const delta = (4098 * es) / Math.pow(T + 237.3, 2);
+
+  // Radiazione netta approssimata (Rn ≈ 0.77 × Rs per giornata tipo)
+  // Sottraiamo radiazione netta a onda lunga semplificata
+  const Rns = 0.77 * Rs;
+  const Rnl = 4.903e-9 * Math.pow(T + 273.16, 4) * (0.34 - 0.14 * Math.sqrt(ea)) * (1.35 * (Rs / Math.max(0.1, Rs * 1.5)) - 0.35);
+  const Rn = Math.max(0, Rns - Math.max(0, Rnl));
+
+  // G (flusso di calore nel suolo) ≈ 0 per calcolo giornaliero
+  const G = 0;
+
+  // ET₀ Penman-Monteith
+  const num = 0.408 * delta * (Rn - G) + gamma * (900 / (T + 273)) * u2 * vpd;
+  const den = delta + gamma * (1 + 0.34 * u2);
+  let et0 = Math.max(0, num / den);
+
+  // Clamp a valori ragionevoli (0-15 mm/day)
+  et0 = Math.min(15, et0);
+
+  // ET₀ di riferimento per giornata "media" di primavera
+  // (20°C, 60% umidità, 350 W/m², 8 km/h) ≈ 3.0 mm/day
+  const et0Ref = 3.0;
+
+  // Fattore: rapporto tra ET₀ attuale e ET₀ di riferimento
+  // Questo sostituisce seasFactor × expFactor
+  let factor = et0 / et0Ref;
+  factor = Math.max(0.25, Math.min(2.5, factor));  // Clamp 0.25-2.5×
+
+  // Descrizione condizioni
+  let desc = '';
+  if (factor < 0.5) desc = 'Evapotraspirazione molto bassa — giornata fredda/umida/nuvolosa, riduci annaffiature';
+  else if (factor < 0.8) desc = 'Evapotraspirazione sotto la media — le piante consumano meno acqua oggi';
+  else if (factor < 1.2) desc = 'Evapotraspirazione nella norma — condizioni standard';
+  else if (factor < 1.6) desc = 'Evapotraspirazione alta — giornata calda e soleggiata, aumenta annaffiature';
+  else desc = 'Evapotraspirazione molto alta — caldo intenso, vento e bassa umidità, annaffia abbondantemente';
+
+  return { et0, factor, desc, temp: T, humidity: RH, solar: solarWm2, wind: windKmh };
+}
+
 function wCalculate() {
   wCalcVol();
 
@@ -2469,10 +2674,20 @@ function wCalculate() {
   }, 0);
 
   const potFactor  = +document.getElementById('w-pot-mat').value;
-  const seasFactor = +document.getElementById('w-season').value;
+  let seasFactor = +document.getElementById('w-season').value;
   const plantFactor= +document.getElementById('w-plant-cat').value;
-  const expFactor  = +document.getElementById('w-exposure').value;
+  let expFactor  = +document.getElementById('w-exposure').value;
   const stageFactor= +document.getElementById('w-stage').value;
+
+  // Se ET₀ live è attivo, sostituisci stagione × esposizione con il fattore calcolato
+  let usingET0 = false;
+  let et0Factor = 1.0;
+  if (wET0Enabled && wET0Data) {
+    et0Factor = wET0Data.factor;
+    seasFactor = 1.0;  // Neutralizza il fattore statico
+    expFactor = et0Factor;  // Usa il fattore ET₀ al suo posto
+    usingET0 = true;
+  }
 
   // Capacità idrica del vaso (ml)
   const waterCapacity = wVolLiters * 1000 * whc;
@@ -2507,11 +2722,24 @@ function wCalculate() {
 
   // Tips personalizzati
   const tips = [];
-  if (whc < 0.20) tips.push('<b>Substrato molto drenante</b>: asciuga velocemente — monitora spesso e annaffia in piccole dosi più frequenti.');
-  if (whc > 0.50) tips.push('<b>Substrato ricco</b>: trattiene molta umidità — aspetta sempre che i primi 2-3 cm siano asciutti prima di annaffiare di nuovo.');
-  if (potFactor < 0.90) tips.push('<b>Terracotta</b>: il vaso assorbe acqua extra — nei mesi caldi controlla più spesso.');
-  if (seasFactor <= 0.45) tips.push('<b>Inverno</b>: molte piante sono in semiriposo — meglio annaffiare meno e controllare visivamente.');
-  if (expFactor >= 1.2) tips.push('<b>Sole diretto + vento</b>: l\u2019evaporazione è alta — la frequenza stimata potrebbe essere ancora più ravvicinata nei picchi estivi.');
+  if (usingET0 && wET0Data) {
+    tips.push(`🌤️ <b>Dati meteo live (ET₀ = ${wET0Data.et0.toFixed(2)} mm/giorno)</b>: ${wET0Data.desc}`);
+    if (wET0Data.temp > 30) tips.push('🔥 <b>Temperatura alta (' + wET0Data.temp.toFixed(0) + '°C)</b>: annaffia nelle ore più fresche (mattina presto o sera).');
+    if (wET0Data.temp < 8) tips.push('❄️ <b>Temperatura bassa (' + wET0Data.temp.toFixed(0) + '°C)</b>: riduci le annaffiature — il terreno asciuga lentamente al freddo.');
+    if (wET0Data.humidity < 30) tips.push('💧 <b>Aria molto secca (' + Math.round(wET0Data.humidity) + '%)</b>: nebulizza le foglie delle piante tropicali e dei bonsai.');
+    if (wET0Data.wind > 20) tips.push('💨 <b>Vento forte (' + wET0Data.wind.toFixed(0) + ' km/h)</b>: i vasi esposti al vento asciugano più rapidamente, controlla più spesso.');
+    if (wET0Data.solar > 600) tips.push('☀️ <b>Radiazione solare intensa (' + Math.round(wET0Data.solar) + ' W/m²)</b>: le piante all\'aperto consumano molta più acqua.');
+    // Mostra il box ET₀ nel risultato
+    document.getElementById('r-et0-item').style.display = 'block';
+    document.getElementById('r-et0').textContent = wET0Data.et0.toFixed(2) + ' mm/g → fattore ' + et0Factor.toFixed(2) + '×';
+  } else {
+    document.getElementById('r-et0-item').style.display = 'none';
+    if (whc < 0.20) tips.push('<b>Substrato molto drenante</b>: asciuga velocemente — monitora spesso e annaffia in piccole dosi più frequenti.');
+    if (whc > 0.50) tips.push('<b>Substrato ricco</b>: trattiene molta umidità — aspetta sempre che i primi 2-3 cm siano asciutti prima di annaffiare di nuovo.');
+    if (potFactor < 0.90) tips.push('<b>Terracotta</b>: il vaso assorbe acqua extra — nei mesi caldi controlla più spesso.');
+    if (seasFactor <= 0.45) tips.push('<b>Inverno</b>: molte piante sono in semiriposo — meglio annaffiare meno e controllare visivamente.');
+    if (expFactor >= 1.2) tips.push('<b>Sole diretto + vento</b>: l\u2019evaporazione è alta — la frequenza stimata potrebbe essere ancora più ravvicinata nei picchi estivi.');
+  }
   tips.push('💡 <b>Regola pratica</b>: annaffia sempre abbondantemente fino a che l\u2019acqua esce dal foro di drenaggio, poi aspetta che il substrato sia parzialmente asciutto prima della prossima annaffiatura.');
   document.getElementById('r-tips').innerHTML = tips.join('<br>');
 
@@ -2784,48 +3012,71 @@ function fiOpenFromCalendar() {
     1:1.15,  // Orchidea (tropicale alta umidità)
   };
 
-  // Arricchisci con dati dall'inventario: pots, volume vaso e acqua
+  // Arricchisci con dati dall'inventario: ogni vaso ha le sue dimensioni
+  // Espandi plantMap in potEntries: una riga per ogni record inventario
+  const potEntries = [];
+
   Object.values(plantMap).forEach(pm => {
     const invItems = inv.filter(it => {
       const p = sPlants[it.plantTypeIdx];
       return p && p.name === pm.name;
     });
+
     if (invItems.length) {
-      pm.pots = invItems.reduce((s,it) => s + (it.qty||1), 0);
-      const first = invItems[0];
-      const vol = invGetVolFromItem(first);
-      // Calcolo acqua basato su substrato reale
-      let whc = SUBSTRATE_WHC[first.substrate] || 0.30;
-      if (first.substrate === 'custom' && first.customSubstrate) {
-        whc = wSubstrates.reduce((s, sub) => {
-          const pct = (first.customSubstrate[sub.id] || 0) / 100;
-          return s + pct * sub.whc;
-        }, 0) || 0.30;
-      }
-      const potFactor = POT_MAT_FACTOR[first.potMat] || 1.0;
-      const plantFactor = PLANT_WATER_FACTOR[pm.id] || 1.0;
-      // Acqua per annaffiatura normale: vol × WHC × 1.2 × materiale × tipo pianta
-      const normalWater = vol * 1000 * whc * 1.2 * potFactor * plantFactor;
-      // Fertirrigazione: 70% dell'acqua normale (terreno già leggermente umido)
-      pm.waterMl = Math.round(normalWater * 0.7);
+      // Una riga per ogni record dell'inventario (diversi vasi della stessa pianta)
+      invItems.forEach((it, idx) => {
+        const vol = invGetVolFromItem(it);
+        let whc = SUBSTRATE_WHC[it.substrate] || 0.30;
+        if (it.substrate === 'custom' && it.customSubstrate) {
+          whc = wSubstrates.reduce((s, sub) => {
+            const pct = (it.customSubstrate[sub.id] || 0) / 100;
+            return s + pct * sub.whc;
+          }, 0) || 0.30;
+        }
+        const potFactor = POT_MAT_FACTOR[it.potMat] || 1.0;
+        const plantFactor = PLANT_WATER_FACTOR[pm.id] || 1.0;
+        const normalWater = vol * 1000 * whc * 1.2 * potFactor * plantFactor;
+        const waterMl = Math.round(normalWater * 0.7);
+        const pots = it.qty || 1;
+        const label = it.nickname || (invItems.length > 1 ? pm.name + ' #' + (idx+1) : pm.name);
+        const dimsStr = it.potShape === 'square'
+          ? `${it.potW||25}×${it.potD||25}×${it.potHSq||22}cm`
+          : it.potShape === 'truncated'
+          ? `Ø${it.potDiamTop||25}/${it.potDiamBot||18}×${it.potHTrunc||22}cm`
+          : `Ø${it.potDiam||25}×${it.potH||22}cm`;
+
+        potEntries.push({
+          id: pm.id, name: label, icon: pm.icon,
+          pots, waterMl, vol: vol.toFixed(1),
+          dimsStr, substrate: it.substrate,
+          products: JSON.parse(JSON.stringify(pm.products)),
+        });
+      });
     } else {
+      // Fallback: nessun record inventario, usa FI_PLANTS
       const fip = FI_PLANTS.find(f => f.id === pm.id);
-      if (fip) { pm.pots = 1; pm.waterMl = fip.waterMl; }
+      potEntries.push({
+        id: pm.id, name: pm.name, icon: pm.icon,
+        pots: 1, waterMl: fip ? fip.waterMl : 500,
+        vol: '?', dimsStr: '', substrate: '',
+        products: JSON.parse(JSON.stringify(pm.products)),
+      });
     }
   });
 
-  // Raggruppa per prodotto
-  const productGroups = {}; // prodId → {label, color, dosePerL, plants:[{name, icon, pots, waterMl, doseFactor, doseLabel}]}
-  Object.values(plantMap).forEach(pm => {
-    if (!pm.products.length) return;
-    pm.products.forEach(prod => {
+  // Raggruppa per prodotto (ogni potEntry è una riga separata)
+  const productGroups = {};
+  potEntries.forEach(pe => {
+    if (!pe.products.length) return;
+    pe.products.forEach(prod => {
       if (!productGroups[prod.prodId]) {
         productGroups[prod.prodId] = {
           label: prod.label, color: prod.color, dosePerL: prod.dosePerL, plants: []
         };
       }
       productGroups[prod.prodId].plants.push({
-        name: pm.name, icon: pm.icon, pots: pm.pots, waterMl: pm.waterMl,
+        name: pe.name, icon: pe.icon, pots: pe.pots, waterMl: pe.waterMl,
+        vol: pe.vol, dimsStr: pe.dimsStr,
         doseFactor: prod.doseFactor, doseLabel: prod.doseLabel,
       });
     });
@@ -2849,13 +3100,17 @@ function fiOpenFromCalendar() {
       const waterStr = totalWater >= 1000 ? (totalWater/1000).toFixed(1)+' L' : totalWater+' ml';
       const fertStr = fert < 1 ? fert.toFixed(2) : fert < 10 ? fert.toFixed(1) : Math.round(fert);
       const perPot = pl.pots > 1 ? ` <span style="font-size:9px;color:var(--muted)">(${pl.pots}×${pl.waterMl}ml)</span>` : '';
+      const dimsInfo = pl.dimsStr ? `<span style="font-size:9px;color:var(--muted)">${pl.dimsStr} · ${pl.vol}L</span>` : '';
       return `<div style="display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;background:#fff;font-size:11px">
         <span>${pl.icon}</span>
-        <span style="flex:1;font-weight:500">${pl.name}${pl.pots>1?' <span style=\"font-size:9px;background:#e0ecff;color:#2a5a8a;padding:1px 5px;border-radius:10px\">×'+pl.pots+'</span>':''}</span>
-        <span style="color:var(--muted)">${waterStr}${perPot}</span>
+        <span style="flex:1">
+          <span style="font-weight:500">${pl.name}</span>${pl.pots>1?' <span style="font-size:9px;background:#e0ecff;color:#2a5a8a;padding:1px 5px;border-radius:10px">×'+pl.pots+'</span>':''}
+          ${dimsInfo?'<br>'+dimsInfo:''}
+        </span>
+        <span style="color:var(--muted);text-align:right;min-width:55px">${waterStr}${perPot}</span>
         <span style="color:#2a5a8a;font-weight:500">→</span>
         <span style="color:#2d7a3a;font-weight:600;min-width:50px;text-align:right">${fertStr} ml</span>
-        <span style="font-size:9px;color:var(--muted)">(${pl.doseLabel})</span>
+        <span style="font-size:9px;color:var(--muted);min-width:32px">(${pl.doseLabel})</span>
       </div>`;
     }).join('');
 
@@ -4091,6 +4346,138 @@ function waToggleDone(dy,dm,dd,pid){
     const we=(gFilter==='all'||gFilter==='acqua')?(waDateMap[k]||[]).filter(e=>!waHiddenPlants.has(e.plant.id)):[];
     gOpenDay(date,fe,be,te,we);
   }
+}
+
+// ── Analisi meteo intelligente per annaffiature ──────────────────────
+async function waAnalyzeMeteo(waEvs, date) {
+  const banner = document.getElementById('wa-meteo-banner');
+  if (!banner) return;
+
+  let ewData = null;
+  try {
+    const res = await fetch('http://localhost:8765/api/ecowitt/realtime');
+    const json = await res.json();
+    if (json.configured && json.code === 0) ewData = json.data;
+  } catch {}
+
+  if (!ewData) {
+    banner.innerHTML = '📡 Stazione Ecowitt non disponibile — intervalli statici';
+    banner.style.background = '#f5f3ee'; banner.style.color = '#9a9082';
+    return;
+  }
+
+  const inv = invLoad();
+
+  // Estrai dati meteo
+  const getVal = (sec, key) => {
+    try { const v = ewData[sec][key]; return v ? parseFloat(v.value||v) : null; } catch { return null; }
+  };
+  const temp = getVal('outdoor','temperature');
+  const hum = getVal('outdoor','humidity');
+  const solar = getVal('solar_and_uvi','solar');
+  const windKmh = getVal('wind','wind_speed');
+  const rainDay = getVal('rainfall','daily');
+
+  // Soil moisture per canale
+  const soilData = {};
+  for (let ch=1; ch<=16; ch++) {
+    let val = getVal('soil','soilmoisture'+ch);
+    if (val === null) val = getVal('soil','soil_ch'+ch);
+    if (val !== null) soilData[ch] = val;
+  }
+
+  // Calcola ET₀
+  const et0Result = (typeof calcET0 === 'function') ? calcET0(temp||20, hum||60, solar||200, windKmh||5) : {et0:3, factor:1};
+
+  // Banner globale
+  const bannerParts = [];
+  if (temp !== null) bannerParts.push(`🌡️ ${temp.toFixed(1)}°C`);
+  if (hum !== null) bannerParts.push(`💧 ${Math.round(hum)}%`);
+  if (rainDay !== null && rainDay > 0) bannerParts.push(`🌧️ ${rainDay.toFixed(1)}mm`);
+  bannerParts.push(`ET₀ ${et0Result.et0.toFixed(1)}mm/g (${et0Result.factor.toFixed(2)}×)`);
+
+  let bannerClass = '#edf5ff'; let bannerColor = '#2a5a8a';
+  if (rainDay && rainDay > 5) { bannerClass = '#ddf0dd'; bannerColor = '#2a6a2a'; }
+  else if (et0Result.factor > 1.5) { bannerClass = '#fdf5e0'; bannerColor = '#8a6a20'; }
+  banner.innerHTML = bannerParts.join(' · ');
+  banner.style.background = bannerClass; banner.style.color = bannerColor;
+
+  // Pioggia globale: se > 5mm salta piante esterne
+  const rainSkip = rainDay && rainDay > 5;
+  const rainHeavy = rainDay && rainDay > 15;
+
+  // Soglie umidità
+  const soglie = SOGLIE_DEFAULT || {};
+
+  // Per ogni annaffiatura: analizza e aggiorna badge
+  waEvs.forEach(e => {
+    const badgeEl = document.getElementById('wa-badge-'+e.plant.id);
+    if (!badgeEl) return;
+
+    const badges = [];
+
+    // 1. Check WH51 soil moisture
+    const invItem = inv.find(it => {
+      const p = sPlants[it.plantTypeIdx];
+      return p && p.name === e.plant.name && it.wh51Ch;
+    });
+
+    if (invItem && invItem.wh51Ch) {
+      const ch = parseInt(invItem.wh51Ch);
+      const moisture = soilData[ch];
+      const cat = invItem.wh51Cat || 'universale';
+      const thresh = soglie[cat] || {secco:20, ok_min:20, ok_max:50, umido:60};
+
+      if (moisture !== undefined) {
+        if (moisture > thresh.ok_max) {
+          badges.push(`<span class="wa-smart-badge skip">📡 ${moisture.toFixed(0)}% — terreno umido, salta</span>`);
+        } else if (moisture > thresh.secco) {
+          badges.push(`<span class="wa-smart-badge ok">📡 ${moisture.toFixed(0)}% — OK, può aspettare</span>`);
+        } else if (moisture < thresh.secco * 0.5) {
+          badges.push(`<span class="wa-smart-badge urgent">📡 ${moisture.toFixed(0)}% — critico, annaffia subito!</span>`);
+        } else {
+          badges.push(`<span class="wa-smart-badge urgent">📡 ${moisture.toFixed(0)}% — secco, annaffia oggi</span>`);
+        }
+      }
+    }
+
+    // 2. Pioggia (solo per piante esterne)
+    const isOutdoor = e.plant.schedules && e.plant.schedules.some(s =>
+      s.note && (s.note.toLowerCase().includes('esterno') || s.note.toLowerCase().includes('aperto'))
+    );
+    // Check anche dal nome: piante tipicamente esterne
+    const outdoorIds = [4,5,6,8,9,10,13,14,15,16,17,18,19,21,22,23]; // Oleandro,Glicine,Limone,Vinca,Mimosa,Melograno,Liquidambar,Ippocastano,Betulla,Acero,Pitosforo,Spino,Gelso,Rosmarino,Salvia,Paulownia
+    const plantIsOutdoor = isOutdoor || outdoorIds.includes(e.plant.id);
+
+    if (plantIsOutdoor && rainSkip) {
+      if (rainHeavy) {
+        badges.push(`<span class="wa-smart-badge skip">🌧️ Pioggia ${rainDay.toFixed(0)}mm — salta sicuramente</span>`);
+      } else {
+        badges.push(`<span class="wa-smart-badge skip">🌧️ Pioggia ${rainDay.toFixed(0)}mm — probabilmente non serve</span>`);
+      }
+    }
+
+    // 3. ET₀: suggerisci anticipo/ritardo della prossima annaffiatura
+    if (et0Result.factor > 1.4) {
+      badges.push(`<span class="wa-smart-badge adjust">☀️ ET₀ alta (${et0Result.factor.toFixed(1)}×) — anticipa la prossima</span>`);
+    } else if (et0Result.factor < 0.5) {
+      badges.push(`<span class="wa-smart-badge adjust">☁️ ET₀ bassa (${et0Result.factor.toFixed(1)}×) — puoi ritardare</span>`);
+    }
+
+    // 4. Temperatura estrema
+    if (temp !== null) {
+      if (temp > 35) badges.push(`<span class="wa-smart-badge urgent">🔥 ${temp.toFixed(0)}°C — annaffia sera/mattina</span>`);
+      else if (temp < 5 && !plantIsOutdoor) {} // indoor, non rilevante
+      else if (temp < 5) badges.push(`<span class="wa-smart-badge info">❄️ ${temp.toFixed(0)}°C — riduci acqua, terreno asciuga lento</span>`);
+    }
+
+    // Render badges
+    if (badges.length) {
+      badgeEl.innerHTML = badges.join('');
+    } else {
+      badgeEl.innerHTML = `<span class="wa-smart-badge ok">✅ Condizioni normali</span>`;
+    }
+  });
 }
 
 let bbHiddenProds  = new Set();
