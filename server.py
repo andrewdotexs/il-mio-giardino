@@ -81,11 +81,17 @@ def init_db():
                 custom_substrate TEXT,
                 wh51_ch         TEXT,
                 wh51_cat        TEXT    DEFAULT 'universale',
+                sensor_type     TEXT    DEFAULT 'wh51',
                 fertilizers     TEXT    DEFAULT '[]',
                 diseases        TEXT    DEFAULT '[]',
                 created         TEXT    DEFAULT (datetime('now','localtime'))
             )
         """)
+        # Migrazione: aggiungi sensor_type se manca (per database esistenti)
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(inventory)").fetchall()]
+        if 'sensor_type' not in cols:
+            conn.execute("ALTER TABLE inventory ADD COLUMN sensor_type TEXT DEFAULT 'wh51'")
+            print("  🔄 Migrazione: aggiunta colonna sensor_type")
         conn.commit()
     print(f"✅ Database pronto: {DB_FILE}")
 
@@ -372,6 +378,7 @@ class Handler(BaseHTTPRequestHandler):
             "custom_substrate": json.dumps(data["customSubstrate"]) if data.get("customSubstrate") else None,
             "wh51_ch": data.get("wh51Ch"),
             "wh51_cat": data.get("wh51Cat", "universale"),
+            "sensor_type": data.get("sensorType", "wh51"),
             "fertilizers": json.dumps(data.get("fertilizers", [])),
             "diseases": json.dumps(data.get("diseases", [])),
         }

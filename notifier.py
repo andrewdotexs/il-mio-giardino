@@ -63,6 +63,21 @@ SOGLIE = CFG.get("soglie_umidita", {
     "universale": {"secco": 20, "ok_max": 50, "umido": 60},
 })
 
+SOGLIE_EC = CFG.get("soglie_ec", {
+    "succulente":   {"min":200,  "target":500,  "max":1500},
+    "tropicali":    {"min":500,  "target":1000, "max":2500},
+    "mediterranee": {"min":300,  "target":700,  "max":1800},
+    "agrumi":       {"min":600,  "target":1100, "max":2200},
+    "bonsai":       {"min":400,  "target":800,  "max":1800},
+    "orchidee":     {"min":300,  "target":600,  "max":1200},
+    "aromatiche":   {"min":200,  "target":500,  "max":1400},
+    "universale":   {"min":400,  "target":800,  "max":2000},
+})
+
+TEMP_RADICI_MIN = CFG.get("temp_radici_min", 12)
+TEMP_RADICI_MAX = CFG.get("temp_radici_max", 30)
+EC_MOISTURE_MIN = CFG.get("ec_moisture_min", 30)
+
 
 # ── Notifiche ─────────────────────────────────────────────────────────
 def is_termux():
@@ -215,6 +230,19 @@ def get_ecowitt_value(data, section, key):
     except:
         return None
 
+def get_soil_data(data, ch):
+    """Legge moisture + temp + EC per canale WH51/WH52"""
+    result = {"moisture": None, "temp": None, "ec": None}
+    def gv(sec, key):
+        v = get_ecowitt_value(data, sec, key)
+        if v is None or v == "" or v == "--": return None
+        try: return float(v)
+        except: return None
+    result["moisture"] = gv("soil", f"soilmoisture{ch}") or gv("soil", f"soil_ch{ch}")
+    result["temp"] = gv("soil", f"soiltemp{ch}") or gv("soil", f"tf_ch{ch}") or gv(f"temp_and_humidity_ch{ch}", "temperature")
+    result["ec"] = gv("soil", f"soilad{ch}") or gv("soil", f"ec_ch{ch}") or gv("soil", f"soilec{ch}")
+    return result
+
 
 # ── Generatore messaggi ──────────────────────────────────────────────
 def build_daily_summary():
@@ -249,31 +277,56 @@ def build_daily_summary():
         if rain and float(rain) > 5:
             alerts.append(f"🌧️ Pioggia {float(rain):.1f}mm — salta annaffiatura esterne")
 
-        # ── Umidità terreno
+        # ── Umidità terreno / EC / temperatura radici
         inv = get_inventory()
         dry_plants = []
         wet_plants = []
+        ec_issues = []
+        temp_issues = []
         for item in inv:
             ch = item.get("wh51_ch")
             if not ch: continue
-            soil_key = f"soilmoisture{ch}"
-            val = get_ecowitt_value(ew_data, "soil", soil_key)
-            if val is None: continue
-            moisture = float(val)
-            cat = item.get("wh51_cat", "universale")
-            thresh = SOGLIE.get(cat, SOGLIE["universale"])
+            ch = int(ch)
+            sd = get_soil_data(ew_data, ch)
             idx = item.get("plant_type_idx", 0)
             name = item.get("nickname") or (PLANT_NAMES[idx] if idx < len(PLANT_NAMES) else f"Pianta #{idx}")
+            cat = item.get("wh51_cat", "universale")
+            thresh = SOGLIE.get(cat, SOGLIE["universale"])
+            ec_thresh = SOGLIE_EC.get(cat, SOGLIE_EC["universale"])
+            is_wh52 = item.get("sensor_type") == "wh52"
 
-            if moisture < thresh.get("secco", 20):
-                dry_plants.append(f"{name} ({moisture:.0f}%)")
-            elif moisture > thresh.get("umido", 60):
-                wet_plants.append(f"{name} ({moisture:.0f}%)")
+            # Moisture
+            if sd["moisture"] is not None:
+                m = sd["moisture"]
+                if m < thresh.get("secco", 20):
+                    dry_plants.append(f"{name} ({m:.0f}%)")
+                elif m > thresh.get("umido", 60):
+                    wet_plants.append(f"{name} ({m:.0f}%)")
+
+            # EC (WH52)
+            if is_wh52 and sd["ec"] is not None:
+                reliable = sd["moisture"] is not None and sd["moisture"] >= EC_MOISTURE_MIN
+                if reliable:
+                    if sd["ec"] > ec_thresh["max"]:
+                        ec_issues.append(f"⚡ {name}: EC {sd['ec']:.0f} (alto)")
+                    elif sd["ec"] < ec_thresh["min"]:
+                        ec_issues.append(f"📉 {name}: EC {sd['ec']:.0f} (basso)")
+
+            # Temperatura radici (WH52)
+            if is_wh52 and sd["temp"] is not None:
+                if sd["temp"] < TEMP_RADICI_MIN:
+                    temp_issues.append(f"❄️ {name}: {sd['temp']:.1f}°C radici")
+                elif sd["temp"] > TEMP_RADICI_MAX:
+                    temp_issues.append(f"🔥 {name}: {sd['temp']:.1f}°C radici")
 
         if dry_plants:
             alerts.append("🏜️ SECCO: " + ", ".join(dry_plants))
         if wet_plants:
             alerts.append("💦 Umido: " + ", ".join(wet_plants))
+        if ec_issues:
+            alerts.append("⚡ EC: " + ", ".join(ec_issues))
+        if temp_issues:
+            alerts.append("🌡️ Radici: " + ", ".join(temp_issues))
 
     # ── Calendario (eventi del giorno)
     # Nota: gli eventi sono generati dal JS nel frontend, qui facciamo un check semplificato
@@ -307,38 +360,88 @@ def build_daily_summary():
 
 
 def build_soil_alert():
-    """Costruisce allerta specifica per terreno secco (da inviare immediatamente)"""
+    """Costruisce allerta per terreno secco, EC estremo o temperatura radici anomala"""
     ew_data = fetch_ecowitt_realtime()
     if not ew_data:
         return None
 
     inv = get_inventory()
-    critical = []
+    dry_plants = []
+    ec_high = []
+    ec_low = []
+    temp_cold = []
+    temp_hot = []
+
     for item in inv:
         ch = item.get("wh51_ch")
         if not ch: continue
-        val = get_ecowitt_value(ew_data, "soil", f"soilmoisture{ch}")
-        if val is None: continue
-        moisture = float(val)
-        cat = item.get("wh51_cat", "universale")
-        thresh = SOGLIE.get(cat, SOGLIE["universale"])
+        ch = int(ch)
+        sd = get_soil_data(ew_data, ch)
+        if sd["moisture"] is None and sd["ec"] is None and sd["temp"] is None:
+            continue
+
         idx = item.get("plant_type_idx", 0)
         name = item.get("nickname") or (PLANT_NAMES[idx] if idx < len(PLANT_NAMES) else f"Pianta #{idx}")
+        cat = item.get("wh51_cat", "universale")
+        thresh = SOGLIE.get(cat, SOGLIE["universale"])
+        ec_thresh = SOGLIE_EC.get(cat, SOGLIE_EC["universale"])
+        is_wh52 = item.get("sensor_type") == "wh52"
         secco = thresh.get("secco", 20)
 
-        # Critico: sotto il 50% della soglia minima
-        if moisture < secco * 0.5:
-            critical.append(f"🔴 {name}: {moisture:.0f}% (critico!)")
-        elif moisture < secco:
-            critical.append(f"🟡 {name}: {moisture:.0f}%")
+        # Umidità
+        if sd["moisture"] is not None:
+            m = sd["moisture"]
+            if m < secco * 0.5:
+                dry_plants.append(f"🔴 {name}: {m:.0f}% (critico!)")
+            elif m < secco:
+                dry_plants.append(f"🟡 {name}: {m:.0f}%")
 
-    if not critical:
+        # EC (solo WH52, affidabile se moisture ≥ EC_MOISTURE_MIN)
+        if is_wh52 and sd["ec"] is not None:
+            reliable = sd["moisture"] is not None and sd["moisture"] >= EC_MOISTURE_MIN
+            if reliable:
+                if sd["ec"] > ec_thresh["max"]:
+                    ec_high.append(f"🔴 {name}: {sd['ec']:.0f} µS/cm — lavaggio substrato!")
+                elif sd["ec"] < ec_thresh["min"]:
+                    ec_low.append(f"🟡 {name}: {sd['ec']:.0f} µS/cm — serve concime")
+
+        # Temperatura radici (solo WH52)
+        if is_wh52 and sd["temp"] is not None:
+            if sd["temp"] < TEMP_RADICI_MIN:
+                temp_cold.append(f"❄️ {name}: radici {sd['temp']:.1f}°C")
+            elif sd["temp"] > TEMP_RADICI_MAX:
+                temp_hot.append(f"🔥 {name}: radici {sd['temp']:.1f}°C")
+
+    if not (dry_plants or ec_high or temp_cold or temp_hot):
         return None
 
-    msg = f"🚨 GIARDINO — Terreno secco!\n\n"
-    msg += "\n".join(critical)
-    msg += "\n\n💧 Annaffia subito le piante in rosso"
-    return msg
+    parts = []
+    if dry_plants:
+        parts.append("🚨 TERRENO SECCO")
+        parts.extend(dry_plants)
+    if ec_high:
+        parts.append("")
+        parts.append("⚡ ACCUMULO SALI (EC alto)")
+        parts.extend(ec_high)
+        parts.append("💧 Lavaggio: 2× acqua senza fertilizzante")
+    if temp_cold:
+        parts.append("")
+        parts.append("❄️ RADICI FREDDE")
+        parts.extend(temp_cold)
+        parts.append("Riduci annaffiature — radici non assorbono bene")
+    if temp_hot:
+        parts.append("")
+        parts.append("🔥 RADICI CALDE")
+        parts.extend(temp_hot)
+        parts.append("Pacciamatura consigliata")
+
+    # Suggerimenti EC basso solo se non ci sono problemi più urgenti
+    if ec_low and not (dry_plants or ec_high):
+        parts.append("")
+        parts.append("📉 Nutrienti scarsi (EC basso)")
+        parts.extend(ec_low)
+
+    return "🌿 GIARDINO\n\n" + "\n".join(parts)
 
 
 def build_frost_alert():
@@ -525,16 +628,25 @@ def main():
         else:
             log("Allerta gelo già inviata nell'ultima ora, skip")
 
-    # Check terreno secco
+    # Check terreno (secco / EC alto / temp radici)
     soil_msg = build_soil_alert()
     if soil_msg:
-        last_soil = _last_alert_time("SECCO")
+        last_soil = _last_alert_time("TERRENO")
         if not last_soil or (datetime.now() - last_soil).total_seconds() > 7200:
-            log("⚠️  Allerta terreno secco!")
-            notify(soil_msg, "🏜️ Terreno Secco!")
-            _save_alert_time("SECCO")
+            log("⚠️  Allerta terreno rilevata!")
+            # Determina titolo in base al contenuto
+            if "ACCUMULO SALI" in soil_msg:
+                title = "⚡ EC alto — Lavaggio!"
+            elif "RADICI FREDDE" in soil_msg:
+                title = "❄️ Radici fredde"
+            elif "RADICI CALDE" in soil_msg:
+                title = "🔥 Radici calde"
+            else:
+                title = "🏜️ Terreno secco"
+            notify(soil_msg, title)
+            _save_alert_time("TERRENO")
         else:
-            log("Allerta terreno secco già inviata nelle ultime 2 ore, skip")
+            log("Allerta terreno già inviata nelle ultime 2 ore, skip")
 
     if not frost_msg and not soil_msg:
         log("✅ Nessuna allerta critica")
