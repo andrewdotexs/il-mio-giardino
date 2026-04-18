@@ -82,16 +82,28 @@ def init_db():
                 wh51_ch         TEXT,
                 wh51_cat        TEXT    DEFAULT 'universale',
                 sensor_type     TEXT    DEFAULT 'wh51',
+                sim_params      TEXT    DEFAULT '{}',
+                has_mulch       INTEGER DEFAULT 0,
+                has_saucer      INTEGER DEFAULT 0,
+                last_watered    TEXT,
                 fertilizers     TEXT    DEFAULT '[]',
                 diseases        TEXT    DEFAULT '[]',
                 created         TEXT    DEFAULT (datetime('now','localtime'))
             )
         """)
-        # Migrazione: aggiungi sensor_type se manca (per database esistenti)
+        # Migrazione incrementale: aggiunge colonne mancanti su DB esistenti
         cols = [r[1] for r in conn.execute("PRAGMA table_info(inventory)").fetchall()]
-        if 'sensor_type' not in cols:
-            conn.execute("ALTER TABLE inventory ADD COLUMN sensor_type TEXT DEFAULT 'wh51'")
-            print("  🔄 Migrazione: aggiunta colonna sensor_type")
+        migrations = [
+            ('sensor_type',  "ALTER TABLE inventory ADD COLUMN sensor_type TEXT DEFAULT 'wh51'"),
+            ('sim_params',   "ALTER TABLE inventory ADD COLUMN sim_params TEXT DEFAULT '{}'"),
+            ('has_mulch',    "ALTER TABLE inventory ADD COLUMN has_mulch INTEGER DEFAULT 0"),
+            ('has_saucer',   "ALTER TABLE inventory ADD COLUMN has_saucer INTEGER DEFAULT 0"),
+            ('last_watered', "ALTER TABLE inventory ADD COLUMN last_watered TEXT"),
+        ]
+        for col, sql in migrations:
+            if col not in cols:
+                conn.execute(sql)
+                print(f"  🔄 Migrazione: aggiunta colonna {col}")
         conn.commit()
     print(f"✅ Database pronto: {DB_FILE}")
 
@@ -349,7 +361,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def _inv_row_to_dict(self, row):
         item = dict(row)
-        for jf in ('fertilizers', 'diseases', 'custom_substrate'):
+        # Deserializza i campi che sono JSON serializzati in SQLite
+        for jf in ('fertilizers', 'diseases', 'custom_substrate', 'sim_params'):
             if item.get(jf):
                 try: item[jf] = json.loads(item[jf])
                 except: pass
@@ -379,6 +392,10 @@ class Handler(BaseHTTPRequestHandler):
             "wh51_ch": data.get("wh51Ch"),
             "wh51_cat": data.get("wh51Cat", "universale"),
             "sensor_type": data.get("sensorType", "wh51"),
+            "sim_params": json.dumps(data.get("simParams", {})),
+            "has_mulch": 1 if data.get("hasMulch") else 0,
+            "has_saucer": 1 if data.get("hasSaucer") else 0,
+            "last_watered": data.get("lastWatered"),
             "fertilizers": json.dumps(data.get("fertilizers", [])),
             "diseases": json.dumps(data.get("diseases", [])),
         }

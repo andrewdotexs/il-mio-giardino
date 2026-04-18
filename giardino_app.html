@@ -1397,6 +1397,32 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
       </div>
 
       <div class="inv-form-card">
+        <div class="inv-form-card-title">💧 Monitoraggio idrico</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:6px">Informazioni usate dal simulatore per stimare l'umidità attuale quando il sensore non è disponibile, e per calibrare l'evaporazione</div>
+        <div class="form-row">
+          <div class="form-field" style="max-width:180px">
+            <label>Ultima annaffiatura</label>
+            <input type="date" id="inv-last-watered">
+            <div class="param-hint">Opzionale. Se vuoto viene usata l'ultima spunta del calendario per questa specie</div>
+          </div>
+          <div class="form-field" style="padding-top:20px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="inv-has-mulch" style="width:16px;height:16px">
+              <span>Pacciamatura superficiale</span>
+            </label>
+            <div class="param-hint">Riduce evaporazione del ~35% (corteccia, lapillo, argilla)</div>
+          </div>
+          <div class="form-field" style="padding-top:20px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="inv-has-saucer" style="width:16px;height:16px">
+              <span>Sottovaso con riserva</span>
+            </label>
+            <div class="param-hint">Riduce perdite per drenaggio (trattiene ~30% dell'eccesso)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="inv-form-card">
         <div class="inv-form-card-title">💚 Concimi utilizzati</div>
         <div style="font-size:10px;color:var(--muted);margin-bottom:6px">Seleziona i prodotti che usi per questa pianta</div>
         <div class="form-field" style="margin-bottom:6px">
@@ -1482,9 +1508,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
           </div>
         </div>
         <div class="form-row">
-          <div class="form-field" style="max-width:140px"><label>Umidità iniziale (% FC)</label>
+          <div class="form-field" style="max-width:220px"><label>Umidità iniziale (% FC)</label>
             <input type="number" id="sim-initial-moist" step="5" min="10" max="100" value="70">
-            <div class="param-hint">Se c'è sensore WH51/WH52, viene preso dal valore live</div>
+            <div class="param-hint">Ordine di priorità: sensore WH51/WH52 live, poi stima da ultima annaffiatura, infine 65% generico</div>
+            <div id="sim-moist-source" style="font-size:10px;margin-top:3px;font-weight:500"></div>
           </div>
         </div>
         <div id="sim-plant-info" style="font-size:10px;color:var(--muted);margin-top:6px"></div>
@@ -1547,7 +1574,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
       <div style="display:flex;gap:8px;justify-content:center;margin:12px 0;flex-wrap:wrap">
         <button class="save-btn" style="padding:10px 24px" onclick="simRun()">▶️ Esegui simulazione</button>
+        <button class="ctrl-btn" style="padding:10px 16px;background:#edf5ff;border-color:#b0c8e8;color:#2a5a8a" onclick="simSaveParams()">💾 Salva parametri per questo vaso</button>
+        <button class="ctrl-btn" style="padding:10px 16px;color:#b08030" onclick="simResetParams()">🔄 Ripristina default</button>
       </div>
+      <div id="sim-save-msg" style="text-align:center;font-size:12px;color:var(--accent);margin-top:-4px;margin-bottom:8px;display:none"></div>
 
       <!-- Risultati -->
       <div id="sim-results" style="display:none">
@@ -3724,6 +3754,11 @@ function invDbToJs(row) {
     substrate: row.substrate, customSubstrate: row.custom_substrate,
     wh51Ch: row.wh51_ch, wh51Cat: row.wh51_cat,
     sensorType: row.sensor_type || 'wh51',
+    // Nuovi campi: parametri simulazione persistenti per vaso
+    simParams: row.sim_params || {},
+    hasMulch: !!row.has_mulch,
+    hasSaucer: !!row.has_saucer,
+    lastWatered: row.last_watered || null,
     fertilizers: row.fertilizers||[], diseases: row.diseases||[],
   };
 }
@@ -3982,6 +4017,10 @@ function invOpenAdd() {
   document.getElementById('inv-wh51-ch').value = '';
   document.getElementById('inv-wh51-cat').value = 'universale';
   document.getElementById('inv-sensor-type').value = 'wh51';
+  // Nuovi campi monitoraggio idrico
+  document.getElementById('inv-last-watered').value = '';
+  document.getElementById('inv-has-mulch').checked = false;
+  document.getElementById('inv-has-saucer').checked = false;
   document.getElementById('inv-del-btn').style.display = 'none';
   // Reset ferts
   document.querySelectorAll('.inv-fert-opt.selected').forEach(el=>el.classList.remove('selected'));
@@ -4030,6 +4069,10 @@ function invOpenEdit(id) {
   document.getElementById('inv-wh51-ch').value = item.wh51Ch||'';
   document.getElementById('inv-wh51-cat').value = item.wh51Cat||'universale';
   document.getElementById('inv-sensor-type').value = item.sensorType||'wh51';
+  // Nuovi campi monitoraggio idrico
+  document.getElementById('inv-last-watered').value = item.lastWatered || '';
+  document.getElementById('inv-has-mulch').checked = !!item.hasMulch;
+  document.getElementById('inv-has-saucer').checked = !!item.hasSaucer;
   document.getElementById('inv-del-btn').style.display = 'inline-flex';
   // Ferts
   document.getElementById('inv-fert-search').value = '';
@@ -4076,9 +4119,19 @@ async function invSave() {
     wh51Ch: document.getElementById('inv-wh51-ch').value || null,
     wh51Cat: document.getElementById('inv-wh51-cat').value || 'universale',
     sensorType: document.getElementById('inv-sensor-type').value || 'wh51',
+    // Campi monitoraggio idrico / simulazione
+    lastWatered: document.getElementById('inv-last-watered').value || null,
+    hasMulch: document.getElementById('inv-has-mulch').checked,
+    hasSaucer: document.getElementById('inv-has-saucer').checked,
     fertilizers: invGetSelectedFerts(),
     diseases: invTempDiseases,
   };
+  // Preserva i simParams eventualmente già salvati per questo vaso
+  // (l'utente può averli impostati dal modal simulatore senza modificarli qui)
+  if (editId) {
+    const existing = invLoad().find(x => x.id === +editId);
+    if (existing && existing.simParams) entry.simParams = existing.simParams;
+  }
   if (editId) {
     await invAPIUpdate(+editId, entry);
   } else {
@@ -5675,6 +5728,176 @@ let _simPotId = null;
 let _simForecast = null;
 let _simLiveMoisture = null;
 
+// ── Gestione parametri di simulazione persistenti per vaso ───────────
+// Questa funzione è la fonte di verità unica: dato un vaso, ritorna sempre
+// un oggetto completo con tutti i parametri, usando i salvati se presenti
+// e riempiendo il resto coi default del gruppo pianta.
+function simGetParamsForPot(item) {
+  const simP = SIM_PLANT_PARAMS[item.plantTypeIdx] || {group:'arbusto', root:25, p:0.45};
+  const kcDefault = SIM_KC_BY_GROUP[simP.group] || SIM_KC_BY_GROUP.arbusto;
+  const saved = item.simParams || {};
+  return {
+    group: simP.group,
+    rootDepthCm: saved.rootDepthCm != null ? saved.rootDepthCm : simP.root,
+    pCoef: saved.pCoef != null ? saved.pCoef : simP.p,
+    kcInitial: saved.kcInitial != null ? saved.kcInitial : kcDefault.initial,
+    kcDev:     saved.kcDev     != null ? saved.kcDev     : kcDefault.dev,
+    kcMid:     saved.kcMid     != null ? saved.kcMid     : kcDefault.mid,
+    kcLate:    saved.kcLate    != null ? saved.kcLate    : kcDefault.late,
+    kcDormant: saved.kcDormant != null ? saved.kcDormant : kcDefault.dormant,
+  };
+}
+
+// Ritorna il Kc per lo stadio corrente usando i parametri del vaso
+function simGetKcForStage(params, stage) {
+  const map = {initial:'kcInitial', dev:'kcDev', mid:'kcMid', late:'kcLate', dormant:'kcDormant'};
+  return params[map[stage]] || params.kcMid;
+}
+
+// Determina lo stadio corrente in base al mese (per piante esterne)
+function simGetCurrentStage(month) {
+  if (month <= 2 || month === 12) return 'dormant';
+  if (month <= 4) return 'initial';
+  if (month === 5 || month >= 10) return 'dev';
+  if (month <= 8) return 'mid';
+  return 'late';
+}
+
+// ── Fallback "ultima annaffiatura" per vasi senza sensore ──────────────
+// Cerca la data più recente dell'ultima annaffiatura per questo vaso,
+// combinando il campo manuale "lastWatered" del vaso con l'ultima spunta
+// nel calendario per quel tipo di pianta.
+function simFindLastWateringDate(item) {
+  const candidates = [];
+
+  // 1) Campo manuale "ultima annaffiatura" registrato sul vaso
+  if (item.lastWatered) {
+    const d = new Date(item.lastWatered + 'T12:00');
+    if (!isNaN(d.getTime())) candidates.push({date: d, source: 'manual'});
+  }
+
+  // 2) Ultima spunta nel calendario per questo tipo di pianta (0-25)
+  // Le chiavi hanno formato wa_YYYY-M-D_<plantId> quando waSetDone le salva
+  try {
+    const plantId = item.plantTypeIdx;
+    let mostRecent = null;
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith('wa_')) continue;
+      if (localStorage.getItem(key) !== '1') continue;
+      // Parsing: wa_YYYY-M-D_<plantId>
+      const m = key.match(/^wa_(\d{4})-(\d+)-(\d+)_(\d+)$/);
+      if (!m) continue;
+      const keyPlantId = parseInt(m[4]);
+      if (keyPlantId !== plantId) continue;
+      const date = new Date(+m[1], +m[2] - 1, +m[3]);
+      if (!mostRecent || date > mostRecent) mostRecent = date;
+    }
+    if (mostRecent) candidates.push({date: mostRecent, source: 'calendar'});
+  } catch {}
+
+  // Scegli la più recente tra manuale e calendario
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => b.date - a.date);
+  return candidates[0];
+}
+
+// ── Stima umidità attuale da ultima annaffiatura ───────────────────────
+// Se non c'è il sensore, usa il motore di simulazione "al contrario":
+// parte dal 98% (tipico target post-irrigazione) alla data dell'ultima
+// annaffiatura e calcola il consumo idrico fino ad oggi.
+function simEstimateMoistureFromLastWater(item, lastWaterInfo, historicalMeteo) {
+  if (!lastWaterInfo) return null;
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const daysSince = Math.floor((today - lastWaterInfo.date) / 86400000);
+
+  if (daysSince < 0) return 98;       // Annaffiatura futura nel DB? Tratta come appena fatta
+  if (daysSince === 0) return 98;     // Annaffiato oggi → al target
+  if (daysSince > 30) return null;    // Troppo tempo fa, meglio fallback al 65%
+
+  // Prepara meteo retrospettivo: se abbiamo dati storici Ecowitt usali,
+  // altrimenti ricostruiamo valori stagionali ragionevoli
+  const meteoBack = historicalMeteo || simBuildHistoricalMeteo(daysSince);
+
+  // Simulazione "headless" identica a simQuickRun ma senza irrigazioni
+  // (partiamo subito dopo un'annaffiatura, vediamo come si svuota)
+  const params = simGetParamsForPot(item);
+  const vol = invGetVolFromItem(item);
+  const potHeight = item.potShape === 'square' ? item.potHSq :
+                    item.potShape === 'truncated' ? item.potHTrunc : item.potH;
+  const maxRoot = (potHeight || 20) - 2;
+  const rootDepthCm = Math.min(params.rootDepthCm, maxRoot);
+
+  let whc = SUBSTRATE_WHC[item.substrate] || 0.30;
+  if (item.substrate === 'custom' && item.customSubstrate) {
+    whc = wSubstrates.reduce((s, sub) => {
+      const pct = (item.customSubstrate[sub.id] || 0) / 100;
+      return s + pct * sub.whc;
+    }, 0) || 0.30;
+  }
+  const rootFraction = Math.min(1, rootDepthCm / (potHeight || 20));
+  const thetaFC_L = whc * vol * rootFraction;
+
+  let areaM2;
+  if (item.potShape === 'square') areaM2 = ((item.potW||25)/100) * ((item.potD||25)/100);
+  else if (item.potShape === 'truncated') areaM2 = Math.PI * Math.pow(((item.potDiamTop||25)/2)/100, 2);
+  else areaM2 = Math.PI * Math.pow(((item.potDiam||25)/2)/100, 2);
+
+  let evapFactor = 1.0;
+  if (item.potMat === 'terracotta') evapFactor *= 1.18;
+  if (item.hasMulch) evapFactor *= 0.65;
+  if (item.hasSaucer) evapFactor *= 0.92;
+
+  // Partenza: 98% FC (target tipico dopo annaffiatura completa)
+  let theta_L = 0.98 * thetaFC_L;
+
+  // Stadio dal mese medio del periodo
+  const midMonth = new Date(lastWaterInfo.date.getTime() + (daysSince/2) * 86400000).getMonth() + 1;
+  const stage = simGetCurrentStage(midMonth);
+  const kc = simGetKcForStage(params, stage);
+
+  for (let d = 0; d < daysSince; d++) {
+    const m = meteoBack[d] || meteoBack[meteoBack.length - 1];
+    const tMean = (m.tmin + m.tmax) / 2;
+    const et0Res = calcET0(tMean, m.hum, m.solarW, m.wind);
+    const rain_L = m.rain * areaM2;
+    const ETc_L = kc * et0Res.et0 * evapFactor * areaM2;
+    theta_L += rain_L - ETc_L;
+    if (theta_L > thetaFC_L) theta_L = thetaFC_L;
+    if (theta_L < 0) theta_L = 0;
+  }
+
+  return Math.max(10, Math.min(100, (theta_L / thetaFC_L) * 100));
+}
+
+// Costruisce dati meteo retrospettivi: preferisce storico Ecowitt, altrimenti stagionali
+function simBuildHistoricalMeteo(days) {
+  const meteo = [];
+  const today = new Date();
+  for (let i = 0; i < days; i++) {
+    const date = new Date(today.getTime() - (days - i) * 86400000);
+    const month = date.getMonth() + 1;
+    const seasonal = {
+      1:{tmin:3,tmax:10,hum:75,wind:8,solarW:150,rain:2},
+      2:{tmin:4,tmax:12,hum:70,wind:8,solarW:200,rain:2},
+      3:{tmin:7,tmax:16,hum:65,wind:10,solarW:300,rain:2},
+      4:{tmin:10,tmax:20,hum:60,wind:10,solarW:400,rain:2},
+      5:{tmin:14,tmax:24,hum:55,wind:8,solarW:500,rain:1},
+      6:{tmin:18,tmax:29,hum:50,wind:8,solarW:600,rain:1},
+      7:{tmin:21,tmax:32,hum:45,wind:8,solarW:700,rain:0.5},
+      8:{tmin:21,tmax:32,hum:50,wind:8,solarW:650,rain:1},
+      9:{tmin:17,tmax:27,hum:60,wind:8,solarW:450,rain:2},
+      10:{tmin:12,tmax:21,hum:65,wind:10,solarW:300,rain:3},
+      11:{tmin:7,tmax:15,hum:75,wind:10,solarW:180,rain:3},
+      12:{tmin:4,tmax:11,hum:75,wind:10,solarW:120,rain:3},
+    };
+    meteo.push({...seasonal[month]});
+  }
+  return meteo;
+}
+
 // Apre il simulatore per un vaso
 async function simOpen(potId) {
   const inv = invLoad();
@@ -5683,33 +5906,36 @@ async function simOpen(potId) {
   _simPotId = potId;
 
   const p = sPlants[item.plantTypeIdx];
-  const simP = SIM_PLANT_PARAMS[item.plantTypeIdx] || {group:'arbusto', root:25, p:0.45};
-  const kc = SIM_KC_BY_GROUP[simP.group] || SIM_KC_BY_GROUP.arbusto;
+  // Usa la funzione unificata che fonde saved + default — stessa logica del batch
+  const params = simGetParamsForPot(item);
   const vol = invGetVolFromItem(item);
 
   // Titolo
   document.getElementById('sim-subtitle').textContent =
     `${item.nickname || p.name} · ${invGetDimsLabel(item)} · ${vol.toFixed(1)}L`;
 
-  // Popola campi default
+  // Popola campi: ora usa i parametri persistenti del vaso se presenti
   document.getElementById('sim-stage').value = 'mid';
-  document.getElementById('sim-kc').value = kc.mid;
-  document.getElementById('sim-root').value = simP.root;
-  document.getElementById('sim-p').value = simP.p;
+  document.getElementById('sim-kc').value = params.kcMid;
+  document.getElementById('sim-root').value = params.rootDepthCm;
+  document.getElementById('sim-p').value = params.pCoef;
   document.getElementById('sim-days').value = 7;
   document.getElementById('sim-color').value = 'chiaro';
-  document.getElementById('sim-mulch').checked = false;
-  document.getElementById('sim-saucer').checked = false;
+  // Pacciamatura e sottovaso sono ora attributi del vaso, non scelte di scenario
+  document.getElementById('sim-mulch').checked = !!item.hasMulch;
+  document.getElementById('sim-saucer').checked = !!item.hasSaucer;
   document.getElementById('sim-auto').checked = true;
   document.getElementById('sim-raw-factor').value = 1.0;
   document.getElementById('sim-target-fill').value = 0.98;
   document.getElementById('sim-meteo-mode').value = 'live';
   simToggleMeteoMode();
 
-  // Info pianta
+  // Info pianta: mostra il profilo Kc completo (personalizzato o default)
   const groupLabels = {succulenta:'Succulenta', orchidea:'Orchidea', tropicale:'Tropicale', agrume:'Agrume', mediterranea:'Mediterranea', bonsai:'Bonsai', arbusto:'Arbusto', albero:'Albero', aromatica:'Aromatica', fiorita:'Da fiore'};
-  document.getElementById('sim-plant-info').textContent =
-    `${p.name} · Gruppo: ${groupLabels[simP.group]||simP.group} · Kc: iniziale ${kc.initial}, sviluppo ${kc.dev}, piena ${kc.mid}, tarda ${kc.late}, riposo ${kc.dormant}`;
+  const kcCustomized = !!(item.simParams && Object.keys(item.simParams).length);
+  document.getElementById('sim-plant-info').innerHTML =
+    `${p.name} · Gruppo: ${groupLabels[params.group]||params.group} · Kc: iniziale ${params.kcInitial}, sviluppo ${params.kcDev}, piena ${params.kcMid}, tarda ${params.kcLate}, riposo ${params.kcDormant}` +
+    (kcCustomized ? ' <span style="color:#2a7abf;font-weight:600">· personalizzato</span>' : '');
 
   // Info contenitore
   const whcInfo = item.substrate==='custom' && item.customSubstrate
@@ -5718,8 +5944,14 @@ async function simOpen(potId) {
   document.getElementById('sim-pot-info').innerHTML =
     `<b>${invGetDimsLabel(item)} · ${vol.toFixed(1)}L</b> · materiale: ${item.potMat} · substrato: ${whcInfo}`;
 
-  // Prova a leggere umidità live dal sensore
+  // ── Cascata di priorità per l'umidità iniziale ─────────────────────
+  // 1° tentativo: sensore live (WH51/WH52)
+  // 2° tentativo: stima da ultima annaffiatura nota
+  // 3° fallback: 65% generico
   _simLiveMoisture = null;
+  let moistureSource = 'default';
+  let moistureNote = '';
+
   if (item.wh51Ch) {
     try {
       const res = await fetch('http://localhost:8765/api/ecowitt/realtime');
@@ -5729,12 +5961,43 @@ async function simOpen(potId) {
         if (d.moisture !== null) {
           _simLiveMoisture = d.moisture;
           document.getElementById('sim-initial-moist').value = Math.round(d.moisture);
+          moistureSource = 'sensor';
+          moistureNote = `📡 Letto in tempo reale dal sensore CH${item.wh51Ch}`;
         }
       }
     } catch {}
   }
 
-  // Prefetch previsioni
+  // Se il sensore non ha dato risposta, prova con la data ultima annaffiatura
+  if (moistureSource === 'default') {
+    const lastWater = simFindLastWateringDate(item);
+    if (lastWater) {
+      const estimated = simEstimateMoistureFromLastWater(item, lastWater);
+      if (estimated !== null) {
+        document.getElementById('sim-initial-moist').value = Math.round(estimated);
+        moistureSource = 'estimated';
+        const daysSince = Math.floor((new Date() - lastWater.date) / 86400000);
+        const srcLabel = lastWater.source === 'calendar' ? 'dal calendario' : 'dato manuale';
+        moistureNote = `💧 Stimato ${daysSince} giorni dopo l'ultima annaffiatura (${srcLabel})`;
+      }
+    }
+  }
+
+  // Se nemmeno questo, usa 65% e avvisa l'utente
+  if (moistureSource === 'default') {
+    document.getElementById('sim-initial-moist').value = 65;
+    moistureNote = '⚠️ Nessun sensore né annaffiatura registrata — stima generica, poco accurata';
+  }
+
+  // Mostra la fonte dell'umidità iniziale sotto il campo
+  const noteEl = document.getElementById('sim-moist-source');
+  if (noteEl) {
+    noteEl.textContent = moistureNote;
+    noteEl.style.color = moistureSource === 'sensor' ? '#2a6a2a' :
+                         moistureSource === 'estimated' ? '#2a7abf' : '#b08030';
+  }
+
+  // Prefetch previsioni per lo scenario meteo live
   _simForecast = null;
   try {
     const res = await fetch('http://localhost:8765/api/forecast');
@@ -5742,9 +6005,7 @@ async function simOpen(potId) {
     if (!data.error && data.daily) _simForecast = data;
   } catch {}
 
-  // Nascondi risultati precedenti
   document.getElementById('sim-results').style.display = 'none';
-
   document.getElementById('sim-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -5753,6 +6014,115 @@ function simClose() {
   document.getElementById('sim-overlay').classList.remove('open');
   document.body.style.overflow = '';
   _simPotId = null;
+}
+
+// Salva i parametri di simulazione del vaso corrente nel database.
+// Raccoglie Kc (5 stadi), profondità radicale, coefficiente p dal form,
+// più gli attributi fisici pacciamatura/sottovaso, e persiste via API.
+async function simSaveParams() {
+  if (!_simPotId) return;
+  const inv = invLoad();
+  const item = inv.find(x => x.id === _simPotId);
+  if (!item) return;
+
+  const simP = SIM_PLANT_PARAMS[item.plantTypeIdx] || {group:'arbusto'};
+  const kcDefault = SIM_KC_BY_GROUP[simP.group] || SIM_KC_BY_GROUP.arbusto;
+  const currentStage = document.getElementById('sim-stage').value;
+  const currentKc = +document.getElementById('sim-kc').value;
+
+  // Preserva i Kc degli altri stadi (quelli non modificati nel form)
+  // e aggiorna solo lo stadio corrente se diverso dal default
+  const saved = item.simParams || {};
+  const newSimParams = {
+    rootDepthCm: +document.getElementById('sim-root').value,
+    pCoef: +document.getElementById('sim-p').value,
+    kcInitial: saved.kcInitial != null ? saved.kcInitial : kcDefault.initial,
+    kcDev:     saved.kcDev     != null ? saved.kcDev     : kcDefault.dev,
+    kcMid:     saved.kcMid     != null ? saved.kcMid     : kcDefault.mid,
+    kcLate:    saved.kcLate    != null ? saved.kcLate    : kcDefault.late,
+    kcDormant: saved.kcDormant != null ? saved.kcDormant : kcDefault.dormant,
+  };
+  // Aggiorna solo lo stadio corrente con il valore nel form
+  const stageKey = {initial:'kcInitial', dev:'kcDev', mid:'kcMid', late:'kcLate', dormant:'kcDormant'}[currentStage];
+  if (stageKey) newSimParams[stageKey] = currentKc;
+
+  // Costruisci oggetto completo per l'update
+  const updated = {
+    ...item,
+    simParams: newSimParams,
+    hasMulch: document.getElementById('sim-mulch').checked,
+    hasSaucer: document.getElementById('sim-saucer').checked,
+  };
+
+  try {
+    if (invUseAPI) {
+      const res = await fetch(`${INV_API}/${item.id}`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(updated),
+      });
+      if (res.ok) {
+        invCache = null;
+        await invLoadFromAPI();
+      }
+    } else {
+      // Fallback localStorage: aggiorna in place
+      const list = invLSLoad();
+      const idx = list.findIndex(x => x.id === item.id);
+      if (idx >= 0) {
+        list[idx] = updated;
+        invLSSave(list);
+        invCache = null;
+      }
+    }
+    const msg = document.getElementById('sim-save-msg');
+    msg.textContent = '✅ Parametri salvati per questo vaso';
+    msg.style.display = 'block';
+    msg.style.color = '#2a6a2a';
+    setTimeout(() => msg.style.display = 'none', 2500);
+  } catch (e) {
+    const msg = document.getElementById('sim-save-msg');
+    msg.textContent = '❌ Errore nel salvataggio';
+    msg.style.display = 'block';
+    msg.style.color = '#b04040';
+    setTimeout(() => msg.style.display = 'none', 3000);
+  }
+}
+
+// Ripristina i parametri generici dal gruppo pianta, cancellando le personalizzazioni.
+async function simResetParams() {
+  if (!_simPotId) return;
+  if (!confirm('Ripristinare i parametri generici della specie?\nLe personalizzazioni verranno cancellate.')) return;
+  const inv = invLoad();
+  const item = inv.find(x => x.id === _simPotId);
+  if (!item) return;
+
+  const updated = {
+    ...item,
+    simParams: {},        // Vuoto: il merge tornerà ai default del gruppo
+    hasMulch: false,
+    hasSaucer: false,
+  };
+
+  try {
+    if (invUseAPI) {
+      const res = await fetch(`${INV_API}/${item.id}`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(updated),
+      });
+      if (res.ok) {
+        invCache = null;
+        await invLoadFromAPI();
+      }
+    } else {
+      const list = invLSLoad();
+      const idx = list.findIndex(x => x.id === item.id);
+      if (idx >= 0) { list[idx] = updated; invLSSave(list); invCache = null; }
+    }
+    // Riapri il modal per ricaricare i default
+    simOpen(item.id);
+  } catch {}
 }
 
 function simToggleMeteoMode() {
@@ -6077,28 +6447,23 @@ function simRenderChart(r) {
 // Esegue la simulazione "headless" senza UI, usando solo dati inventario + parametri di default.
 // Ritorna le date e le quantità d'irrigazione previste.
 function simQuickRun(item, days, meteoArray, initialMoistPct) {
-  const simP = SIM_PLANT_PARAMS[item.plantTypeIdx] || {group:'arbusto', root:25, p:0.45};
-  const kcSet = SIM_KC_BY_GROUP[simP.group] || SIM_KC_BY_GROUP.arbusto;
+  // Usa la fonte unica di verità: parametri salvati del vaso + default del gruppo
+  const params = simGetParamsForPot(item);
 
   // Stadio auto dal mese corrente
   const month = new Date().getMonth() + 1;
-  let stage = 'mid';
-  if (month <= 2 || month === 12) stage = 'dormant';
-  else if (month <= 4) stage = 'initial';
-  else if (month <= 5 || month >= 10) stage = 'dev';
-  else if (month <= 8) stage = 'mid';
-  else stage = 'late';
-  // Succulente e bonsai indoor: meno variabili nelle stagioni
-  if (simP.group === 'succulenta' || simP.group === 'orchidea') {
-    if (stage === 'dormant') stage = 'initial';
+  let stage = simGetCurrentStage(month);
+  // Succulente e orchidee: evitano riposo assoluto (indoor)
+  if ((params.group === 'succulenta' || params.group === 'orchidea') && stage === 'dormant') {
+    stage = 'initial';
   }
 
-  const kc = kcSet[stage];
-  let rootDepthCm = simP.root;
-  const pCoef = simP.p;
+  const kc = simGetKcForStage(params, stage);
+  let rootDepthCm = params.rootDepthCm;
+  const pCoef = params.pCoef;
   const vol = invGetVolFromItem(item);
 
-  // Limita profondità radicale
+  // Limita profondità radicale all'altezza utile del vaso
   const potHeight = item.potShape === 'square' ? item.potHSq :
                     item.potShape === 'truncated' ? item.potHTrunc : item.potH;
   const maxRoot = (potHeight || 20) - 2;
@@ -6132,9 +6497,11 @@ function simQuickRun(item, days, meteoArray, initialMoistPct) {
     areaM2 = Math.PI * r * r;
   }
 
-  // Evaporation factor
+  // Evaporation factor con attributi fisici salvati sul vaso
   let evapFactor = 1.0;
   if (item.potMat === 'terracotta') evapFactor *= 1.18;
+  if (item.hasMulch) evapFactor *= 0.65;
+  if (item.hasSaucer) evapFactor *= 0.92;
 
   // Simulazione
   let theta_L = initialMoistPct / 100 * thetaFC_L;
@@ -6252,10 +6619,19 @@ async function buildSimWateringSchedule() {
     const p = sPlants[item.plantTypeIdx];
     if (!p) return;
 
-    // Umidità iniziale: da sensore live, o fallback 65%
-    const initMoist = (item.wh51Ch && liveMoisture[parseInt(item.wh51Ch)] !== undefined)
-      ? liveMoisture[parseInt(item.wh51Ch)]
-      : 65;
+    // Cascata di priorità identica al modal:
+    // 1) Sensore live → 2) Stima da ultima annaffiatura → 3) 65% generico
+    let initMoist = null;
+    if (item.wh51Ch && liveMoisture[parseInt(item.wh51Ch)] !== undefined) {
+      initMoist = liveMoisture[parseInt(item.wh51Ch)];
+    } else {
+      const lastWater = simFindLastWateringDate(item);
+      if (lastWater) {
+        const estimated = simEstimateMoistureFromLastWater(item, lastWater);
+        if (estimated !== null) initMoist = estimated;
+      }
+    }
+    if (initMoist === null) initMoist = 65;
 
     const sim = simQuickRun(item, horizonDays, meteo, initMoist);
 

@@ -1,1 +1,3 @@
-*.sqlite
+*.sqlite, *.sqlite3
+.vscode/
+.venv/, venv/
