@@ -1132,6 +1132,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     </div>
   </div>
 
+  <!-- Annaffiature predittive -->
+  <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
+    <div class="calc-card-title">🔮 Annaffiature predittive da simulazione</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Quando attivo, il calendario annaffiature usa il simulatore FAO-56 per ogni vaso dell'inventario: calcola le date e le quantità esatte in base al meteo previsto, umidità live dai sensori, e caratteristiche del vaso.</div>
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--bg);border:1px solid var(--border)">
+      <input type="checkbox" id="p-use-sim-sched" style="width:18px;height:18px">
+      <div>
+        <div style="font-size:12px;font-weight:500">Attiva annaffiature predittive</div>
+        <div class="param-hint">Sostituisce gli intervalli statici con le previsioni del simulatore (richiede vasi nell'inventario)</div>
+      </div>
+    </div>
+  </div>
+
   <div style="max-width:700px;margin:12px auto;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
     <button class="save-btn" onclick="paramsSave()" style="padding:10px 24px">💾 Salva parametri</button>
     <button class="ctrl-btn" onclick="paramsReset()" style="padding:10px 16px;color:#b04040">🔄 Ripristina default</button>
@@ -1427,6 +1440,126 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   </div>
 </div>
 
+<!-- ── MODAL: SIMULATORE BILANCIO IDRICO ─────────────────────────── -->
+<div class="overlay" id="sim-overlay" onclick="if(event.target===this)simClose()">
+  <div class="panel" style="max-width:720px;max-height:92vh;overflow-y:auto">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">🔮 Simulazione bilancio idrico</div>
+        <div class="panel-subtitle" id="sim-subtitle">FAO-56 · TAW/RAW · ET₀ Penman-Monteith</div>
+      </div>
+      <button class="close-btn" onclick="simClose()">✕</button>
+    </div>
+    <div style="padding:12px 16px">
+
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">🌱 Coltura e stadio</div>
+        <div class="form-row">
+          <div class="form-field" style="flex:1"><label>Stadio vegetativo</label>
+            <select id="sim-stage" onchange="simOnStageChange()">
+              <option value="initial">Iniziale / Ripresa</option>
+              <option value="dev">Sviluppo</option>
+              <option value="mid" selected>Piena vegetazione</option>
+              <option value="late">Tarda stagione</option>
+              <option value="dormant">Riposo invernale</option>
+            </select>
+          </div>
+          <div class="form-field" style="max-width:110px"><label>Kc</label>
+            <input type="number" id="sim-kc" step="0.05" min="0.1" max="1.5">
+            <div class="param-hint">Coefficiente colturale (0.3-1.1)</div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field" style="max-width:140px"><label>Profondità radicale (cm)</label>
+            <input type="number" id="sim-root" step="1" min="5" max="100">
+          </div>
+          <div class="form-field" style="max-width:140px"><label>Coefficiente p</label>
+            <input type="number" id="sim-p" step="0.05" min="0.2" max="0.7">
+            <div class="param-hint">% TAW estraibile senza stress (0.3=sensibile, 0.6=tollerante)</div>
+          </div>
+          <div class="form-field" style="max-width:120px"><label>Giorni simulazione</label>
+            <input type="number" id="sim-days" step="1" min="1" max="30" value="7">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field" style="max-width:140px"><label>Umidità iniziale (% FC)</label>
+            <input type="number" id="sim-initial-moist" step="5" min="10" max="100" value="70">
+            <div class="param-hint">Se c'è sensore WH51/WH52, viene preso dal valore live</div>
+          </div>
+        </div>
+        <div id="sim-plant-info" style="font-size:10px;color:var(--muted);margin-top:6px"></div>
+      </div>
+
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">🪴 Contenitore</div>
+        <div id="sim-pot-info" style="font-size:11px;color:var(--text);margin-bottom:6px"></div>
+        <div class="form-row">
+          <div class="form-field" style="max-width:130px"><label>Colore vaso</label>
+            <select id="sim-color"><option value="chiaro">Chiaro</option><option value="scuro">Scuro</option></select>
+          </div>
+          <div class="form-field" style="padding-top:20px"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="sim-mulch">Pacciamatura superficiale</label>
+            <div class="param-hint">Riduce evaporazione del substrato del ~35%</div>
+          </div>
+          <div class="form-field" style="padding-top:20px"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="sim-saucer">Sottovaso con riserva</label>
+            <div class="param-hint">Riduce perdite per drenaggio</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">🌤️ Scenario meteo</div>
+        <div class="form-row">
+          <div class="form-field" style="flex:1"><label>Origine dati</label>
+            <select id="sim-meteo-mode" onchange="simToggleMeteoMode()">
+              <option value="live">Live + previsioni (Ecowitt + Open-Meteo)</option>
+              <option value="manual">Scenario manuale</option>
+            </select>
+          </div>
+        </div>
+        <div id="sim-meteo-manual" style="display:none">
+          <div class="form-row">
+            <div class="form-field"><label>T min (°C)</label><input type="number" id="sim-tmin" value="15" step="1"></div>
+            <div class="form-field"><label>T max (°C)</label><input type="number" id="sim-tmax" value="26" step="1"></div>
+            <div class="form-field"><label>Umidità media (%)</label><input type="number" id="sim-hum" value="60" step="5"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-field"><label>Vento (km/h)</label><input type="number" id="sim-wind" value="8" step="1"></div>
+            <div class="form-field"><label>Radiazione (MJ/m²/g)</label><input type="number" id="sim-solar" value="18" step="1"></div>
+            <div class="form-field"><label>Pioggia (mm/g)</label><input type="number" id="sim-rain" value="0" step="1"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">💧 Irrigazione automatica</div>
+        <div class="form-row">
+          <div class="form-field" style="padding-top:20px"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="sim-auto" checked>Attiva irrigazione automatica</label>
+            <div class="param-hint">Irriga quando la depletion supera la soglia RAW</div>
+          </div>
+          <div class="form-field" style="max-width:110px"><label>Soglia RAW</label><input type="number" id="sim-raw-factor" step="0.1" min="0.5" max="1.5" value="1.0">
+            <div class="param-hint">1.0=usa RAW intera, 0.8=più prudente</div>
+          </div>
+          <div class="form-field" style="max-width:110px"><label>Riempimento target</label><input type="number" id="sim-target-fill" step="0.02" min="0.8" max="1.0" value="0.98">
+            <div class="param-hint">% capacità di campo da ripristinare</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:center;margin:12px 0;flex-wrap:wrap">
+        <button class="save-btn" style="padding:10px 24px" onclick="simRun()">▶️ Esegui simulazione</button>
+      </div>
+
+      <!-- Risultati -->
+      <div id="sim-results" style="display:none">
+        <div id="sim-summary"></div>
+        <div id="sim-chart"></div>
+        <div id="sim-timeline"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <!-- ── BOTTOM NAV ─────────────────────────────────────────────────── -->
 <nav class="app-nav">
   <button class="nav-tab active" id="tab-schede" data-sec="schede" onclick="showSection('schede')">
@@ -1482,7 +1615,7 @@ function showSection(name) {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key==='Escape') { sCloseDetail(); cCloseOverlay(); gClosePanel(); invCloseForm(); }
+  if (e.key==='Escape') { sCloseDetail(); cCloseOverlay(); gClosePanel(); invCloseForm(); simClose(); }
 });
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1993,6 +2126,11 @@ function gInitGiorni() {
       .map(([k])=>{const[y,m,d]=k.split('-');return new Date(+y,+m-1,+d);})
       .sort((a,b)=>a-b);
   });
+
+  // ── Annaffiature predittive da simulazione (per vasi nell'inventario) ──
+  if (PARAMS.useSimScheduling !== false) {
+    buildSimWateringSchedule();
+  }
   // Watering plant legend
   const wl=document.getElementById('wa-legend');
   waPlants.forEach(p=>{
@@ -2262,13 +2400,16 @@ function gOpenDay(date, fertEvs, bbEvs, trEvs, waEvs) {
       const done=waIsDone(date,e.plant.id);
       const dy=date.getFullYear(),dm=date.getMonth(),dd=date.getDate();
       const nextDate=e.plant._waDates?e.plant._waDates.find(nd=>nd>date):null;
-      const nextStr=nextDate?('Prossima: '+nextDate.getDate()+' '+gMonthNames[nextDate.getMonth()]):'Fine stagione';
+      const nextStr=nextDate?('Prossima: '+nextDate.getDate()+' '+gMonthNames[nextDate.getMonth()]):(e._sim?'Prossima: aggiornata dalla simulazione':'Fine stagione');
+      const simBadge = e._sim ? '<span style="font-size:9px;background:#2a7abf;color:#fff;padding:2px 6px;border-radius:10px;margin-left:4px;font-weight:500">🔮 PREDITTIVA</span>' : '';
+      const simNote = e._sim && e._liters ? `<div style="margin-top:4px;padding:4px 8px;background:#e6f1fb;border-left:2px solid #2a7abf;border-radius:4px;font-size:10px;color:#2a5a8a"><b>💧 ${e._liters.toFixed(2)}L</b> · calcolati dalla simulazione bilancio idrico</div>` : '';
       html+=`<div class="event-row${done?' done':''}" id="wa-row-${e.plant.id}">
         <div class="event-icon">${e.plant.icon}</div>
         <div class="event-content">
-          <div class="event-name">${e.plant.name}</div>
+          <div class="event-name">${e.plant.name}${simBadge}</div>
           <div class="event-info"><strong>Metodo:</strong> ${e.plant.method}${e.note?`<br>${e.note}`:''}
           <br><span style="color:var(--muted)">${nextStr}</span></div>
+          ${simNote}
           <div id="wa-badge-${e.plant.id}" style="margin-top:4px"></div>
         </div>
         <button class="check-btn${done?' done':''}" style="${done?'background:#3a8abf;border-color:#3a8abf':''}"
@@ -4039,6 +4180,9 @@ function invRender() {
       ${ferts?`<div style="margin-top:4px">${ferts}${moreFerts}</div>`:''}
       ${activeDiseases.length?`<div style="margin-top:4px">${activeDiseases.map(d=>`<span class="inv-disease-chip active">⚠️ ${INV_DISEASE_LABELS[d.type]||d.type}</span>`).join(' ')}</div>`:''}
       ${it.wh51Ch?`<div class="inv-soil-badge offline" id="inv-soil-${it.id}">📡 CH${it.wh51Ch} · in attesa dati...</div>`:''}
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap" onclick="event.stopPropagation()">
+        <button class="ctrl-btn" style="flex:1;padding:6px 10px;font-size:11px;background:#edf5ff;border-color:#b0c8e8;color:#2a5a8a;border-radius:8px;cursor:pointer" onclick="event.stopPropagation();simOpen(${it.id})">🔮 Simula bilancio idrico</button>
+      </div>
     </div>`;
   });
   // Add button
@@ -5328,6 +5472,7 @@ const PARAMS_DEFAULTS = {
   tempRadiciMin: 12,  // Sotto: radici non assorbono bene → blocca fertirrigazione
   tempRadiciMax: 30,  // Sopra: rischio bruciature radici → allerta
   ecMoistureMin: 30,  // Sotto umidità %: letture EC inaffidabili
+  useSimScheduling: true,  // Usa simulazione per calendario annaffiature
 };
 
 const SOGLIE_LABELS = {
@@ -5383,6 +5528,7 @@ function paramsInit() {
   document.getElementById('p-temp-radici-min').value = PARAMS.tempRadiciMin;
   document.getElementById('p-temp-radici-max').value = PARAMS.tempRadiciMax;
   document.getElementById('p-ec-moisture-min').value = PARAMS.ecMoistureMin;
+  document.getElementById('p-use-sim-sched').checked = PARAMS.useSimScheduling !== false;
 
   // Soglie grid
   const grid = document.getElementById('p-soglie-grid');
@@ -5435,6 +5581,7 @@ function paramsSave() {
   if (isNaN(PARAMS.tempRadiciMin)) PARAMS.tempRadiciMin = PARAMS_DEFAULTS.tempRadiciMin;
   PARAMS.tempRadiciMax = +(document.getElementById('p-temp-radici-max').value) || PARAMS_DEFAULTS.tempRadiciMax;
   PARAMS.ecMoistureMin = +(document.getElementById('p-ec-moisture-min').value) || PARAMS_DEFAULTS.ecMoistureMin;
+  PARAMS.useSimScheduling = document.getElementById('p-use-sim-sched').checked;
 
   // Soglie moisture
   Object.keys(SOGLIE_LABELS).forEach(cat => {
@@ -5473,6 +5620,721 @@ function paramsReset() {
 
 // Carica parametri all'avvio
 paramsLoad();
+
+// ══════════════════════════════════════════════════════════════════════
+// ⑭ SIMULATORE BILANCIO IDRICO (FAO-56)
+// ══════════════════════════════════════════════════════════════════════
+
+// Kc (coefficiente colturale) per gruppo di piante e stadio
+const SIM_KC_BY_GROUP = {
+  succulenta:    {initial:0.25, dev:0.35, mid:0.50, late:0.40, dormant:0.20},
+  orchidea:      {initial:0.40, dev:0.50, mid:0.60, late:0.50, dormant:0.35},
+  tropicale:     {initial:0.60, dev:0.75, mid:0.90, late:0.75, dormant:0.60},
+  agrume:        {initial:0.55, dev:0.70, mid:0.85, late:0.70, dormant:0.60},
+  mediterranea:  {initial:0.50, dev:0.65, mid:0.80, late:0.65, dormant:0.45},
+  bonsai:        {initial:0.45, dev:0.55, mid:0.70, late:0.55, dormant:0.35},
+  arbusto:       {initial:0.55, dev:0.70, mid:0.85, late:0.70, dormant:0.45},
+  albero:        {initial:0.60, dev:0.75, mid:0.90, late:0.75, dormant:0.55},
+  aromatica:     {initial:0.40, dev:0.55, mid:0.70, late:0.55, dormant:0.40},
+  fiorita:       {initial:0.60, dev:0.75, mid:0.95, late:0.70, dormant:0.40},
+};
+
+// Parametri simulazione per pianta: gruppo, profondità radicale (cm), p coefficient
+const SIM_PLANT_PARAMS = {
+  0:  {group:'succulenta',   root:18, p:0.60}, // Sanseviera
+  1:  {group:'orchidea',     root:10, p:0.35}, // Orchidea
+  2:  {group:'tropicale',    root:25, p:0.40}, // Ficus Benjamina
+  3:  {group:'tropicale',    root:28, p:0.40}, // Ficus Elastica
+  4:  {group:'mediterranea', root:30, p:0.45}, // Oleandro
+  5:  {group:'bonsai',       root:15, p:0.40}, // Glicine Bonsai
+  6:  {group:'agrume',       root:32, p:0.50}, // Limone
+  7:  {group:'tropicale',    root:12, p:0.40}, // Moneta Cinese
+  8:  {group:'fiorita',      root:18, p:0.50}, // Vinca
+  9:  {group:'arbusto',      root:28, p:0.45}, // Mimosa
+  10: {group:'arbusto',      root:32, p:0.50}, // Melograno
+  11: {group:'fiorita',      root:18, p:0.40}, // Stella di Natale
+  12: {group:'succulenta',   root:15, p:0.60}, // Aloe Vera
+  13: {group:'albero',       root:40, p:0.55}, // Liquidambar
+  14: {group:'albero',       root:45, p:0.55}, // Ippocastano
+  15: {group:'albero',       root:40, p:0.55}, // Betulla
+  16: {group:'albero',       root:35, p:0.55}, // Acero Campestre
+  17: {group:'arbusto',      root:30, p:0.50}, // Pitosforo
+  18: {group:'arbusto',      root:30, p:0.50}, // Spino di Giuda
+  19: {group:'bonsai',       root:15, p:0.40}, // Gelso Bonsai
+  20: {group:'tropicale',    root:12, p:0.40}, // Tradescantia
+  21: {group:'aromatica',    root:25, p:0.50}, // Rosmarino
+  22: {group:'aromatica',    root:22, p:0.50}, // Salvia
+  23: {group:'albero',       root:45, p:0.55}, // Paulownia
+  24: {group:'succulenta',   root:15, p:0.60}, // Crassula Ovata
+  25: {group:'bonsai',       root:15, p:0.40}, // Carmona Bonsai
+};
+
+// State
+let _simPotId = null;
+let _simForecast = null;
+let _simLiveMoisture = null;
+
+// Apre il simulatore per un vaso
+async function simOpen(potId) {
+  const inv = invLoad();
+  const item = inv.find(x => x.id === potId);
+  if (!item) return;
+  _simPotId = potId;
+
+  const p = sPlants[item.plantTypeIdx];
+  const simP = SIM_PLANT_PARAMS[item.plantTypeIdx] || {group:'arbusto', root:25, p:0.45};
+  const kc = SIM_KC_BY_GROUP[simP.group] || SIM_KC_BY_GROUP.arbusto;
+  const vol = invGetVolFromItem(item);
+
+  // Titolo
+  document.getElementById('sim-subtitle').textContent =
+    `${item.nickname || p.name} · ${invGetDimsLabel(item)} · ${vol.toFixed(1)}L`;
+
+  // Popola campi default
+  document.getElementById('sim-stage').value = 'mid';
+  document.getElementById('sim-kc').value = kc.mid;
+  document.getElementById('sim-root').value = simP.root;
+  document.getElementById('sim-p').value = simP.p;
+  document.getElementById('sim-days').value = 7;
+  document.getElementById('sim-color').value = 'chiaro';
+  document.getElementById('sim-mulch').checked = false;
+  document.getElementById('sim-saucer').checked = false;
+  document.getElementById('sim-auto').checked = true;
+  document.getElementById('sim-raw-factor').value = 1.0;
+  document.getElementById('sim-target-fill').value = 0.98;
+  document.getElementById('sim-meteo-mode').value = 'live';
+  simToggleMeteoMode();
+
+  // Info pianta
+  const groupLabels = {succulenta:'Succulenta', orchidea:'Orchidea', tropicale:'Tropicale', agrume:'Agrume', mediterranea:'Mediterranea', bonsai:'Bonsai', arbusto:'Arbusto', albero:'Albero', aromatica:'Aromatica', fiorita:'Da fiore'};
+  document.getElementById('sim-plant-info').textContent =
+    `${p.name} · Gruppo: ${groupLabels[simP.group]||simP.group} · Kc: iniziale ${kc.initial}, sviluppo ${kc.dev}, piena ${kc.mid}, tarda ${kc.late}, riposo ${kc.dormant}`;
+
+  // Info contenitore
+  const whcInfo = item.substrate==='custom' && item.customSubstrate
+    ? 'personalizzato (WHC calcolato dalla media pesata)'
+    : INV_SUB_LABELS[item.substrate]||item.substrate;
+  document.getElementById('sim-pot-info').innerHTML =
+    `<b>${invGetDimsLabel(item)} · ${vol.toFixed(1)}L</b> · materiale: ${item.potMat} · substrato: ${whcInfo}`;
+
+  // Prova a leggere umidità live dal sensore
+  _simLiveMoisture = null;
+  if (item.wh51Ch) {
+    try {
+      const res = await fetch('http://localhost:8765/api/ecowitt/realtime');
+      const json = await res.json();
+      if (json.configured && json.code === 0) {
+        const d = meteoGetSoilData(json, parseInt(item.wh51Ch));
+        if (d.moisture !== null) {
+          _simLiveMoisture = d.moisture;
+          document.getElementById('sim-initial-moist').value = Math.round(d.moisture);
+        }
+      }
+    } catch {}
+  }
+
+  // Prefetch previsioni
+  _simForecast = null;
+  try {
+    const res = await fetch('http://localhost:8765/api/forecast');
+    const data = await res.json();
+    if (!data.error && data.daily) _simForecast = data;
+  } catch {}
+
+  // Nascondi risultati precedenti
+  document.getElementById('sim-results').style.display = 'none';
+
+  document.getElementById('sim-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function simClose() {
+  document.getElementById('sim-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  _simPotId = null;
+}
+
+function simToggleMeteoMode() {
+  const mode = document.getElementById('sim-meteo-mode').value;
+  document.getElementById('sim-meteo-manual').style.display = mode === 'manual' ? 'block' : 'none';
+}
+
+function simOnStageChange() {
+  if (!_simPotId) return;
+  const inv = invLoad();
+  const item = inv.find(x => x.id === _simPotId);
+  if (!item) return;
+  const simP = SIM_PLANT_PARAMS[item.plantTypeIdx] || {group:'arbusto'};
+  const kc = SIM_KC_BY_GROUP[simP.group] || SIM_KC_BY_GROUP.arbusto;
+  const stage = document.getElementById('sim-stage').value;
+  document.getElementById('sim-kc').value = kc[stage] || 0.7;
+}
+
+// Costruisce array di dati meteo giornalieri per la simulazione
+function simBuildMeteoArray(days) {
+  const mode = document.getElementById('sim-meteo-mode').value;
+  const meteo = [];
+
+  if (mode === 'manual') {
+    const tmin = +document.getElementById('sim-tmin').value;
+    const tmax = +document.getElementById('sim-tmax').value;
+    const hum = +document.getElementById('sim-hum').value;
+    const wind = +document.getElementById('sim-wind').value;
+    const solarMJ = +document.getElementById('sim-solar').value;
+    const rain = +document.getElementById('sim-rain').value;
+    // Converti MJ/m²/g → W/m² medio (MJ / 86.4 ks per giorno ≈ W/m² medio diurno)
+    const solarW = solarMJ * 1000 / PARAMS.solarConv;
+    for (let d = 0; d < days; d++) {
+      meteo.push({tmin, tmax, hum, wind, solarW, rain, source:'manual'});
+    }
+  } else {
+    // Usa previsioni Open-Meteo
+    const daily = _simForecast && _simForecast.daily;
+    for (let d = 0; d < days; d++) {
+      if (daily && d < daily.time.length) {
+        meteo.push({
+          tmin: daily.temperature_2m_min[d],
+          tmax: daily.temperature_2m_max[d],
+          hum: 60, // Open-Meteo daily non fornisce hum media direttamente
+          wind: daily.wind_speed_10m_max ? daily.wind_speed_10m_max[d] * 0.6 : 8,
+          solarW: 300, // approx, serve radiazione più precisa ma non fornita in daily
+          rain: daily.precipitation_sum[d] || 0,
+          source:'forecast',
+        });
+      } else {
+        // Fallback: estende con ultimo giorno disponibile
+        const last = meteo[meteo.length-1];
+        meteo.push(last ? {...last} : {tmin:15, tmax:25, hum:60, wind:8, solarW:300, rain:0, source:'default'});
+      }
+    }
+  }
+  return meteo;
+}
+
+// Motore di bilancio idrico FAO-56
+function simRun() {
+  const inv = invLoad();
+  const item = inv.find(x => x.id === _simPotId);
+  if (!item) return;
+
+  const p = sPlants[item.plantTypeIdx];
+  const vol = invGetVolFromItem(item);
+
+  // Parametri
+  const stage = document.getElementById('sim-stage').value;
+  const kc = +document.getElementById('sim-kc').value;
+  let rootDepthCm = +document.getElementById('sim-root').value;
+  const pCoef = +document.getElementById('sim-p').value;
+  const days = Math.max(1, Math.min(30, +document.getElementById('sim-days').value));
+  const initialMoistPct = +document.getElementById('sim-initial-moist').value;
+  const color = document.getElementById('sim-color').value;
+  const hasMulch = document.getElementById('sim-mulch').checked;
+  const hasSaucer = document.getElementById('sim-saucer').checked;
+  const autoEnabled = document.getElementById('sim-auto').checked;
+  const rawFactor = +document.getElementById('sim-raw-factor').value;
+  const targetFill = +document.getElementById('sim-target-fill').value;
+
+  // Limita la profondità radicale all'altezza del vaso
+  const potHeight = item.potShape === 'square' ? item.potHSq :
+                    item.potShape === 'truncated' ? item.potHTrunc : item.potH;
+  const maxRoot = (potHeight || 20) - 2; // margine di 2cm dal fondo
+  if (rootDepthCm > maxRoot) rootDepthCm = maxRoot;
+
+  // WHC del substrato
+  let whc = SUBSTRATE_WHC[item.substrate] || 0.30;
+  if (item.substrate === 'custom' && item.customSubstrate) {
+    whc = wSubstrates.reduce((s, sub) => {
+      const pct = (item.customSubstrate[sub.id] || 0) / 100;
+      return s + pct * sub.whc;
+    }, 0) || 0.30;
+  }
+
+  // Parametri idrologici (volume-based, in litri)
+  // Capacità di campo (L) = WHC × volume vaso, ma riferita alla zona radicale
+  const rootFraction = Math.min(1, rootDepthCm / (potHeight || 20));
+  const rootVolumeL = vol * rootFraction;
+  const thetaFC_L = whc * rootVolumeL;  // L al field capacity
+  const thetaPWP_L = thetaFC_L * 0.25;   // PWP ≈ 25% di FC (approssimato per substrati organici)
+  const TAW_L = thetaFC_L - thetaPWP_L;
+  const RAW_L = pCoef * TAW_L;
+
+  // Superficie del vaso (m²) per conversione ET mm → L
+  let areaM2;
+  if (item.potShape === 'square') {
+    areaM2 = ((item.potW||25)/100) * ((item.potD||25)/100);
+  } else if (item.potShape === 'truncated') {
+    const rTop = ((item.potDiamTop||25)/2)/100;
+    areaM2 = Math.PI * rTop * rTop;
+  } else {
+    const r = ((item.potDiam||25)/2)/100;
+    areaM2 = Math.PI * r * r;
+  }
+
+  // Fattori di modifica evaporazione
+  let evapFactor = 1.0;
+  if (item.potMat === 'terracotta') evapFactor *= 1.18;
+  if (color === 'scuro') evapFactor *= 1.10;
+  if (hasMulch) evapFactor *= 0.65;
+  if (hasSaucer) evapFactor *= 0.92;
+
+  // Meteo
+  const meteo = simBuildMeteoArray(days);
+
+  // Simulazione
+  let theta_L = initialMoistPct / 100 * thetaFC_L;
+  const results = [];
+  let totalIrrigation_L = 0;
+  let totalDrainage_L = 0;
+  let stressDays = 0;
+  const irrigationEvents = [];
+
+  for (let d = 0; d < days; d++) {
+    const m = meteo[d];
+    const tMean = (m.tmin + m.tmax) / 2;
+
+    // ET₀ Penman-Monteith (riutilizza la funzione esistente)
+    const et0Res = calcET0(tMean, m.hum, m.solarW, m.wind);
+    const ET0 = et0Res.et0; // mm/day
+
+    // Stress reduction (Ks)
+    const depletion_L = thetaFC_L - theta_L;
+    let Ks = 1;
+    if (depletion_L > RAW_L) {
+      Ks = Math.max(0, (TAW_L - depletion_L) / (TAW_L - RAW_L));
+    }
+
+    const ETc_mm = kc * ET0 * evapFactor * Ks;
+    const ETc_L = ETc_mm * areaM2;  // mm × m² = L
+
+    // Pioggia effettiva (considera superficie del vaso)
+    const rain_L = m.rain * areaM2;
+
+    // Irrigazione automatica
+    let irrig_L = 0;
+    const rawThreshold_L = rawFactor * RAW_L;
+    if (autoEnabled && depletion_L > rawThreshold_L) {
+      const target_L = targetFill * thetaFC_L;
+      irrig_L = Math.max(0, target_L - theta_L);
+      irrigationEvents.push({day: d, liters: irrig_L});
+      totalIrrigation_L += irrig_L;
+    }
+
+    // Bilancio
+    const balance_L = rain_L + irrig_L - ETc_L;
+    theta_L += balance_L;
+
+    // Drenaggio (eccesso oltre FC)
+    if (theta_L > thetaFC_L) {
+      let drain = theta_L - thetaFC_L;
+      if (hasSaucer) drain *= 0.7; // sottovaso trattiene parte
+      totalDrainage_L += drain;
+      theta_L = thetaFC_L;
+    }
+    if (theta_L < 0) theta_L = 0;
+
+    if (Ks < 1) stressDays++;
+
+    const moisturePct = theta_L / thetaFC_L * 100;
+    results.push({
+      day: d,
+      moisturePct,
+      theta_L,
+      ET0, ETc_L, ETc_mm,
+      Ks,
+      rain_L,
+      irrig_L,
+      source: m.source,
+    });
+  }
+
+  simRenderResults({
+    item, p, vol, thetaFC_L, thetaPWP_L, TAW_L, RAW_L, rootDepthCm, whc, kc,
+    results, irrigationEvents, totalIrrigation_L, totalDrainage_L, stressDays, days, areaM2, pCoef,
+  });
+}
+
+function simRenderResults(r) {
+  document.getElementById('sim-results').style.display = 'block';
+
+  // Summary
+  const avgMoist = r.results.reduce((s,x)=>s+x.moisturePct,0) / r.results.length;
+  const minMoist = Math.min(...r.results.map(x=>x.moisturePct));
+  const totalET = r.results.reduce((s,x)=>s+x.ETc_L,0);
+
+  document.getElementById('sim-summary').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px;margin-bottom:12px">
+      <div class="result-item"><div class="result-item-label">Giorni simulati</div><div class="result-item-val">${r.days}</div></div>
+      <div class="result-item"><div class="result-item-label">Umidità media</div><div class="result-item-val">${avgMoist.toFixed(0)}%</div></div>
+      <div class="result-item"><div class="result-item-label">Umidità minima</div><div class="result-item-val" style="color:${minMoist < 30 ? '#c04040' : 'inherit'}">${minMoist.toFixed(0)}%</div></div>
+      <div class="result-item"><div class="result-item-label">Giorni in stress</div><div class="result-item-val" style="color:${r.stressDays > 0 ? '#c04040' : '#2a6a2a'}">${r.stressDays}</div></div>
+      <div class="result-item"><div class="result-item-label">Irrigazioni tot.</div><div class="result-item-val">${r.totalIrrigation_L.toFixed(2)} L</div></div>
+      <div class="result-item"><div class="result-item-label">Evapotraspirazione tot.</div><div class="result-item-val">${totalET.toFixed(2)} L</div></div>
+      <div class="result-item"><div class="result-item-label">Drenaggio tot.</div><div class="result-item-val">${r.totalDrainage_L.toFixed(2)} L</div></div>
+      <div class="result-item"><div class="result-item-label">N. irrigazioni</div><div class="result-item-val">${r.irrigationEvents.length}</div></div>
+    </div>
+    <div style="font-size:10px;color:var(--muted);padding:6px 8px;background:var(--bg);border-radius:6px;margin-bottom:10px">
+      <b>Parametri idrologici del vaso:</b><br>
+      FC = ${r.thetaFC_L.toFixed(2)}L · PWP = ${r.thetaPWP_L.toFixed(2)}L · TAW = ${r.TAW_L.toFixed(2)}L · RAW = ${r.RAW_L.toFixed(2)}L (p=${r.pCoef})<br>
+      Area superficie: ${(r.areaM2*10000).toFixed(0)} cm² · Profondità radicale: ${r.rootDepthCm} cm · WHC: ${(r.whc*100).toFixed(0)}%
+    </div>`;
+
+  // Grafico SVG
+  simRenderChart(r);
+
+  // Timeline
+  simRenderTimeline(r);
+}
+
+function simRenderChart(r) {
+  const w = 660, h = 260, padL = 44, padR = 16, padT = 20, padB = 30;
+  const innerW = w - padL - padR;
+  const innerH = h - padT - padB;
+  const days = r.results.length;
+  const xStep = innerW / Math.max(1, days - 1);
+
+  // Coordinate Y: 0-100%
+  const yScale = pct => padT + innerH * (1 - pct/100);
+
+  // Bande colorate: PWP, stress, RAW, ok
+  const pwpPct = r.thetaPWP_L / r.thetaFC_L * 100;
+  const rawStartPct = (r.thetaFC_L - r.RAW_L) / r.thetaFC_L * 100;
+
+  let bands = `
+    <rect x="${padL}" y="${padT}" width="${innerW}" height="${yScale(rawStartPct) - padT}" fill="#d5ecd5" opacity="0.5"/>
+    <rect x="${padL}" y="${yScale(rawStartPct)}" width="${innerW}" height="${yScale(pwpPct) - yScale(rawStartPct)}" fill="#fdf0e0" opacity="0.5"/>
+    <rect x="${padL}" y="${yScale(pwpPct)}" width="${innerW}" height="${h - padB - yScale(pwpPct)}" fill="#faeaea" opacity="0.5"/>
+  `;
+
+  // Linee di riferimento FC, RAW, PWP
+  const lines = `
+    <line x1="${padL}" y1="${yScale(100)}" x2="${padL+innerW}" y2="${yScale(100)}" stroke="#3a6abf" stroke-dasharray="3,3" stroke-width="1"/>
+    <text x="${padL-3}" y="${yScale(100)+3}" font-size="9" fill="#3a6abf" text-anchor="end">FC 100%</text>
+    <line x1="${padL}" y1="${yScale(rawStartPct)}" x2="${padL+innerW}" y2="${yScale(rawStartPct)}" stroke="#8a6a20" stroke-dasharray="3,3" stroke-width="1"/>
+    <text x="${padL-3}" y="${yScale(rawStartPct)+3}" font-size="9" fill="#8a6a20" text-anchor="end">RAW ${rawStartPct.toFixed(0)}%</text>
+    <line x1="${padL}" y1="${yScale(pwpPct)}" x2="${padL+innerW}" y2="${yScale(pwpPct)}" stroke="#c04040" stroke-dasharray="3,3" stroke-width="1"/>
+    <text x="${padL-3}" y="${yScale(pwpPct)+3}" font-size="9" fill="#c04040" text-anchor="end">PWP ${pwpPct.toFixed(0)}%</text>
+  `;
+
+  // Linea umidità
+  let path = '';
+  r.results.forEach((x, i) => {
+    const xc = padL + i * xStep;
+    const yc = yScale(x.moisturePct);
+    path += (i === 0 ? 'M' : 'L') + xc + ',' + yc;
+  });
+  const line = `<path d="${path}" fill="none" stroke="#2a5a8a" stroke-width="2.5"/>`;
+
+  // Punti + irrigazione/pioggia
+  let markers = '';
+  r.results.forEach((x, i) => {
+    const xc = padL + i * xStep;
+    const yc = yScale(x.moisturePct);
+    markers += `<circle cx="${xc}" cy="${yc}" r="3" fill="#2a5a8a"/>`;
+    // Irrigazione (triangolo blu sopra)
+    if (x.irrig_L > 0) {
+      markers += `<path d="M${xc-4},${padT-4} L${xc+4},${padT-4} L${xc},${padT+2} Z" fill="#3a8abf"/>`;
+    }
+    // Pioggia (goccia)
+    if (x.rain_L > 0) {
+      markers += `<circle cx="${xc}" cy="${padT-6}" r="2.5" fill="#4a90d0"/>`;
+    }
+  });
+
+  // Asse X
+  let axisX = '';
+  const today = new Date();
+  for (let i = 0; i < days; i += Math.max(1, Math.floor(days/10))) {
+    const xc = padL + i * xStep;
+    const d = new Date(today.getTime() + i * 86400000);
+    axisX += `<text x="${xc}" y="${h - 10}" font-size="9" fill="#666" text-anchor="middle">${d.getDate()}/${d.getMonth()+1}</text>`;
+    axisX += `<line x1="${xc}" y1="${padT+innerH}" x2="${xc}" y2="${padT+innerH+3}" stroke="#aaa"/>`;
+  }
+
+  // Asse Y
+  let axisY = '';
+  [0, 25, 50, 75, 100].forEach(pct => {
+    axisY += `<line x1="${padL-3}" y1="${yScale(pct)}" x2="${padL}" y2="${yScale(pct)}" stroke="#aaa"/>`;
+    axisY += `<text x="${padL-5}" y="${yScale(pct)+3}" font-size="9" fill="#666" text-anchor="end">${pct}%</text>`;
+  });
+
+  document.getElementById('sim-chart').innerHTML = `
+    <div style="font-size:12px;font-weight:500;margin-bottom:4px">📈 Andamento umidità substrato</div>
+    <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;background:#fff;border:1px solid var(--border);border-radius:8px">
+      ${bands}${lines}${line}${markers}${axisX}${axisY}
+      <rect x="${padL}" y="${padT}" width="${innerW}" height="${innerH}" fill="none" stroke="#ccc"/>
+    </svg>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;font-size:10px;color:var(--muted)">
+      <span>🟩 Zona ottimale</span>
+      <span>🟧 Depletion > RAW (stress imminente)</span>
+      <span>🟥 Sotto PWP (danno)</span>
+      <span>🔺 Irrigazione</span>
+      <span>💧 Pioggia</span>
+    </div>`;
+}
+
+// ── Simulazione batch per pianificazione calendario ──────────────────
+// Esegue la simulazione "headless" senza UI, usando solo dati inventario + parametri di default.
+// Ritorna le date e le quantità d'irrigazione previste.
+function simQuickRun(item, days, meteoArray, initialMoistPct) {
+  const simP = SIM_PLANT_PARAMS[item.plantTypeIdx] || {group:'arbusto', root:25, p:0.45};
+  const kcSet = SIM_KC_BY_GROUP[simP.group] || SIM_KC_BY_GROUP.arbusto;
+
+  // Stadio auto dal mese corrente
+  const month = new Date().getMonth() + 1;
+  let stage = 'mid';
+  if (month <= 2 || month === 12) stage = 'dormant';
+  else if (month <= 4) stage = 'initial';
+  else if (month <= 5 || month >= 10) stage = 'dev';
+  else if (month <= 8) stage = 'mid';
+  else stage = 'late';
+  // Succulente e bonsai indoor: meno variabili nelle stagioni
+  if (simP.group === 'succulenta' || simP.group === 'orchidea') {
+    if (stage === 'dormant') stage = 'initial';
+  }
+
+  const kc = kcSet[stage];
+  let rootDepthCm = simP.root;
+  const pCoef = simP.p;
+  const vol = invGetVolFromItem(item);
+
+  // Limita profondità radicale
+  const potHeight = item.potShape === 'square' ? item.potHSq :
+                    item.potShape === 'truncated' ? item.potHTrunc : item.potH;
+  const maxRoot = (potHeight || 20) - 2;
+  if (rootDepthCm > maxRoot) rootDepthCm = maxRoot;
+
+  // WHC
+  let whc = SUBSTRATE_WHC[item.substrate] || 0.30;
+  if (item.substrate === 'custom' && item.customSubstrate) {
+    whc = wSubstrates.reduce((s, sub) => {
+      const pct = (item.customSubstrate[sub.id] || 0) / 100;
+      return s + pct * sub.whc;
+    }, 0) || 0.30;
+  }
+
+  const rootFraction = Math.min(1, rootDepthCm / (potHeight || 20));
+  const rootVolumeL = vol * rootFraction;
+  const thetaFC_L = whc * rootVolumeL;
+  const thetaPWP_L = thetaFC_L * 0.25;
+  const TAW_L = thetaFC_L - thetaPWP_L;
+  const RAW_L = pCoef * TAW_L;
+
+  // Superficie
+  let areaM2;
+  if (item.potShape === 'square') {
+    areaM2 = ((item.potW||25)/100) * ((item.potD||25)/100);
+  } else if (item.potShape === 'truncated') {
+    const rTop = ((item.potDiamTop||25)/2)/100;
+    areaM2 = Math.PI * rTop * rTop;
+  } else {
+    const r = ((item.potDiam||25)/2)/100;
+    areaM2 = Math.PI * r * r;
+  }
+
+  // Evaporation factor
+  let evapFactor = 1.0;
+  if (item.potMat === 'terracotta') evapFactor *= 1.18;
+
+  // Simulazione
+  let theta_L = initialMoistPct / 100 * thetaFC_L;
+  const irrigations = [];
+
+  for (let d = 0; d < days; d++) {
+    const m = meteoArray[d] || meteoArray[meteoArray.length-1];
+    const tMean = (m.tmin + m.tmax) / 2;
+    const et0Res = calcET0(tMean, m.hum, m.solarW, m.wind);
+    const ET0 = et0Res.et0;
+
+    const depletion_L = thetaFC_L - theta_L;
+    let Ks = 1;
+    if (depletion_L > RAW_L) {
+      Ks = Math.max(0, (TAW_L - depletion_L) / (TAW_L - RAW_L));
+    }
+    const ETc_L = kc * ET0 * evapFactor * Ks * areaM2;
+    const rain_L = m.rain * areaM2;
+
+    let irrig_L = 0;
+    if (depletion_L > RAW_L) {
+      irrig_L = Math.max(0, 0.98 * thetaFC_L - theta_L);
+      if (irrig_L > 0) {
+        irrigations.push({dayOffset: d, liters: irrig_L, ETc_L, moisturePctBefore: theta_L/thetaFC_L*100});
+      }
+    }
+
+    theta_L += rain_L + irrig_L - ETc_L;
+    if (theta_L > thetaFC_L) theta_L = thetaFC_L;
+    if (theta_L < 0) theta_L = 0;
+  }
+
+  return {
+    irrigations,
+    stage, kc,
+    thetaFC_L, TAW_L, RAW_L,
+  };
+}
+
+// Costruisce meteo array per i prossimi N giorni usando Open-Meteo forecast (se disponibile)
+// o fallback a valori stagionali ragionevoli.
+function simBuildMeteoForSchedule(days) {
+  const meteo = [];
+  const daily = _simForecast && _simForecast.daily;
+  const month = new Date().getMonth() + 1;
+
+  // Valori stagionali di default (Italia centrale)
+  const seasonal = {
+    1: {tmin:3, tmax:10, hum:75, wind:8, solarW:150, rain:2},
+    2: {tmin:4, tmax:12, hum:70, wind:8, solarW:200, rain:2},
+    3: {tmin:7, tmax:16, hum:65, wind:10, solarW:300, rain:2},
+    4: {tmin:10, tmax:20, hum:60, wind:10, solarW:400, rain:2},
+    5: {tmin:14, tmax:24, hum:55, wind:8, solarW:500, rain:1},
+    6: {tmin:18, tmax:29, hum:50, wind:8, solarW:600, rain:1},
+    7: {tmin:21, tmax:32, hum:45, wind:8, solarW:700, rain:0.5},
+    8: {tmin:21, tmax:32, hum:50, wind:8, solarW:650, rain:1},
+    9: {tmin:17, tmax:27, hum:60, wind:8, solarW:450, rain:2},
+    10: {tmin:12, tmax:21, hum:65, wind:10, solarW:300, rain:3},
+    11: {tmin:7, tmax:15, hum:75, wind:10, solarW:180, rain:3},
+    12: {tmin:4, tmax:11, hum:75, wind:10, solarW:120, rain:3},
+  };
+  const defaults = seasonal[month];
+
+  for (let d = 0; d < days; d++) {
+    if (daily && d < daily.time.length) {
+      meteo.push({
+        tmin: daily.temperature_2m_min[d],
+        tmax: daily.temperature_2m_max[d],
+        hum: defaults.hum,
+        wind: daily.wind_speed_10m_max ? daily.wind_speed_10m_max[d] * 0.6 : defaults.wind,
+        solarW: defaults.solarW,
+        rain: daily.precipitation_sum[d] || 0,
+      });
+    } else {
+      meteo.push({...defaults});
+    }
+  }
+  return meteo;
+}
+
+// Genera gli eventi annaffiatura basati sulla simulazione, per tutti i vasi dell'inventario.
+// Aggiunge le previsioni al waDateMap esistente.
+async function buildSimWateringSchedule() {
+  const inv = invLoad();
+  if (!inv.length) return;
+
+  // Prefetch previsioni (se non già in cache)
+  if (!_simForecast) {
+    try {
+      const res = await fetch('http://localhost:8765/api/forecast');
+      const data = await res.json();
+      if (!data.error && data.daily) _simForecast = data;
+    } catch {}
+  }
+
+  // Prefetch umidità live per vasi con sensore
+  const liveMoisture = {};
+  try {
+    const res = await fetch('http://localhost:8765/api/ecowitt/realtime');
+    const json = await res.json();
+    if (json.configured && json.code === 0) {
+      for (let ch = 1; ch <= 16; ch++) {
+        const d = meteoGetSoilData(json, ch);
+        if (d.moisture !== null) liveMoisture[ch] = d.moisture;
+      }
+    }
+  } catch {}
+
+  const horizonDays = 14;  // Pianifica 2 settimane avanti
+  const meteo = simBuildMeteoForSchedule(horizonDays);
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  inv.forEach(item => {
+    const p = sPlants[item.plantTypeIdx];
+    if (!p) return;
+
+    // Umidità iniziale: da sensore live, o fallback 65%
+    const initMoist = (item.wh51Ch && liveMoisture[parseInt(item.wh51Ch)] !== undefined)
+      ? liveMoisture[parseInt(item.wh51Ch)]
+      : 65;
+
+    const sim = simQuickRun(item, horizonDays, meteo, initMoist);
+
+    // Aggiungi ogni irrigazione prevista al calendario
+    sim.irrigations.forEach(ev => {
+      const date = new Date(today.getTime() + ev.dayOffset * 86400000);
+      const key = gDateKey(date);
+      if (!waDateMap[key]) waDateMap[key] = [];
+
+      // Crea un evento "sim-based" distinguibile
+      const simPlant = {
+        id: 1000 + item.id,  // ID virtuale per vasi simulati
+        name: item.nickname || p.name,
+        icon: p.icon,
+        color: '#2a7abf',
+        method: `Predittiva (${ev.liters.toFixed(2)}L)`,
+        _isSim: true,
+        _potRef: item.id,
+      };
+
+      // Evita duplicati esatti
+      if (!waDateMap[key].some(e => e.plant.id === simPlant.id)) {
+        waDateMap[key].push({
+          plant: simPlant,
+          note: `${ev.liters.toFixed(2)}L · umidità prevista ${ev.moisturePctBefore.toFixed(0)}% · ETc ${ev.ETc_L.toFixed(2)}L/g`,
+          _sim: true,
+          _liters: ev.liters,
+        });
+      }
+    });
+
+    // Salva anche le date nel plant virtuale per il "prossimo" display
+    const virtualId = 1000 + item.id;
+    const dates = sim.irrigations.map(ev => new Date(today.getTime() + ev.dayOffset * 86400000));
+    // Attach to first event's plant ref
+    Object.values(waDateMap).forEach(evs => {
+      evs.forEach(e => {
+        if (e.plant && e.plant.id === virtualId) {
+          e.plant._waDates = dates;
+        }
+      });
+    });
+  });
+}
+
+function simRenderTimeline(r) {
+  const today = new Date();
+  const rows = r.results.map((x, i) => {
+    const d = new Date(today.getTime() + i * 86400000);
+    const date = d.getDate() + '/' + (d.getMonth()+1);
+    const dow = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'][d.getDay()];
+    const stressBadge = x.Ks < 1 ? `<span style="color:#c04040;font-weight:600">stress Ks=${x.Ks.toFixed(2)}</span>` : '';
+    const rainBadge = x.rain_L > 0 ? `<span style="color:#3a6abf">💧 ${x.rain_L.toFixed(2)}L</span>` : '';
+    const irrigBadge = x.irrig_L > 0 ? `<span style="color:#2a6a2a;font-weight:600">🔻 ${x.irrig_L.toFixed(2)}L</span>` : '';
+    return `<tr style="border-top:1px solid var(--border)">
+      <td style="padding:4px 6px;font-size:10px">${dow} ${date}</td>
+      <td style="padding:4px 6px;font-size:10px;text-align:right">${x.moisturePct.toFixed(0)}%</td>
+      <td style="padding:4px 6px;font-size:10px;text-align:right">${x.ETc_L.toFixed(2)}L</td>
+      <td style="padding:4px 6px;font-size:10px;text-align:right">${rainBadge}</td>
+      <td style="padding:4px 6px;font-size:10px;text-align:right">${irrigBadge}</td>
+      <td style="padding:4px 6px;font-size:10px;text-align:right">${stressBadge}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('sim-timeline').innerHTML = `
+    <div style="font-size:12px;font-weight:500;margin:12px 0 4px">📅 Timeline giornaliera</div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:10px;background:#fff;border-radius:8px;border:1px solid var(--border)">
+        <thead style="background:var(--bg)"><tr>
+          <th style="padding:6px;text-align:left">Giorno</th>
+          <th style="padding:6px;text-align:right">Umidità</th>
+          <th style="padding:6px;text-align:right">ETc</th>
+          <th style="padding:6px;text-align:right">Pioggia</th>
+          <th style="padding:6px;text-align:right">Irrigazione</th>
+          <th style="padding:6px;text-align:right">Stress</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
 
 // ══════════════════════════════════════════════════════════════════════
 // ⑫ PWA — Service Worker + Offline
