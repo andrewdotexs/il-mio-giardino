@@ -2700,6 +2700,23 @@ const wSubstrates = [
   { id:'vermiculite', name:'Vermiculite',            whc: 0.55, color:'#c0a868' },
 ];
 
+// WHC media per preset substrato (globale: usata sia dal calcolatore acqua che dal simulatore)
+const SUBSTRATE_WHC = {
+  universale_mix: 0.32, succulente_mix: 0.17, orchidee_mix: 0.21,
+  agrumi_mix: 0.34, bonsai_mix: 0.38, mediterranee_mix: 0.20,
+  tropicali_mix: 0.40, acidofile_mix: 0.38, arbusti_mix: 0.36, custom: 0.30
+};
+// Fattore materiale vaso (globale)
+const POT_MAT_FACTOR = {plastica:1.0, ceramica:1.0, terracotta:0.88, bonsai:1.0};
+// Fattore pianta (globale)
+const PLANT_WATER_FACTOR = {
+  0:0.55, 12:0.55, 24:0.55,
+  5:0.65, 19:0.65, 25:0.65,
+  4:0.75, 6:0.75, 9:0.75, 21:0.75, 22:0.75,
+  8:0.85, 10:0.85, 11:0.85,
+  1:1.15,
+};
+
 let wVolMode = 'dim'; // 'dim' o 'lit'
 let wVolLiters = 5;   // volume corrente calcolato
 let wActivePreset = 'universale_mix';
@@ -3335,22 +3352,6 @@ async function fiOpenFromCalendar() {
       });
     }
   });
-
-  // WHC media per preset substrato (calcolata dalle composizioni)
-  const SUBSTRATE_WHC = {
-    universale_mix: 0.32, succulente_mix: 0.17, orchidee_mix: 0.21,
-    agrumi_mix: 0.34, bonsai_mix: 0.38, mediterranee_mix: 0.20,
-    tropicali_mix: 0.40, acidofile_mix: 0.38, arbusti_mix: 0.36, custom: 0.30
-  };
-  const POT_MAT_FACTOR = {plastica:1.0, ceramica:1.0, terracotta:0.88, bonsai:1.0};
-  // Fattore pianta (stesso del calcolatore acqua)
-  const PLANT_WATER_FACTOR = {
-    0:0.55, 12:0.55, 24:0.55,  // Sanseviera, Aloe, Crassula (succulente)
-    5:0.65, 19:0.65, 25:0.65,  // Glicine, Gelso, Carmona (bonsai)
-    4:0.75, 6:0.75, 9:0.75, 21:0.75, 22:0.75,  // Oleandro, Limone, Mimosa, Rosmarino, Salvia (mediterranee)
-    8:0.85, 10:0.85, 11:0.85,  // Vinca, Melograno, Stella (arbusti/fiore)
-    1:1.15,  // Orchidea (tropicale alta umidità)
-  };
 
   // Arricchisci con dati dall'inventario: ogni vaso ha le sue dimensioni
   // Espandi plantMap in potEntries: una riga per ogni record inventario
