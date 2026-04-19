@@ -238,15 +238,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/inventory":
             with get_db() as conn:
                 rows = conn.execute("SELECT * FROM inventory ORDER BY id").fetchall()
-            items = []
-            for r in rows:
-                item = dict(r)
-                # Deserializza i campi JSON
-                for jf in ('fertilizers', 'diseases', 'custom_substrate'):
-                    if item.get(jf):
-                        try: item[jf] = json.loads(item[jf])
-                        except: pass
-                items.append(item)
+            # Usa il metodo unificato per deserializzare (include sim_params)
+            items = [self._inv_row_to_dict(r) for r in rows]
             self.send_json({"items": items})
             return
 

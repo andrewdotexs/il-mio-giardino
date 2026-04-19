@@ -3744,6 +3744,15 @@ function invLSLoad(){ try { return JSON.parse(localStorage.getItem('inv_plants')
 function invLSSave(data){ try { localStorage.setItem('inv_plants', JSON.stringify(data)); } catch {} }
 
 function invDbToJs(row) {
+  // Defensive parse: se un campo JSON arriva come stringa (ad es. da una versione
+  // buggata del server), lo parsiamo qui per evitare errori a cascata
+  const parseIfString = (v, fallback) => {
+    if (v == null) return fallback;
+    if (typeof v === 'string') {
+      try { return JSON.parse(v); } catch { return fallback; }
+    }
+    return v;
+  };
   return {
     id: row.id, plantTypeIdx: row.plant_type_idx, qty: row.qty, nickname: row.nickname||'',
     location: row.location, potShape: row.pot_shape, potMat: row.pot_mat,
@@ -3751,15 +3760,17 @@ function invDbToJs(row) {
     potDiamTop: row.pot_diam_top, potDiamBot: row.pot_diam_bot,
     potHTrunc: row.pot_h_trunc, potVolTrunc: row.pot_vol_trunc,
     potW: row.pot_w, potD: row.pot_d, potHSq: row.pot_h_sq, potVolSq: row.pot_vol_sq,
-    substrate: row.substrate, customSubstrate: row.custom_substrate,
+    substrate: row.substrate,
+    customSubstrate: parseIfString(row.custom_substrate, null),
     wh51Ch: row.wh51_ch, wh51Cat: row.wh51_cat,
     sensorType: row.sensor_type || 'wh51',
     // Nuovi campi: parametri simulazione persistenti per vaso
-    simParams: row.sim_params || {},
+    simParams: parseIfString(row.sim_params, {}),
     hasMulch: !!row.has_mulch,
     hasSaucer: !!row.has_saucer,
     lastWatered: row.last_watered || null,
-    fertilizers: row.fertilizers||[], diseases: row.diseases||[],
+    fertilizers: parseIfString(row.fertilizers, []),
+    diseases: parseIfString(row.diseases, []),
   };
 }
 
