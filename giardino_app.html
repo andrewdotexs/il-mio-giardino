@@ -1535,6 +1535,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
       <div class="inv-form-card">
         <div class="inv-form-card-title">🌤️ Scenario meteo</div>
+        <div id="sim-meteo-banner" style="font-size:11px;padding:6px 10px;border-radius:6px;margin-bottom:8px;display:none"></div>
         <div class="form-row">
           <div class="form-field" style="flex:1"><label>Origine dati</label>
             <select id="sim-meteo-mode" onchange="simToggleMeteoMode()">
@@ -4377,6 +4378,73 @@ function meteoGetSoilData(data, ch) {
   return result;
 }
 
+// ── Lettura dati sensore interno WN31 (temp + umidità ambiente) ───────
+// Il WN31 CH1 è il sensore ambiente interno. L'API Ecowitt espone i dati in
+// 'temp_and_humidity_ch1' (formato cloud), con fallback a 'indoor' per la
+// stazione base principale (HP2551/GW2000 integrati).
+function meteoGetIndoorData(data, ch) {
+  ch = ch || 1;  // Default CH1
+  const result = {temp: null, humidity: null};
+  if (!data || !data.data) return result;
+  const getV = (sec, key) => {
+    try {
+      const s = data.data[sec]; if (!s) return null;
+      const item = s[key]; if (!item) return null;
+      const v = item.value !== undefined ? item.value : item;
+      return v === null || v === '' || v === '--' ? null : parseFloat(v);
+    } catch { return null; }
+  };
+
+  // Prima prova il canale WN31 specifico
+  result.temp = getV('temp_and_humidity_ch'+ch, 'temperature');
+  result.humidity = getV('temp_and_humidity_ch'+ch, 'humidity');
+
+  // Fallback: sensore 'indoor' della stazione base
+  if (result.temp === null) result.temp = getV('indoor', 'temperature');
+  if (result.humidity === null) result.humidity = getV('indoor', 'humidity');
+
+  return result;
+}
+
+// ── Selettore meteo per pianta: indoor (WN31) o outdoor (Ecowitt+Open-Meteo) ──
+// Restituisce sempre un set di valori utilizzabili per ET₀ e simulazione.
+// Per piante indoor, radiazione solare e vento usano valori FAO surrogati.
+function meteoPickForLocation(data, location) {
+  const isIndoor = location === 'indoor';
+  if (isIndoor) {
+    const indoor = meteoGetIndoorData(data, 1);
+    return {
+      isIndoor: true,
+      temp: indoor.temp,
+      humidity: indoor.humidity,
+      // Surrogati FAO per ambienti chiusi:
+      // vento bassissimo (ambiente stagnante), radiazione ridotta (luce indiretta)
+      windKmh: 2,       // ≈0.55 m/s — raccomandazione FAO per interni
+      solarWm2: 300,    // luce diffusa tipica vicino a finestra luminosa
+      rainMm: 0,        // mai pioggia indoor
+      source: 'wn31',
+    };
+  }
+  // Outdoor: usa dati Ecowitt esterni
+  const getV = (sec, key) => {
+    try {
+      const s = data && data.data && data.data[sec]; if (!s) return null;
+      const item = s[key]; if (!item) return null;
+      const v = item.value !== undefined ? item.value : item;
+      return v === null || v === '' || v === '--' ? null : parseFloat(v);
+    } catch { return null; }
+  };
+  return {
+    isIndoor: false,
+    temp: getV('outdoor', 'temperature'),
+    humidity: getV('outdoor', 'humidity'),
+    windKmh: getV('wind', 'wind_speed'),
+    solarWm2: getV('solar_and_uvi', 'solar'),
+    rainMm: getV('rainfall', 'daily'),
+    source: 'ecowitt_outdoor',
+  };
+}
+
 function meteoRenderWeather() {
   if (!meteoData || !meteoData.data) return;
   const d = meteoData.data;
@@ -5350,6 +5418,9 @@ async function waAnalyzeMeteo(waEvs, date) {
   const soglie = PARAMS.soglie || SOGLIE_DEFAULT;
   const sogliEC = PARAMS.sogliEC || {};
 
+  // Dati indoor (WN31 CH1) se servono per piante interne
+  const indoorData = meteoGetIndoorData({data: ewData}, 1);
+
   // Per ogni annaffiatura: analizza e aggiorna badge
   waEvs.forEach(e => {
     const badgeEl = document.getElementById('wa-badge-'+e.plant.id);
@@ -5357,20 +5428,28 @@ async function waAnalyzeMeteo(waEvs, date) {
 
     const badges = [];
 
-    // 1. Check sensore terreno (WH51/WH52)
+    // Cerca il vaso nell'inventario per determinare la location
     const invItem = inv.find(it => {
+      const p = sPlants[it.plantTypeIdx];
+      return p && p.name === e.plant.name;
+    });
+    const plantIsIndoor = invItem && invItem.location === 'indoor';
+    const plantIsOutdoor = !plantIsIndoor;
+
+    // 1. Check sensore terreno (WH51/WH52) — vale per indoor e outdoor
+    const invItemWithSensor = inv.find(it => {
       const p = sPlants[it.plantTypeIdx];
       return p && p.name === e.plant.name && it.wh51Ch;
     });
 
-    if (invItem && invItem.wh51Ch) {
-      const ch = parseInt(invItem.wh51Ch);
+    if (invItemWithSensor && invItemWithSensor.wh51Ch) {
+      const ch = parseInt(invItemWithSensor.wh51Ch);
       const sensorData = soilByCh[ch] || {moisture:null, temp:null, ec:null};
       const moisture = sensorData.moisture;
-      const cat = invItem.wh51Cat || 'universale';
+      const cat = invItemWithSensor.wh51Cat || 'universale';
       const thresh = soglie[cat] || {secco:20, ok_min:20, ok_max:50, umido:60};
       const ecThresh = sogliEC[cat] || sogliEC.universale || {min:400, target:800, max:2000};
-      const isWH52 = invItem.sensorType === 'wh52';
+      const isWH52 = invItemWithSensor.sensorType === 'wh52';
 
       if (moisture !== null) {
         if (moisture > thresh.ok_max) {
@@ -5393,7 +5472,7 @@ async function waAnalyzeMeteo(waEvs, date) {
         }
       }
 
-      // WH52: EC (conducibilità/sali)
+      // WH52: EC
       if (isWH52 && sensorData.ec !== null) {
         const reliable = moisture !== null && moisture >= PARAMS.ecMoistureMin;
         if (reliable) {
@@ -5408,34 +5487,41 @@ async function waAnalyzeMeteo(waEvs, date) {
       }
     }
 
-    // 2. Pioggia (solo per piante esterne)
-    const isOutdoor = e.plant.schedules && e.plant.schedules.some(s =>
-      s.note && (s.note.toLowerCase().includes('esterno') || s.note.toLowerCase().includes('aperto'))
-    );
-    // Check anche dal nome: piante tipicamente esterne
-    const outdoorIds = [4,5,6,8,9,10,13,14,15,16,17,18,19,21,22,23]; // Oleandro,Glicine,Limone,Vinca,Mimosa,Melograno,Liquidambar,Ippocastano,Betulla,Acero,Pitosforo,Spino,Gelso,Rosmarino,Salvia,Paulownia
-    const plantIsOutdoor = isOutdoor || outdoorIds.includes(e.plant.id);
+    // ── Badge specifici per location ─────────────────────────────────
+    if (plantIsIndoor) {
+      // PIANTA INDOOR: usa dati WN31, ignora pioggia/ET₀/gelo esterni
+      badges.push(`<span class="wa-smart-badge info">🏠 Indoor — meteo esterno ignorato</span>`);
 
-    if (plantIsOutdoor && rainSkip) {
-      if (rainHeavy) {
-        badges.push(`<span class="wa-smart-badge skip">🌧️ Pioggia ${rainDay.toFixed(0)}mm — salta sicuramente</span>`);
-      } else {
-        badges.push(`<span class="wa-smart-badge skip">🌧️ Pioggia ${rainDay.toFixed(0)}mm — probabilmente non serve</span>`);
+      // Umidità ambiente interno bassa → secca più in fretta
+      if (indoorData.humidity !== null && indoorData.humidity < PARAMS.alertHumIn) {
+        badges.push(`<span class="wa-smart-badge adjust">💨 Aria secca ${Math.round(indoorData.humidity)}% — nebulizza o avvicina umidificatore</span>`);
       }
-    }
+      // Temperatura ambiente molto alta (es. caloriferi) → ET₀ indoor più alta
+      if (indoorData.temp !== null && indoorData.temp > 26) {
+        badges.push(`<span class="wa-smart-badge adjust">🌡️ ${indoorData.temp.toFixed(0)}°C in casa — controlla più spesso</span>`);
+      }
+    } else {
+      // PIANTA OUTDOOR/BALCONE: applica logica pioggia + ET₀ + temperatura esterna
+      if (rainSkip) {
+        if (rainHeavy) {
+          badges.push(`<span class="wa-smart-badge skip">🌧️ Pioggia ${rainDay.toFixed(0)}mm — salta sicuramente</span>`);
+        } else {
+          badges.push(`<span class="wa-smart-badge skip">🌧️ Pioggia ${rainDay.toFixed(0)}mm — probabilmente non serve</span>`);
+        }
+      }
 
-    // 3. ET₀: suggerisci anticipo/ritardo della prossima annaffiatura
-    if (et0Result.factor > PARAMS.et0Anticipa) {
-      badges.push(`<span class="wa-smart-badge adjust">☀️ ET₀ alta (${et0Result.factor.toFixed(1)}×) — anticipa la prossima</span>`);
-    } else if (et0Result.factor < PARAMS.et0Ritarda) {
-      badges.push(`<span class="wa-smart-badge adjust">☁️ ET₀ bassa (${et0Result.factor.toFixed(1)}×) — puoi ritardare</span>`);
-    }
+      // ET₀ esterna: suggerisci anticipo/ritardo
+      if (et0Result.factor > PARAMS.et0Anticipa) {
+        badges.push(`<span class="wa-smart-badge adjust">☀️ ET₀ alta (${et0Result.factor.toFixed(1)}×) — anticipa la prossima</span>`);
+      } else if (et0Result.factor < PARAMS.et0Ritarda) {
+        badges.push(`<span class="wa-smart-badge adjust">☁️ ET₀ bassa (${et0Result.factor.toFixed(1)}×) — puoi ritardare</span>`);
+      }
 
-    // 4. Temperatura estrema
-    if (temp !== null) {
-      if (temp > PARAMS.alertHeat) badges.push(`<span class="wa-smart-badge urgent">🔥 ${temp.toFixed(0)}°C — annaffia sera/mattina</span>`);
-      else if (temp < PARAMS.alertFrost && !plantIsOutdoor) {} // indoor, non rilevante
-      else if (temp < PARAMS.alertFrost) badges.push(`<span class="wa-smart-badge info">❄️ ${temp.toFixed(0)}°C — riduci acqua, terreno asciuga lento</span>`);
+      // Temperatura estrema esterna
+      if (temp !== null) {
+        if (temp > PARAMS.alertHeat) badges.push(`<span class="wa-smart-badge urgent">🔥 ${temp.toFixed(0)}°C — annaffia sera/mattina</span>`);
+        else if (temp < PARAMS.alertFrost) badges.push(`<span class="wa-smart-badge info">❄️ ${temp.toFixed(0)}°C — riduci acqua, terreno asciuga lento</span>`);
+      }
     }
 
     // Render badges
@@ -5738,6 +5824,7 @@ const SIM_PLANT_PARAMS = {
 let _simPotId = null;
 let _simForecast = null;
 let _simLiveMoisture = null;
+let _simIndoorLive = null;  // Dati live dal WN31 CH1 per piante indoor
 
 // ── Gestione parametri di simulazione persistenti per vaso ───────────
 // Questa funzione è la fonte di verità unica: dato un vaso, ritorna sempre
@@ -5828,9 +5915,10 @@ function simEstimateMoistureFromLastWater(item, lastWaterInfo, historicalMeteo) 
   if (daysSince === 0) return 98;     // Annaffiato oggi → al target
   if (daysSince > 30) return null;    // Troppo tempo fa, meglio fallback al 65%
 
-  // Prepara meteo retrospettivo: se abbiamo dati storici Ecowitt usali,
-  // altrimenti ricostruiamo valori stagionali ragionevoli
-  const meteoBack = historicalMeteo || simBuildHistoricalMeteo(daysSince);
+  // Prepara meteo retrospettivo: distinguiamo indoor (ambiente stabile) da
+  // outdoor (stagionale). Se il chiamante fornisce meteo custom, ha priorità.
+  const isIndoorPlant = item.location === 'indoor';
+  const meteoBack = historicalMeteo || simBuildHistoricalMeteo(daysSince, isIndoorPlant);
 
   // Simulazione "headless" identica a simQuickRun ma senza irrigazioni
   // (partiamo subito dopo un'annaffiatura, vediamo come si svuota)
@@ -5883,9 +5971,16 @@ function simEstimateMoistureFromLastWater(item, lastWaterInfo, historicalMeteo) 
   return Math.max(10, Math.min(100, (theta_L / thetaFC_L) * 100));
 }
 
-// Costruisce dati meteo retrospettivi: preferisce storico Ecowitt, altrimenti stagionali
-function simBuildHistoricalMeteo(days) {
+// Costruisce dati meteo retrospettivi: preferisce storico Ecowitt, altrimenti stagionali.
+// Per piante indoor usa valori "ambiente interno" stabili (21°C, 55% hum, luce indiretta).
+function simBuildHistoricalMeteo(days, isIndoor) {
   const meteo = [];
+  if (isIndoor) {
+    for (let i = 0; i < days; i++) {
+      meteo.push({tmin:19, tmax:23, hum:55, wind:2, solarW:300, rain:0, isIndoor:true});
+    }
+    return meteo;
+  }
   const today = new Date();
   for (let i = 0; i < days; i++) {
     const date = new Date(today.getTime() - (days - i) * 86400000);
@@ -5960,23 +6055,54 @@ async function simOpen(potId) {
   // 2° tentativo: stima da ultima annaffiatura nota
   // 3° fallback: 65% generico
   _simLiveMoisture = null;
+  _simIndoorLive = null;
   let moistureSource = 'default';
   let moistureNote = '';
 
-  if (item.wh51Ch) {
-    try {
-      const res = await fetch('http://localhost:8765/api/ecowitt/realtime');
-      const json = await res.json();
-      if (json.configured && json.code === 0) {
-        const d = meteoGetSoilData(json, parseInt(item.wh51Ch));
-        if (d.moisture !== null) {
-          _simLiveMoisture = d.moisture;
-          document.getElementById('sim-initial-moist').value = Math.round(d.moisture);
-          moistureSource = 'sensor';
-          moistureNote = `📡 Letto in tempo reale dal sensore CH${item.wh51Ch}`;
-        }
+  // Singolo fetch Ecowitt che raccoglie tutto: moisture dal WH51/WH52 + dati WN31
+  let ewJson = null;
+  try {
+    const res = await fetch('http://localhost:8765/api/ecowitt/realtime');
+    const j = await res.json();
+    if (j.configured && j.code === 0) ewJson = j;
+  } catch {}
+
+  // Popola dati indoor (WN31 CH1) se la pianta è indoor
+  if (ewJson && item.location === 'indoor') {
+    _simIndoorLive = meteoGetIndoorData(ewJson, 1);
+  }
+
+  // Banner informativo nel modal meteo
+  const banner = document.getElementById('sim-meteo-banner');
+  if (banner) {
+    if (item.location === 'indoor') {
+      if (_simIndoorLive && _simIndoorLive.temp !== null) {
+        banner.innerHTML = `🏠 <b>Pianta indoor</b> — usa dati WN31 CH1: ${_simIndoorLive.temp.toFixed(1)}°C, umidità ${Math.round(_simIndoorLive.humidity)}%. Meteo esterno ignorato.`;
+        banner.style.background = '#e6f1fb';
+        banner.style.color = '#2a5a8a';
+      } else {
+        banner.innerHTML = `🏠 <b>Pianta indoor</b> — sensore WN31 CH1 non disponibile, uso default ambiente (21°C, 55% umidità).`;
+        banner.style.background = '#fdf5e0';
+        banner.style.color = '#8a6a20';
       }
-    } catch {}
+      banner.style.display = 'block';
+    } else {
+      banner.innerHTML = `🌤️ <b>Pianta ${item.location === 'balcone' ? 'in balcone' : 'outdoor'}</b> — usa dati meteo esterni (Ecowitt + previsioni Open-Meteo).`;
+      banner.style.background = '#edf5ff';
+      banner.style.color = '#2a5a8a';
+      banner.style.display = 'block';
+    }
+  }
+
+  // Tenta lettura umidità dal sensore WH51/WH52
+  if (item.wh51Ch && ewJson) {
+    const d = meteoGetSoilData(ewJson, parseInt(item.wh51Ch));
+    if (d.moisture !== null) {
+      _simLiveMoisture = d.moisture;
+      document.getElementById('sim-initial-moist').value = Math.round(d.moisture);
+      moistureSource = 'sensor';
+      moistureNote = `📡 Letto in tempo reale dal sensore CH${item.wh51Ch}`;
+    }
   }
 
   // Se il sensore non ha dato risposta, prova con la data ultima annaffiatura
@@ -6157,6 +6283,11 @@ function simBuildMeteoArray(days) {
   const mode = document.getElementById('sim-meteo-mode').value;
   const meteo = [];
 
+  // Se la pianta è indoor, il meteo live diventa "ambiente interno" stabile
+  // usando i dati WN31 cached in _simIndoorLive (popolato da simOpen)
+  const item = invLoad().find(x => x.id === _simPotId);
+  const isIndoor = item && item.location === 'indoor';
+
   if (mode === 'manual') {
     const tmin = +document.getElementById('sim-tmin').value;
     const tmax = +document.getElementById('sim-tmax').value;
@@ -6169,8 +6300,23 @@ function simBuildMeteoArray(days) {
     for (let d = 0; d < days; d++) {
       meteo.push({tmin, tmax, hum, wind, solarW, rain, source:'manual'});
     }
+  } else if (isIndoor) {
+    // Modalità live per pianta indoor: usa WN31 CH1 (temp+hum) + surrogati FAO
+    const live = _simIndoorLive || {temp: 21, humidity: 55};
+    const t = live.temp !== null ? live.temp : 21;
+    const h = live.humidity !== null ? live.humidity : 55;
+    for (let d = 0; d < days; d++) {
+      meteo.push({
+        tmin: t - 2, tmax: t + 2,
+        hum: h,
+        wind: 2,
+        solarW: 300,
+        rain: 0,
+        source: 'wn31_indoor',
+      });
+    }
   } else {
-    // Usa previsioni Open-Meteo
+    // Usa previsioni Open-Meteo per piante outdoor/balcone
     const daily = _simForecast && _simForecast.daily;
     for (let d = 0; d < days; d++) {
       if (daily && d < daily.time.length) {
@@ -6554,8 +6700,32 @@ function simQuickRun(item, days, meteoArray, initialMoistPct) {
 
 // Costruisce meteo array per i prossimi N giorni usando Open-Meteo forecast (se disponibile)
 // o fallback a valori stagionali ragionevoli.
-function simBuildMeteoForSchedule(days) {
+// Se isIndoor=true, restituisce un meteo "ambiente interno" stabile:
+// temperatura dal WN31 live (o valore default), umidità ambiente,
+// vento minimo e radiazione surrogata per luce indiretta.
+function simBuildMeteoForSchedule(days, isIndoor, indoorLive) {
   const meteo = [];
+
+  if (isIndoor) {
+    // Per ambienti interni i valori sono molto più stabili: usiamo quelli live
+    // se disponibili, altrimenti defaults ragionevoli per un appartamento.
+    const t = (indoorLive && indoorLive.temp !== null) ? indoorLive.temp : 21;
+    const h = (indoorLive && indoorLive.humidity !== null) ? indoorLive.humidity : 55;
+    // Escursione giornaliera indoor limitata: ±2°C rispetto alla media
+    const tmin = t - 2, tmax = t + 2;
+    for (let d = 0; d < days; d++) {
+      meteo.push({
+        tmin, tmax,
+        hum: h,
+        wind: 2,          // vento bassissimo indoor
+        solarW: 300,      // luce indiretta tipica vicino a finestra
+        rain: 0,          // mai pioggia indoor
+        isIndoor: true,
+      });
+    }
+    return meteo;
+  }
+
   const daily = _simForecast && _simForecast.daily;
   const month = new Date().getMonth() + 1;
 
@@ -6608,8 +6778,9 @@ async function buildSimWateringSchedule() {
     } catch {}
   }
 
-  // Prefetch umidità live per vasi con sensore
+  // Prefetch umidità live per vasi con sensore + dati WN31 indoor
   const liveMoisture = {};
+  let indoorLive = null;
   try {
     const res = await fetch('http://localhost:8765/api/ecowitt/realtime');
     const json = await res.json();
@@ -6618,17 +6789,25 @@ async function buildSimWateringSchedule() {
         const d = meteoGetSoilData(json, ch);
         if (d.moisture !== null) liveMoisture[ch] = d.moisture;
       }
+      // Legge anche temperatura/umidità ambiente interno dal WN31 CH1
+      indoorLive = meteoGetIndoorData(json, 1);
     }
   } catch {}
 
   const horizonDays = 14;  // Pianifica 2 settimane avanti
-  const meteo = simBuildMeteoForSchedule(horizonDays);
+  // Costruisci due meteo paralleli: uno outdoor (stagionale/forecast) e uno indoor
+  // (WN31 live o default). Ogni vaso userà quello appropriato in base alla location.
+  const meteoOutdoor = simBuildMeteoForSchedule(horizonDays, false);
+  const meteoIndoor = simBuildMeteoForSchedule(horizonDays, true, indoorLive);
   const today = new Date();
   today.setHours(0,0,0,0);
 
   inv.forEach(item => {
     const p = sPlants[item.plantTypeIdx];
     if (!p) return;
+
+    // Scegli il meteo in base alla location della pianta
+    const meteo = item.location === 'indoor' ? meteoIndoor : meteoOutdoor;
 
     // Cascata di priorità identica al modal:
     // 1) Sensore live → 2) Stima da ultima annaffiatura → 3) 65% generico
