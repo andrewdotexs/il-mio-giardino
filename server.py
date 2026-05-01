@@ -112,6 +112,81 @@ def init_db():
         conn.execute("CREATE INDEX IF NOT EXISTS idx_diary_plant ON diary(plant)")
         # Inventario: query frequente per plant_type_idx (calendario, simulazione)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_inventory_plant ON inventory(plant_type_idx)")
+
+        # ────────────────────────────────────────────────────────────────
+        # Tabella custom_plants: piante aggiunte dall'utente a runtime.
+        # Le 26 piante native restano hard-coded nel file HTML; le custom
+        # vivono qui e vengono fuse con le native al caricamento dell'app.
+        #
+        # Gli ID partono da 26 (PRIMARY KEY AUTOINCREMENT con seed iniziale)
+        # per non collidere con le 26 native (id 0-25).
+        # ────────────────────────────────────────────────────────────────
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS custom_plants (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                -- Identificazione e classificazione
+                name            TEXT    NOT NULL,
+                latin           TEXT    DEFAULT '',
+                icon            TEXT    DEFAULT '🌱',
+                sim_group       TEXT    DEFAULT 'arbusto',
+                sensor_cat      TEXT    DEFAULT 'universale',
+                -- Contenuti scheda colturale (tutti opzionali)
+                description     TEXT    DEFAULT '',
+                exposure        TEXT    DEFAULT '',
+                watering        TEXT    DEFAULT '',
+                substrate       TEXT    DEFAULT '',
+                temperature     TEXT    DEFAULT '',
+                fertilization   TEXT    DEFAULT '',
+                pruning         TEXT    DEFAULT '',
+                pests           TEXT    DEFAULT '',
+                -- Parametri calendario fertilizzazione
+                fert_months     TEXT    DEFAULT '3,4,5,6,7,8,9,10',
+                fert_interval   INTEGER DEFAULT 21,
+                fert_product    TEXT    DEFAULT '',
+                fert_note       TEXT    DEFAULT '',
+                -- Calendario annuale per la sezione Mensile.
+                -- monthly_states: stringa CSV di 12 valori (0=riposo, 1=attivo,
+                -- 2=dose ridotta, 3=attenzione speciale). Coerente col formato
+                -- usato dalla struttura cPlants nel frontend.
+                -- monthly_notes: JSON dict {mese: nota}, popolato solo per i mesi
+                -- dove l'utente ha scritto qualcosa. Vuoto se non personalizzato.
+                monthly_states  TEXT    DEFAULT '',
+                monthly_notes   TEXT    DEFAULT '{}',
+                -- Parametri simulazione esperti (vuoti = usa default del gruppo)
+                root_depth_cm   REAL,
+                p_coef          REAL,
+                kc_initial      REAL,
+                kc_dev          REAL,
+                kc_mid          REAL,
+                kc_late         REAL,
+                kc_dormant      REAL,
+                created         TEXT    DEFAULT (datetime('now','localtime')),
+                updated         TEXT    DEFAULT (datetime('now','localtime'))
+            )
+        """)
+        # Migrazioni incrementali per database esistenti che potrebbero non
+        # avere le ultime colonne. Idempotenti: ALTER TABLE viene eseguito
+        # solo se la colonna manca davvero.
+        cp_cols = [r[1] for r in conn.execute("PRAGMA table_info(custom_plants)").fetchall()]
+        cp_migrations = [
+            ('monthly_states', "ALTER TABLE custom_plants ADD COLUMN monthly_states TEXT DEFAULT ''"),
+            ('monthly_notes',  "ALTER TABLE custom_plants ADD COLUMN monthly_notes TEXT DEFAULT '{}'"),
+        ]
+        for col, sql in cp_migrations:
+            if col not in cp_cols:
+                conn.execute(sql)
+                print(f"  🔄 Migrazione custom_plants: aggiunta colonna {col}")
+        # Seed iniziale dell'AUTOINCREMENT a 26 (id 0-25 sono le native).
+        # sqlite_sequence è la tabella interna di SQLite per AUTOINCREMENT;
+        # se la tabella custom_plants è appena stata creata, ci scriviamo 25
+        # così il prossimo INSERT genera id=26.
+        already_seeded = conn.execute(
+            "SELECT 1 FROM sqlite_sequence WHERE name='custom_plants'"
+        ).fetchone()
+        if not already_seeded:
+            conn.execute("INSERT INTO sqlite_sequence (name, seq) VALUES ('custom_plants', 25)")
+            print("  🌱 Tabella custom_plants creata (ID custom partono da 26)")
+
         conn.commit()
     print(f"✅ Database pronto: {DB_FILE}")
 
@@ -248,6 +323,15 @@ class Handler(BaseHTTPRequestHandler):
                 rows = conn.execute("SELECT * FROM inventory ORDER BY id").fetchall()
             # Usa il metodo unificato per deserializzare (include sim_params)
             items = [self._inv_row_to_dict(r) for r in rows]
+            self.send_json({"items": items})
+            return
+
+        # GET /api/plants — restituisce le piante personalizzate (custom)
+        # Le 26 native restano hard-coded nel frontend; qui ci sono solo le aggiunte
+        if path == "/api/plants":
+            with get_db() as conn:
+                rows = conn.execute("SELECT * FROM custom_plants ORDER BY name").fetchall()
+            items = [self._plant_row_to_dict(r) for r in rows]
             self.send_json({"items": items})
             return
 
@@ -401,6 +485,100 @@ class Handler(BaseHTTPRequestHandler):
             "diseases": json.dumps(data.get("diseases", [])),
         }
 
+    # ── Helpers per custom_plants ─────────────────────────────────────
+    # Stesso pattern di _inv_*: row_to_dict per leggere, _fields per scrivere.
+    # I campi numerici opzionali (Kc, p, profondità radici) restano None se vuoti
+    # per indicare al frontend "usa il default del gruppo". Il frontend mappa
+    # snake_case → camelCase nella sua funzione plantDbToJs equivalente.
+    def _plant_row_to_dict(self, row):
+        item = dict(row)
+        # Le note mensili sono salvate come JSON serializzato. Le deserializzo
+        # qui così il frontend riceve direttamente un oggetto. Se il JSON è
+        # malformato (improbabile ma possibile) o vuoto, restituisco un dict vuoto
+        # invece di lasciare la stringa raw.
+        if item.get('monthly_notes'):
+            try:
+                item['monthly_notes'] = json.loads(item['monthly_notes'])
+            except (json.JSONDecodeError, TypeError):
+                item['monthly_notes'] = {}
+        else:
+            item['monthly_notes'] = {}
+        return item
+
+    def _plant_fields(self, data):
+        # Helper per parsare numeri opzionali: stringa vuota o None → None,
+        # altrimenti float. Questo permette al frontend di mandare campi vuoti
+        # senza dover fare distinzioni nel form.
+        def opt_num(key):
+            v = data.get(key)
+            if v is None or v == "" or v == "null":
+                return None
+            try: return float(v)
+            except (TypeError, ValueError): return None
+
+        # I mesi di fertilizzazione possono arrivare come array [3,4,5] o come
+        # stringa già formattata "3,4,5". Normalizzo sempre a stringa CSV.
+        fert_months = data.get("fertMonths", "3,4,5,6,7,8,9,10")
+        if isinstance(fert_months, list):
+            fert_months = ",".join(str(m) for m in fert_months)
+
+        # Gli stati mensili arrivano come array di 12 numeri [0,0,1,1,...] dal
+        # frontend, oppure come stringa CSV già formattata. Stringa o array vuoti
+        # significano "nessun calendario manuale, deduci dai fert_months".
+        monthly_states = data.get("monthlyStates", "")
+        if isinstance(monthly_states, list):
+            if len(monthly_states) == 0:
+                # Array vuoto = intento "deduci automaticamente". Salvo
+                # stringa vuota, non "0,0,...,0" che semanticamente significa
+                # "calendario manuale con tutto a riposo" (significato diverso).
+                monthly_states = ""
+            else:
+                # Array non vuoto: validazione difensiva e normalizzazione a CSV.
+                # Tengo solo valori 0-3 e padding/troncamento a 12.
+                cleaned = [int(v) if isinstance(v, (int, float)) and 0 <= v <= 3 else 0 for v in monthly_states]
+                cleaned = (cleaned + [0]*12)[:12]
+                monthly_states = ",".join(str(v) for v in cleaned)
+
+        # Le note mensili arrivano come oggetto {mese: nota} dove mese è
+        # una chiave 1-12. Le serializzo a JSON per salvarle in SQLite.
+        # Filtro le note vuote per non occupare spazio inutilmente.
+        monthly_notes = data.get("monthlyNotes", {})
+        if isinstance(monthly_notes, dict):
+            cleaned_notes = {str(k): str(v).strip() for k, v in monthly_notes.items()
+                            if v and str(v).strip()}
+            monthly_notes = json.dumps(cleaned_notes, ensure_ascii=False)
+        elif not isinstance(monthly_notes, str):
+            monthly_notes = "{}"
+
+        return {
+            "name": data.get("name", "").strip(),
+            "latin": data.get("latin", "").strip(),
+            "icon": data.get("icon", "🌱"),
+            "sim_group": data.get("simGroup", "arbusto"),
+            "sensor_cat": data.get("sensorCat", "universale"),
+            "description": data.get("description", ""),
+            "exposure": data.get("exposure", ""),
+            "watering": data.get("watering", ""),
+            "substrate": data.get("substrate", ""),
+            "temperature": data.get("temperature", ""),
+            "fertilization": data.get("fertilization", ""),
+            "pruning": data.get("pruning", ""),
+            "pests": data.get("pests", ""),
+            "fert_months": fert_months,
+            "fert_interval": int(data.get("fertInterval", 21)),
+            "fert_product": data.get("fertProduct", ""),
+            "fert_note": data.get("fertNote", ""),
+            "monthly_states": monthly_states,
+            "monthly_notes": monthly_notes,
+            "root_depth_cm": opt_num("rootDepthCm"),
+            "p_coef": opt_num("pCoef"),
+            "kc_initial": opt_num("kcInitial"),
+            "kc_dev": opt_num("kcDev"),
+            "kc_mid": opt_num("kcMid"),
+            "kc_late": opt_num("kcLate"),
+            "kc_dormant": opt_num("kcDormant"),
+        }
+
     def do_POST(self):
         parsed = urlparse(self.path)
         path = parsed.path
@@ -449,6 +627,32 @@ class Handler(BaseHTTPRequestHandler):
                 row = conn.execute("SELECT * FROM inventory WHERE id = ?", (new_id,)).fetchone()
             print(f"  ➕ Nuovo vaso: idx={fields['plant_type_idx']} — {fields['nickname'] or 'senza nome'}")
             self.send_json({"item": self._inv_row_to_dict(row)}, 201)
+            return
+
+        # POST /api/plants — crea una nuova pianta custom.
+        # L'id viene assegnato automaticamente da SQLite (>= 26 grazie al seed).
+        if path == "/api/plants":
+            data = self._read_json_body()
+            if data is None:
+                self.send_json({"error": "JSON non valido"}, 400)
+                return
+            fields = self._plant_fields(data)
+            # Validazione minima: il nome è l'unico campo obbligatorio
+            if not fields["name"]:
+                self.send_json({"error": "Il nome è obbligatorio"}, 400)
+                return
+            cols = ", ".join(fields.keys())
+            placeholders = ", ".join(["?"] * len(fields))
+            with get_db() as conn:
+                cur = conn.execute(
+                    f"INSERT INTO custom_plants ({cols}) VALUES ({placeholders})",
+                    list(fields.values())
+                )
+                conn.commit()
+                new_id = cur.lastrowid
+                row = conn.execute("SELECT * FROM custom_plants WHERE id = ?", (new_id,)).fetchone()
+            print(f"  🌱 Nuova pianta custom: id={new_id} — {fields['name']}")
+            self.send_json({"item": self._plant_row_to_dict(row)}, 201)
             return
 
         self.send_json({"error": "Not found"}, 404)
@@ -510,6 +714,37 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"item": self._inv_row_to_dict(updated)})
             return
 
+        # PUT /api/plants/:id — modifica una pianta custom esistente.
+        # Le 26 native (id 0-25) non sono modificabili: per design vivono
+        # nel codice statico. Tentativi di edit su id < 26 vengono respinti.
+        if table == "plants":
+            if entry_id < 26:
+                self.send_json({"error": "Le piante predefinite non sono modificabili"}, 403)
+                return
+            with get_db() as conn:
+                row = conn.execute("SELECT * FROM custom_plants WHERE id = ?", (entry_id,)).fetchone()
+                if not row:
+                    self.send_json({"error": "Pianta non trovata"}, 404)
+                    return
+                fields = self._plant_fields(data)
+                if not fields["name"]:
+                    self.send_json({"error": "Il nome è obbligatorio"}, 400)
+                    return
+                # Aggiorna anche il timestamp di ultima modifica
+                fields["updated"] = "datetime('now','localtime')"
+                # Per il timestamp uso un placeholder SQL diretto, non un parametro
+                sets = ", ".join(f"{k}=?" for k in fields if k != "updated")
+                values = [v for k, v in fields.items() if k != "updated"]
+                conn.execute(
+                    f"UPDATE custom_plants SET {sets}, updated=datetime('now','localtime') WHERE id=?",
+                    values + [entry_id]
+                )
+                conn.commit()
+                updated_row = conn.execute("SELECT * FROM custom_plants WHERE id = ?", (entry_id,)).fetchone()
+            print(f"  ✏️  Pianta custom modificata: id={entry_id} — {fields['name']}")
+            self.send_json({"item": self._plant_row_to_dict(updated_row)})
+            return
+
         self.send_json({"error": "Not found"}, 404)
 
     def do_DELETE(self):
@@ -522,6 +757,47 @@ class Handler(BaseHTTPRequestHandler):
             entry_id = int(parts[2])
         except ValueError:
             self.send_json({"error": "ID non valido"}, 400)
+            return
+
+        # Le piante custom hanno una logica DELETE speciale: verifica delle
+        # dipendenze (vasi e voci diario) prima di eliminare.
+        if table == "plants":
+            if entry_id < 26:
+                self.send_json({"error": "Le piante predefinite non sono eliminabili"}, 403)
+                return
+            with get_db() as conn:
+                row = conn.execute("SELECT * FROM custom_plants WHERE id = ?", (entry_id,)).fetchone()
+                if not row:
+                    self.send_json({"error": "Pianta non trovata"}, 404)
+                    return
+                plant_name = row["name"]
+                # Verifica vasi associati (l'inventario usa plant_type_idx)
+                pots = conn.execute(
+                    "SELECT id, nickname FROM inventory WHERE plant_type_idx = ?",
+                    (entry_id,)
+                ).fetchall()
+                # Verifica voci diario (il diario usa il NOME della pianta come stringa)
+                diary_count = conn.execute(
+                    "SELECT COUNT(*) FROM diary WHERE plant = ?",
+                    (plant_name,)
+                ).fetchone()[0]
+
+                if pots or diary_count > 0:
+                    # Conflitto: ci sono dipendenze, blocca l'eliminazione
+                    pot_list = [{"id": p["id"], "nickname": p["nickname"] or "senza nome"} for p in pots]
+                    self.send_json({
+                        "error": "Eliminazione bloccata: la pianta è in uso",
+                        "blocking": {
+                            "pots": pot_list,
+                            "diary_entries": diary_count
+                        }
+                    }, 409)
+                    return
+                # Nessuna dipendenza, procedi con l'eliminazione
+                conn.execute("DELETE FROM custom_plants WHERE id = ?", (entry_id,))
+                conn.commit()
+            print(f"  🗑️  Pianta custom eliminata: id={entry_id} — {plant_name}")
+            self.send_json({"deleted": entry_id, "name": plant_name})
             return
 
         if table not in ("diary", "inventory"):

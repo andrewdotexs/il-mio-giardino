@@ -440,6 +440,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   </div>
   <input type="text" placeholder="Cerca pianta o caratteristica..." oninput="sFilter(this.value)" />
   <p class="count-label" id="s-count">20 piante</p>
+
+  <!-- Pannello piante personalizzate.
+       Se non ce ne sono, mostriamo solo un piccolo invito (vedi cpRenderPanel).
+       Se ce ne sono, una griglia con i pulsanti edit/delete su ogni card. -->
+  <div id="cp-panel" style="margin:0 0 18px 0"></div>
+
   <div class="plant-grid" id="s-grid"></div>
 </div>
 <div class="overlay" id="s-overlay" onclick="if(event.target===this)sCloseDetail()">
@@ -1466,6 +1472,248 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   </div>
 </div>
 
+<!-- ── MODAL: FORM PIANTA PERSONALIZZATA ────────────────────────────
+     Form a tre livelli (base, avanzato, esperto) per aggiungere o
+     modificare una pianta custom. Solo il livello base è espanso al
+     primo apertura; gli altri due si aprono cliccando i loro header.
+-->
+<div class="overlay" id="cp-overlay" onclick="if(event.target===this)cpCloseForm()">
+  <div class="panel" style="max-width:680px;max-height:92vh;overflow-y:auto">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title" id="cp-form-title">🌱 Nuova pianta personalizzata</div>
+        <div class="panel-sub" id="cp-form-sub">Compila i campi base. I livelli avanzato ed esperto sono opzionali.</div>
+      </div>
+      <button class="close-btn" onclick="cpCloseForm()">✕</button>
+    </div>
+    <div class="panel-body">
+
+      <!-- ── LIVELLO BASE — sempre visibile ────────────────────── -->
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">📝 Informazioni essenziali</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Cinque campi sufficienti per registrare una pianta funzionante. Tutto il resto è opzionale.</div>
+
+        <div class="form-row">
+          <div class="form-field" style="flex:2">
+            <label>Nome <span style="color:#c45a5a">*</span></label>
+            <input type="text" id="cp-name" placeholder="Es. Plumeria">
+          </div>
+          <div class="form-field" style="flex:2">
+            <label>Nome latino</label>
+            <input type="text" id="cp-latin" placeholder="Es. Plumeria rubra">
+          </div>
+          <div class="form-field" style="max-width:90px">
+            <label>Icona</label>
+            <input type="text" id="cp-icon" placeholder="🌱" maxlength="4" style="text-align:center;font-size:18px">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field" style="flex:1">
+            <label>Gruppo simulazione</label>
+            <select id="cp-sim-group">
+              <option value="succulenta">Succulenta</option>
+              <option value="orchidea">Orchidea</option>
+              <option value="tropicale">Tropicale</option>
+              <option value="agrume">Agrume</option>
+              <option value="mediterranea">Mediterranea</option>
+              <option value="bonsai">Bonsai</option>
+              <option value="arbusto" selected>Arbusto</option>
+              <option value="albero">Albero</option>
+              <option value="aromatica">Aromatica</option>
+              <option value="fiorita">Da fiore</option>
+            </select>
+            <div class="param-hint">Determina i Kc stagionali del simulatore FAO-56</div>
+          </div>
+          <div class="form-field" style="flex:1">
+            <label>Categoria sensore</label>
+            <select id="cp-sensor-cat">
+              <option value="succulente">Succulente</option>
+              <option value="tropicali">Tropicali</option>
+              <option value="mediterranee">Mediterranee</option>
+              <option value="agrumi">Agrumi</option>
+              <option value="bonsai">Bonsai</option>
+              <option value="orchidee">Orchidee</option>
+              <option value="aromatiche">Aromatiche</option>
+              <option value="universale" selected>Universale</option>
+            </select>
+            <div class="param-hint">Soglie umidità per badge calendario</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── LIVELLO AVANZATO — collassabile ─────────────────────── -->
+      <div class="inv-form-card" style="cursor:pointer" onclick="cpToggleSection('advanced')">
+        <div class="inv-form-card-title" style="margin-bottom:0;display:flex;align-items:center;justify-content:space-between">
+          <span>📖 Scheda colturale e calendario</span>
+          <span id="cp-toggle-advanced" style="font-size:14px;color:var(--muted)">▼</span>
+        </div>
+      </div>
+      <div id="cp-section-advanced" style="display:none">
+        <div class="inv-form-card">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Contenuti che appariranno nella scheda della pianta. Tutti i campi sono opzionali: i tab vuoti non verranno mostrati.</div>
+          <div class="form-row">
+            <div class="form-field" style="flex:1"><label>Descrizione</label>
+              <textarea id="cp-description" rows="2" placeholder="Es. Pianta esotica con fiori a forma di uccello del paradiso."></textarea>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field" style="flex:1"><label>Esposizione</label>
+              <textarea id="cp-exposure" rows="2" placeholder="Es. Luce intensa indiretta o sole diretto al mattino"></textarea>
+            </div>
+            <div class="form-field" style="flex:1"><label>Annaffiatura</label>
+              <textarea id="cp-watering" rows="2" placeholder="Es. Regolare in primavera-estate, ridotta in inverno"></textarea>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field" style="flex:1"><label>Substrato</label>
+              <textarea id="cp-substrate-text" rows="2" placeholder="Es. Universale ben drenato con perlite"></textarea>
+            </div>
+            <div class="form-field" style="flex:1"><label>Temperatura</label>
+              <textarea id="cp-temperature" rows="2" placeholder="Es. 16-26°C, non sotto i 10°C"></textarea>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field" style="flex:1"><label>Potatura</label>
+              <textarea id="cp-pruning" rows="2" placeholder="Es. Rimuovere foglie secche alla base"></textarea>
+            </div>
+            <div class="form-field" style="flex:1"><label>Parassiti tipici</label>
+              <textarea id="cp-pests" rows="2" placeholder="Es. Cocciniglia, ragnetto rosso in ambienti secchi"></textarea>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field" style="flex:1"><label>Note generali sulla concimazione</label>
+              <textarea id="cp-fertilization" rows="2" placeholder="Es. Sospendere durante la fioritura"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="inv-form-card">
+          <div class="inv-form-card-title">📅 Calendario fertilizzazione</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Mesi in cui la pianta riceve concime, frequenza e prodotto suggerito.</div>
+          <div class="form-row">
+            <div class="form-field" style="flex:1">
+              <label>Mesi attivi</label>
+              <div id="cp-fert-months" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div>
+              <div class="param-hint">Clicca i mesi per attivarli/disattivarli</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field" style="max-width:160px">
+              <label>Intervallo (giorni)</label>
+              <input type="number" id="cp-fert-interval" min="3" max="90" value="21">
+              <div class="param-hint">Tra una concimazione e la successiva</div>
+            </div>
+            <div class="form-field" style="flex:1">
+              <label>Concime suggerito</label>
+              <input type="text" id="cp-fert-product" placeholder="Es. Concime liquido per piante fiorite">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field" style="flex:1"><label>Note sul concime</label>
+              <input type="text" id="cp-fert-note" placeholder="Es. Mezza dose, ogni due settimane in piena estate">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── LIVELLO CALENDARIO ANNUALE — collassabile ───────────── -->
+      <!-- Questa sezione popola la struttura cPlants e fa apparire la pianta
+           nella sezione Mensile. Se l'utente non la tocca, la sezione Mensile
+           dedurrà automaticamente gli stati dai mesi di concimazione del livello
+           avanzato. Se invece vuole controllo fine, qui può specificare per
+           ogni mese lo stato e una nota personalizzata. -->
+      <div class="inv-form-card" style="cursor:pointer" onclick="cpToggleSection('monthly')">
+        <div class="inv-form-card-title" style="margin-bottom:0;display:flex;align-items:center;justify-content:space-between">
+          <span>📅 Calendario annuale (sezione Mensile)</span>
+          <span id="cp-toggle-monthly" style="font-size:14px;color:var(--muted)">▼</span>
+        </div>
+      </div>
+      <div id="cp-section-monthly" style="display:none">
+        <div class="inv-form-card">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">
+            Per ogni mese puoi indicare lo stato della pianta e una nota descrittiva.
+            <b>Se lasci tutto a "Auto", la sezione Mensile dedurrà gli stati dai mesi di concimazione</b>
+            indicati nel livello avanzato qui sopra.
+            <button type="button" onclick="cpDeduceFromFertMonths()" style="margin-left:8px;padding:2px 8px;font-size:11px;border:1px solid #b0a070;background:#fff8e0;border-radius:6px;cursor:pointer">
+              ⚙️ Deduci da concimazione
+            </button>
+          </div>
+
+          <!-- Legenda degli stati: piccolo richiamo visuale di cosa significano -->
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;font-size:11px">
+            <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#d8d8d8;border-radius:50%;display:inline-block"></span>Auto/Riposo</span>
+            <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#7a9a50;border-radius:50%;display:inline-block"></span>Concimazione attiva</span>
+            <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#c0a040;border-radius:50%;display:inline-block"></span>Dose ridotta</span>
+            <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#c06040;border-radius:50%;display:inline-block"></span>Attenzione speciale</span>
+          </div>
+
+          <!-- Griglia 12 mesi: ogni mese ha selettore stato + nota opzionale -->
+          <div id="cp-monthly-grid"></div>
+        </div>
+      </div>
+
+      <!-- ── LIVELLO ESPERTO — collassabile ──────────────────────── -->
+      <div class="inv-form-card" style="cursor:pointer" onclick="cpToggleSection('expert')">
+        <div class="inv-form-card-title" style="margin-bottom:0;display:flex;align-items:center;justify-content:space-between">
+          <span>🔬 Parametri esperti FAO-56</span>
+          <span id="cp-toggle-expert" style="font-size:14px;color:var(--muted)">▼</span>
+        </div>
+      </div>
+      <div id="cp-section-expert" style="display:none">
+        <div class="inv-form-card">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Parametri tecnici della simulazione. <b>Lascia vuoti i campi per usare i default del gruppo</b>: il simulatore userà i valori standard del modello FAO-56.</div>
+
+          <div class="form-row">
+            <div class="form-field" style="max-width:180px">
+              <label>Profondità radici (cm)</label>
+              <input type="number" id="cp-root-depth" min="5" max="100" step="1" placeholder="default gruppo">
+              <div class="param-hint">Tipica per la specie</div>
+            </div>
+            <div class="form-field" style="max-width:160px">
+              <label>Coefficiente p</label>
+              <input type="number" id="cp-p-coef" min="0.1" max="0.8" step="0.05" placeholder="default gruppo">
+              <div class="param-hint">Tolleranza al deficit (0.3-0.7)</div>
+            </div>
+          </div>
+
+          <div style="font-size:11px;color:var(--muted);margin:12px 0 6px 0;font-weight:600">Coefficienti colturali Kc per stadio vegetativo</div>
+          <div class="form-row">
+            <div class="form-field" style="max-width:130px">
+              <label>Iniziale</label>
+              <input type="number" id="cp-kc-initial" min="0.1" max="1.5" step="0.05" placeholder="auto">
+            </div>
+            <div class="form-field" style="max-width:130px">
+              <label>Sviluppo</label>
+              <input type="number" id="cp-kc-dev" min="0.1" max="1.5" step="0.05" placeholder="auto">
+            </div>
+            <div class="form-field" style="max-width:130px">
+              <label>Piena</label>
+              <input type="number" id="cp-kc-mid" min="0.1" max="1.5" step="0.05" placeholder="auto">
+            </div>
+            <div class="form-field" style="max-width:130px">
+              <label>Tarda</label>
+              <input type="number" id="cp-kc-late" min="0.1" max="1.5" step="0.05" placeholder="auto">
+            </div>
+            <div class="form-field" style="max-width:130px">
+              <label>Riposo</label>
+              <input type="number" id="cp-kc-dormant" min="0.1" max="1.5" step="0.05" placeholder="auto">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PULSANTI AZIONE ──────────────────────────────────────── -->
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap">
+        <button class="ctrl-btn" id="cp-delete-btn" onclick="cpDeletePlant()" style="display:none;background:#fdf0f0;border-color:#e8b8b8;color:#a04040">🗑️ Elimina</button>
+        <button class="ctrl-btn" onclick="cpCloseForm()">Annulla</button>
+        <button class="save-btn" onclick="cpSavePlant()">Salva</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <!-- ── MODAL: SIMULATORE BILANCIO IDRICO ─────────────────────────── -->
 <div class="overlay" id="sim-overlay" onclick="if(event.target===this)simClose()">
   <div class="panel" style="max-width:720px;max-height:92vh;overflow-y:auto">
@@ -1670,13 +1918,16 @@ function showSection(name) {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key==='Escape') { sCloseDetail(); cCloseOverlay(); gClosePanel(); invCloseForm(); simClose(); }
+  if (e.key==='Escape') { sCloseDetail(); cCloseOverlay(); gClosePanel(); invCloseForm(); simClose(); cpCloseForm(); }
 });
 
 // ══════════════════════════════════════════════════════════════════════
 // ① SCHEDE PIANTE
 // ══════════════════════════════════════════════════════════════════════
-const sPlants = [
+// Le 26 piante native sono dichiarate qui come array mutabile (let) perché
+// il sistema di piante custom le estende a runtime. La fusione avviene in
+// loadCustomPlants() che fa push dei record creati a partire dal database.
+let sPlants = [
   { name:"Sanseviera", latin:"", icon:"🌿", isNew:false, tags:["Interno","Facile","Stop invernale"], tc:["pt","pg","pgr"],
     con:{periodo:"Aprile – Settembre",frequenza:"1× al mese",concime:"Liquido succulente, ½ dose",stop:"Stop completo in autunno/inverno",note:"Non concimare mai su terreno secco. Soffre più di eccessi che di carenze."},
     sub:{terreno:"Substrato per succulente e cactus, ben drenante",ph:"6.0 – 7.0",vaso:"Terracotta con foro di drenaggio, non troppo grande",rinvaso:"Ogni 2-3 anni o quando le radici escono dal vaso",vivo:"Aggiungere 10% di humus di lombrico al substrato. Micorrize universali in polvere al rinvaso. Dose contenuta — la sanseviera preferisce substrati poveri; eccedere con organico rischia il marciume."},
@@ -1835,6 +2086,26 @@ const sPlants = [
     bio:{prodotti:"Bio·Grow · Alg·A·Mic · Root·Juice",primavera:"Bio·Grow a ½ dose ogni 2-3 settimane da aprile. Alg·A·Mic 1× al mese come rinvigorente",estate:"Bio·Grow a ½ dose ogni 2-3 settimane. Alg·A·Mic come spray fogliare diluito per umidità",autunno:"Ridurre a Bio·Grow 1× al mese a ¼ dose se temp >18°C. Stop sotto i 18°C",rinvaso:"Root·Juice sulle radici al rinvaso (solo in tarda primavera/estate). Worm·Humus a 15%",note:"Mai Bio·Bloom. Il Bio·Grow a ½ dose è sufficiente. L'Alg·A·Mic come spray fogliare è particolarmente utile per mantenere l'alta umidità che il Carmona richiede."}}
 ];
 
+// ── Helper: lookup pianta per id reale ─────────────────────────────────────
+// Le 26 native hanno id 0-25 e fino al Passo 5 erano accessibili come
+// sPlants[id] perché posizione coincideva con id. Le piante custom invece
+// arrivano dal backend ordinate per nome e quindi posizione ≠ id.
+//
+// Questa funzione fa il lookup corretto cercando per id, indipendentemente
+// dalla posizione. Va usata OVUNQUE si avesse prima sPlants[plantTypeIdx]
+// dove plantTypeIdx è un id (perché ora la dropdown della sezione Vasi
+// salva l'id reale invece dell'indice di posizione).
+//
+// Se non trova niente (per esempio perché la pianta è stata eliminata),
+// ritorna null. Il chiamante deve verificare e gestire il caso difensivamente.
+function getPlantById(id, list) {
+  if (id === undefined || id === null) return null;
+  const arr = list || sPlants;
+  // Confronto con coercion (==) per gestire stringa vs numero, perché
+  // a volte l'id arriva da DOM come stringa "26" e altre volte da DB come 26.
+  return arr.find(p => p && p.id == id) || null;
+}
+
 const sTabDefs = [
   {key:"con",label:"Concimazione",fields:[{k:"periodo",l:"Periodo"},{k:"frequenza",l:"Frequenza"},{k:"concime",l:"Concime"},{k:"stop",l:"Stop"},{k:"note",l:"Note"}]},
   {key:"sub",label:"Substrato",fields:[{k:"terreno",l:"Terreno"},{k:"ph",l:"pH ideale"},{k:"vaso",l:"Vaso"},{k:"rinvaso",l:"Rinvaso"},{k:"vivo",l:"Terreno vivo"}]},
@@ -1907,7 +2178,11 @@ function sFilter(q) {
 // ══════════════════════════════════════════════════════════════════════
 // ② CALENDARIO MENSILE
 // ══════════════════════════════════════════════════════════════════════
-const cPlants = [
+// cPlants è esteso a runtime con le piante custom (vedi loadCustomPlants).
+// Per ogni pianta custom viene generato un record con months[] e notes{}
+// dedotti dai fert_months oppure prelevati dalle colonne monthly_states e
+// monthly_notes se l'utente ha compilato il calendario manualmente.
+let cPlants = [
   {name:"Sanseviera",latin:"",icon:"🌿",months:[0,0,0,1,1,1,1,1,1,0,0,0],freq:"1× al mese",concime:"Liquido succulente, ½ dose",notes:{4:"Riprendi la concimazione — usa metà dose.",5:"Concima regolarmente. Suolo asciutto tra le annaffiature.",6:"Piena stagione. Controlla eventuali cocciniglie.",7:"Continua normalmente.",8:"Ultima parte della stagione attiva.",9:"Ultima concimazione dell'anno. Da ottobre stop totale."}},
   {name:"Orchidea",latin:"Phalaenopsis",icon:"🌸",months:[2,0,1,1,1,1,1,1,2,0,0,0],freq:"Ogni 1-2 settimane (weakly, weekly)",concime:"Specifico orchidee, ¼ dose",notes:{1:"Riposo. Nessuna concimazione.",3:"Riprendi con dosi molto leggere se emette nuovi germogli.",4:"Stagione attiva. Ogni settimana con dose ¼.",5:"Massima crescita — concima regolarmente.",6:"Se in fioritura, sospendi il concime.",7:"Continua normalmente se non in fioritura.",8:"Inizio riduzione. Scala a ogni 2 settimane.",9:"Dose molto ridotta — 1× al mese.",10:"Stop quasi totale. Solo annaffiatura."}},
   {name:"Ficus Benjamina",latin:"",icon:"🌳",months:[0,0,1,1,1,1,1,1,1,0,0,0],freq:"Ogni 2 settimane",concime:"Liquido azotato NPK 3-1-2",notes:{3:"Riprendi con la prima concimazione.",4:"Stagione piena. Tieni d'occhio le foglie nuove per clorosi ferrica.",5:"Se foglie nuove gialle con venature verdi → ferro chelato subito.",6:"Non spostare la pianta — perde foglie facilmente.",7:"Continua normalmente.",8:"Inizia a scalare leggermente la frequenza.",9:"Ultima concimazione. Da ottobre stop totale."}},
@@ -1949,7 +2224,11 @@ function cInitMensile() {
   const yearBars = document.getElementById('c-year-bars');
   cPlants.forEach(p=>{
     const row=document.createElement('div');row.className='bar-plant-row';
-    const label=document.createElement('div');label.className='bar-plant-label';label.textContent=p.icon+' '+p.name;row.appendChild(label);
+    const label=document.createElement('div');label.className='bar-plant-label';
+    // Per le custom aggiungo un piccolo indicatore visivo sottile accanto al nome.
+    // Lo rendo discreto (font piccolo, colore tenue) per non distrarre dalla griglia.
+    label.innerHTML = `${p.icon} ${cpEscape(p.name)}${p.isCustom ? ' <span style="font-size:0.7em;color:#9a8a30;font-weight:600">●</span>' : ''}`;
+    row.appendChild(label);
     const bars=document.createElement('div');bars.className='bar-months';
     p.months.forEach((s,mi)=>{const bar=document.createElement('div');bar.className='bar-month '+cSC(s);bar.title=cMonths[mi]+': '+cSL(s);bars.appendChild(bar)});
     row.appendChild(bars);yearBars.appendChild(row);
@@ -1963,7 +2242,7 @@ function cInitMensile() {
     const body=document.createElement('div');body.className='month-body';
     const active=cPlants.filter(p=>p.months[mi]>0);
     if(!active.length){body.innerHTML='<div class="empty-month">Riposo per tutte le piante</div>';}
-    else{active.forEach(p=>{const s=p.months[mi];const row=document.createElement('div');row.className='plant-row';row.innerHTML=`<span class="plant-icon-sm">${p.icon}</span><span class="plant-name-sm">${p.name}</span><span class="status-badge badge-${cSC(s)}">${cSL(s)}</span>`;body.appendChild(row)});}
+    else{active.forEach(p=>{const s=p.months[mi];const row=document.createElement('div');row.className='plant-row';row.innerHTML=`<span class="plant-icon-sm">${p.icon}</span><span class="plant-name-sm">${cpEscape(p.name)}${p.isCustom?' <span style="font-size:0.75em;color:#9a8a30">●</span>':''}</span><span class="status-badge badge-${cSC(s)}">${cSL(s)}</span>`;body.appendChild(row)});}
     card.appendChild(body);grid.appendChild(card);
   });
 }
@@ -1974,7 +2253,20 @@ function cOpenMonthDetail(mi) {
   function rg(list,status,label){
     if(!list.length)return'';
     let out=`<div class="detail-section-title">${label}</div>`;
-    list.forEach(p=>{const note=p.notes[mi+1]||'';out+=`<div class="plant-detail-row ${status}"><div class="pdr-icon">${p.icon}</div><div class="pdr-content"><div class="pdr-name">${p.name}</div>${p.latin?`<div class="pdr-latin">${p.latin}</div>`:''}<div class="pdr-info"><strong>Concime:</strong> ${p.concime}<br><strong>Frequenza:</strong> ${p.freq}${note?'<br>'+note:''}</div></div><span class="pdr-badge ${status}">${cSL({active:1,reduce:2,special:3,stop:0}[status])}</span></div>`;});
+    list.forEach(p=>{
+      const note=p.notes[mi+1]||'';
+      // Per le piante custom: aggiungo il badge "personalizzata" accanto al nome
+      // e, in fondo alla riga, un piccolo pulsante di modifica che apre il form.
+      // Uso event.stopPropagation perché la riga potrebbe avere altri handler
+      // legati alla card e non vogliamo che il click sul pulsante li scateni.
+      const customBadge = p.isCustom
+        ? ' <span style="font-size:0.7em;color:#9a8a30;font-weight:600;background:#fff8e0;padding:1px 6px;border-radius:8px;border:1px solid #d4c060">personalizzata</span>'
+        : '';
+      const editBtn = (p.isCustom && p.customId)
+        ? `<button onclick="event.stopPropagation();cCloseOverlay();cpOpenEditForm(${p.customId})" style="margin-top:6px;padding:4px 10px;font-size:0.85em;border:1px solid #b0a070;background:#fff8e0;border-radius:6px;cursor:pointer;color:#5a4a10">✏️ Modifica</button>`
+        : '';
+      out+=`<div class="plant-detail-row ${status}"><div class="pdr-icon">${p.icon}</div><div class="pdr-content"><div class="pdr-name">${cpEscape(p.name)}${customBadge}</div>${p.latin?`<div class="pdr-latin">${cpEscape(p.latin)}</div>`:''}<div class="pdr-info"><strong>Concime:</strong> ${cpEscape(p.concime)}<br><strong>Frequenza:</strong> ${cpEscape(p.freq)}${note?'<br>'+cpEscape(note):''}</div>${editBtn}</div><span class="pdr-badge ${status}">${cSL({active:1,reduce:2,special:3,stop:0}[status])}</span></div>`;
+    });
     return out;
   }
   document.getElementById('c-panel-body').innerHTML = rg(special,'special','⚠️ Attenzione speciale')+rg(active,'active','✅ Concimazione attiva')+rg(reduce,'reduce','🔽 Dose ridotta')+rg(stop,'stop','⏸ In riposo');
@@ -1988,7 +2280,10 @@ function cCloseDetail(e){if(e.target===document.getElementById('c-overlay'))cClo
 // ③ CALENDARIO GIORNI
 // ══════════════════════════════════════════════════════════════════════
 const gTODAY = new Date();
-const gPlants = [
+// gPlants è esteso a runtime con le piante custom (vedi loadCustomPlants).
+// Per ogni pianta custom viene generato un record con schedules basato sui
+// fert_months e fert_interval salvati nel database.
+let gPlants = [
   {id:0,name:"Sanseviera",latin:"",icon:"🌿",color:"#5a7a4a",concime:"Liquido succulente, ½ dose",schedules:[{months:[4,5,6,7,8,9],interval:30}],startDate:new Date(2026,3,5)},
   {id:1,name:"Orchidea",latin:"Phalaenopsis",icon:"🌸",color:"#c06080",concime:"Specifico orchidee, ¼ dose",schedules:[{months:[3,4,5,6,7,8,9],interval:10},{months:[1,10],interval:21,note:"Dose molto ridotta"}],startDate:new Date(2026,3,4)},
   {id:2,name:"Ficus Benjamina",latin:"",icon:"🌳",color:"#3d6b30",concime:"Liquido azotato NPK 3-1-2",schedules:[{months:[3,4,5,6,7,8,9],interval:14}],startDate:new Date(2026,2,20)},
@@ -2021,6 +2316,15 @@ const gPlants = [
 let gCurrentMonth = gTODAY.getMonth();
 let gCurrentYear  = gTODAY.getFullYear();
 let gHiddenPlants = new Set();
+
+// Helper: ritorna true se l'evento appartiene a una pianta nascosta nella legenda.
+// Funziona sia con eventi per-specie (id === plant.id) sia con eventi per-vaso
+// generati da expandEventByPots (id virtuale, ma _origPlantId punta alla specie).
+function gIsHiddenEvent(ev) {
+  const origId = ev.plant._origPlantId;
+  if (origId !== undefined && gHiddenPlants.has(origId)) return true;
+  return gHiddenPlants.has(ev.plant.id);
+}
 const gDateMap = {};
 const gMonthNames = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
 const gWeekdays = ["Domenica","Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato"];
@@ -2046,7 +2350,7 @@ function gToggleDone(dy,dm,dd,pid){
   gRenderCalendar();
   if(document.getElementById('g-overlay').classList.contains('open')){
     const k=gDateKey(date);
-    const fe=(gFilter==='all'||gFilter==='fert')?(gDateMap[k]||[]).filter(e=>!gHiddenPlants.has(e.plant.id)):[];
+    const fe=(gFilter==='all'||gFilter==='fert')?(gDateMap[k]||[]).filter(e=>!gIsHiddenEvent(e)):[];
     const be=(gFilter==='all'||gFilter==='biobizz')?(bbDateMap[k]||[]).filter(e=>!bbHiddenProds.has(e.prod)):[];
     const te=(gFilter==='all'||gFilter==='tratt')?(trDateMap[k]||[]).filter(e=>!trHiddenProds.has(e.prod)):[];
     gOpenDay(date,fe,be,te);
@@ -2087,11 +2391,60 @@ function gSetFilter(f){
   gRenderCalendar();
 }
 
+// ──────────────────────────────────────────────────────────────────────
+// EXPAND EVENT BY POTS — utility per generare eventi calendario per-vaso
+// ──────────────────────────────────────────────────────────────────────
+// Dato un evento per-specie (fertirrigazione, BioBizz, trattamento), espande
+// in N eventi per-vaso usando l'inventario. Se la specie non ha vasi
+// registrati, ritorna un singolo evento equivalente all'originale.
+//
+// L'output ha id virtuali "1000 + item.id" identici al pattern già usato
+// dalle annaffiature predittive — così le spunte e i toggle restano coerenti.
+//
+// Parametri:
+//   plant      = oggetto pianta (gPlants/bbPlants/trPlants), serve id e icona
+//   baseEvent  = oggetto evento originale (può contenere note, sched, prod)
+//   inv        = array dell'inventario già caricato (passato esternamente per
+//                evitare invLoad() nel loop, costoso con DB)
+function expandEventByPots(plant, baseEvent, inv) {
+  const pots = inv.filter(it => it.plantTypeIdx === plant.id);
+  if (!pots.length) {
+    // Specie senza vasi: comportamento legacy invariato
+    return [baseEvent];
+  }
+  // Specie con vasi: un evento per ogni vaso
+  return pots.map((pot, idx) => {
+    const virtualId = 1000 + pot.id;
+    const displayName = pot.nickname && pot.nickname.trim()
+      ? pot.nickname
+      : (pots.length > 1 ? `${plant.name} #${idx + 1}` : plant.name);
+    return {
+      ...baseEvent,
+      plant: {
+        ...plant,
+        id: virtualId,                  // ID virtuale per spunte distinte
+        name: displayName,              // Nickname o "Vinca #1"
+        _origPlantId: plant.id,         // Ref alla specie originale (per toggle leggenda)
+        _potRef: pot.id,                // Ref al vaso reale
+      },
+      _potItem: pot,                    // Oggetto vaso completo (per dosi calcolate)
+    };
+  });
+}
+
 function gInitGiorni() {
+  // Carica una volta sola l'inventario per tutte le espansioni per-vaso
+  const _inv = (typeof invLoad === 'function') ? invLoad() : [];
+
   // Build fert date map
   gPlants.forEach(p=>{
     p._dates=gGenerateDates(p);
-    p._dates.forEach(d=>{const key=gDateKey(d.date);if(!gDateMap[key])gDateMap[key]=[];gDateMap[key].push({plant:p,note:d.note});});
+    p._dates.forEach(d=>{
+      const key=gDateKey(d.date);
+      if(!gDateMap[key])gDateMap[key]=[];
+      const baseEv = {plant:p,note:d.note};
+      expandEventByPots(p, baseEv, _inv).forEach(ev => gDateMap[key].push(ev));
+    });
   });
   // Build BioBizz date map
   bbPlants.forEach(p=>{
@@ -2104,13 +2457,14 @@ function gInitGiorni() {
         if(sched.months.includes(m)&&cursor>=yearStart){
           const k=gDateKey(cursor);
           if(!bbDateMap[k])bbDateMap[k]=[];
-          bbDateMap[k].push({plant:p,sched,prod:sched.prod});
+          const baseEv = {plant:p,sched,prod:sched.prod};
+          expandEventByPots(p, baseEv, _inv).forEach(ev => bbDateMap[k].push(ev));
         }
         cursor=new Date(cursor.getTime()+sched.interval*86400000);
       }
     });
     p._bbDates=Object.entries(bbDateMap)
-      .filter(([,evs])=>evs.some(e=>e.plant.id===p.id))
+      .filter(([,evs])=>evs.some(e=>e.plant._origPlantId===p.id || e.plant.id===p.id))
       .map(([k])=>{const[y,m,d]=k.split('-');return new Date(+y,+m-1,+d);})
       .sort((a,b)=>a-b);
   });
@@ -2140,13 +2494,14 @@ function gInitGiorni() {
         if(sched.months.includes(m)&&cursor>=yearStart){
           const k=gDateKey(cursor);
           if(!trDateMap[k])trDateMap[k]=[];
-          trDateMap[k].push({plant:p,sched,prod:sched.prod});
+          const baseEv = {plant:p,sched,prod:sched.prod};
+          expandEventByPots(p, baseEv, _inv).forEach(ev => trDateMap[k].push(ev));
         }
         cursor=new Date(cursor.getTime()+sched.interval*86400000);
       }
     });
     p._trDates=Object.entries(trDateMap)
-      .filter(([,evs])=>evs.some(e=>e.plant.id===p.id))
+      .filter(([,evs])=>evs.some(e=>e.plant._origPlantId===p.id || e.plant.id===p.id))
       .map(([k])=>{const[y,m,d]=k.split('-');return new Date(+y,+m-1,+d);})
       .sort((a,b)=>a-b);
   });
@@ -2190,7 +2545,10 @@ function gInitGiorni() {
   const wl=document.getElementById('wa-legend');
   waPlants.forEach(p=>{
     const item=document.createElement('div');item.className='wa-legend-item';item.id='wl-'+p.id;
-    item.innerHTML='<div class="wa-legend-dot"></div>'+p.icon+' '+p.name;
+    // Stesso pattern visuale della sezione Mensile: piccolo pallino dorato
+    // accanto al nome per le piante custom. Discrete ma riconoscibile.
+    const customBadge = p.isCustom ? ' <span style="font-size:0.7em;color:#9a8a30;font-weight:600">●</span>' : '';
+    item.innerHTML='<div class="wa-legend-dot"></div>'+p.icon+' '+p.name+customBadge;
     item.onclick=()=>{if(waHiddenPlants.has(p.id))waHiddenPlants.delete(p.id);else waHiddenPlants.add(p.id);item.classList.toggle('hidden-plant');gRenderCalendar();};
     wl.appendChild(item);
   });
@@ -2211,7 +2569,7 @@ function gRenderStats(){
   let eDays=0,fertTotal=0,bbTotal=0,trTotal=0;
   for(let d=1;d<=daysInMonth;d++){
     const date=new Date(gCurrentYear,gCurrentMonth,d);
-    const fe=(gDateMap[gDateKey(date)]||[]).filter(e=>!gHiddenPlants.has(e.plant.id));
+    const fe=(gDateMap[gDateKey(date)]||[]).filter(e=>!gIsHiddenEvent(e));
     const be=(bbDateMap[gDateKey(date)]||[]).filter(e=>!bbHiddenProds.has(e.prod));
     const te=(trDateMap[gDateKey(date)]||[]).filter(e=>!trHiddenProds.has(e.prod));
     const showF=gFilter==='all'||gFilter==='fert';
@@ -2239,7 +2597,7 @@ function gRenderCalendar(){
   for(let d=1;d<=daysInMonth;d++){
     const date=new Date(gCurrentYear,gCurrentMonth,d);
     const key=gDateKey(date);
-    const fertEvs=(gFilter==='all'||gFilter==='fert')?(gDateMap[key]||[]).filter(e=>!gHiddenPlants.has(e.plant.id)):[];
+    const fertEvs=(gFilter==='all'||gFilter==='fert')?(gDateMap[key]||[]).filter(e=>!gIsHiddenEvent(e)):[];
     const bbEvs=(gFilter==='all'||gFilter==='biobizz')?(bbDateMap[key]||[]).filter(e=>!bbHiddenProds.has(e.prod)):[];
     const trEvs=(gFilter==='all'||gFilter==='tratt')?(trDateMap[key]||[]).filter(e=>!trHiddenProds.has(e.prod)):[];
     const cureEvs=(gFilter==='all'||gFilter==='tratt')?(cureDateMap[key]||[]):[];
@@ -2324,15 +2682,22 @@ function gOpenDay(date, fertEvs, bbEvs, trEvs, waEvs) {
     html+=`<div class="event-group"><div class="event-group-title" style="background:#4a4a4a">📆 Fertilizzazioni</div>`;
     fertEvs.forEach(e=>{
       const p=e.plant;const done=gIsDone(date,p.id);
-      const next=p._dates.find(d=>d.date>date);
+      const origP = p._origPlantId !== undefined ? gPlants.find(gp => gp.id === p._origPlantId) : null;
+      const concimeLabel = (origP && origP.concime) || p.concime;
+      const nextSrc = origP ? origP._dates : p._dates;
+      const next = nextSrc && nextSrc.find(d=>d.date>date);
       const nextStr=next?('Prossima: '+next.date.getDate()+' '+gMonthNames[next.date.getMonth()]):'Fine stagione';
       const dy=date.getFullYear(),dm=date.getMonth(),dd=date.getDate();
+      const potInfo = e._potItem
+        ? `<div style="font-size:10px;color:#2a5a8a;margin-top:2px">🪴 ${invGetDimsLabel(e._potItem)} · ${invGetVolFromItem(e._potItem).toFixed(1)}L</div>`
+        : '';
       html+=`<div class="event-row${done?' done':''}">
         <div class="event-icon">${p.icon}</div>
         <div class="event-content">
           <div class="event-name">${p.name}</div>
           ${p.latin?`<div class="event-latin">${p.latin}</div>`:''}
-          <div class="event-info"><strong>Concime:</strong> ${p.concime}<br>${e.note?`<strong>Nota:</strong> ${e.note}<br>`:''}<span style="color:var(--muted)">${nextStr}</span></div>
+          ${potInfo}
+          <div class="event-info"><strong>Concime:</strong> ${concimeLabel}<br>${e.note?`<strong>Nota:</strong> ${e.note}<br>`:''}<span style="color:var(--muted)">${nextStr}</span></div>
         </div>
         <button class="check-btn${done?' done':''}" onclick="gToggleDone(${dy},${dm},${dd},${p.id})">✓</button>
       </div>`;
@@ -2350,13 +2715,18 @@ function gOpenDay(date, fertEvs, bbEvs, trEvs, waEvs) {
       evs.forEach(e=>{
         const done=bbIsDone(date,e.plant.id,e.prod);
         const dy=date.getFullYear(),dm=date.getMonth(),dd=date.getDate();
-        const nextDate=e.plant._bbDates.find(nd=>nd>date&&(bbDateMap[gDateKey(nd)]||[]).some(ev=>ev.plant.id===e.plant.id&&ev.prod===prod));
+        const nextDate=e.plant._bbDates && e.plant._bbDates.find(nd=>nd>date&&(bbDateMap[gDateKey(nd)]||[]).some(ev=>ev.plant.id===e.plant.id&&ev.prod===prod));
         const nextStr=nextDate?('Prossima: '+nextDate.getDate()+' '+gMonthNames[nextDate.getMonth()]):'Fine stagione';
+        // Info vaso se evento espanso da inventario
+        const potInfo = e._potItem
+          ? `<div style="font-size:10px;color:#2a5a8a;margin-top:2px">🪴 ${invGetDimsLabel(e._potItem)} · ${invGetVolFromItem(e._potItem).toFixed(1)}L</div>`
+          : '';
         html+=`<div class="event-row${done?' done':''}">
           <div class="event-icon">${e.plant.icon}</div>
           <div class="event-content">
             <div class="event-name">${e.plant.name}</div>
             ${e.plant.latin?`<div class="event-latin">${e.plant.latin}</div>`:''}
+            ${potInfo}
             <div style="margin-bottom:3px"><span class="event-prod" style="background:${p.color}">${p.label}</span></div>
             <div class="event-info"><strong>Dose:</strong> ${e.sched.dose}${e.sched.note?`<br>${e.sched.note}`:''}
             <br><span style="color:var(--muted)">${nextStr}</span></div>
@@ -2388,13 +2758,17 @@ function gOpenDay(date, fertEvs, bbEvs, trEvs, waEvs) {
       evs.forEach(e=>{
         const done=trIsDone(date,e.plant.id,e.prod);
         const dy=date.getFullYear(),dm=date.getMonth(),dd=date.getDate();
-        const nextDate=e.plant._trDates.find(nd=>nd>date&&(trDateMap[gDateKey(nd)]||[]).some(ev=>ev.plant.id===e.plant.id&&ev.prod===prod));
+        const nextDate=e.plant._trDates && e.plant._trDates.find(nd=>nd>date&&(trDateMap[gDateKey(nd)]||[]).some(ev=>ev.plant.id===e.plant.id&&ev.prod===prod));
         const nextStr=nextDate?('Prossimo: '+nextDate.getDate()+' '+gMonthNames[nextDate.getMonth()]):'Fine stagione';
+        const potInfo = e._potItem
+          ? `<div style="font-size:10px;color:#2a5a8a;margin-top:2px">🪴 ${invGetDimsLabel(e._potItem)} · ${invGetVolFromItem(e._potItem).toFixed(1)}L</div>`
+          : '';
         html+=`<div class="event-row${done?' done':''}">
           <div class="event-icon">${e.plant.icon}</div>
           <div class="event-content">
             <div class="event-name">${e.plant.name}</div>
             ${e.plant.latin?`<div class="event-latin">${e.plant.latin}</div>`:''}
+            ${potInfo}
             <div style="margin-bottom:3px"><span class="event-prod" style="background:${p.color}">${p.label}</span></div>
             <div class="event-info"><strong>Dose:</strong> ${e.sched.dose}${e.sched.note?`<br>${e.sched.note}`:''}
             <br><span style="color:var(--muted)">${nextStr}</span></div>
@@ -2480,7 +2854,7 @@ function gOpenDay(date, fertEvs, bbEvs, trEvs, waEvs) {
   const upcoming=[];
   for(let dd2=1;dd2<=7;dd2++){
     const nd=new Date(date.getTime()+dd2*86400000);const nk=gDateKey(nd);
-    const nf=(gFilter==='all'||gFilter==='fert')?(gDateMap[nk]||[]).filter(e=>!gHiddenPlants.has(e.plant.id)):[];
+    const nf=(gFilter==='all'||gFilter==='fert')?(gDateMap[nk]||[]).filter(e=>!gIsHiddenEvent(e)):[];
     const nb=(gFilter==='all'||gFilter==='biobizz')?(bbDateMap[nk]||[]).filter(e=>!bbHiddenProds.has(e.prod)):[];
     const nt=(gFilter==='all'||gFilter==='tratt')?(trDateMap[nk]||[]).filter(e=>!trHiddenProds.has(e.prod)):[];
     const nc=(gFilter==='all'||gFilter==='tratt')?(cureDateMap[nk]||[]):[];
@@ -2660,7 +3034,46 @@ function dInitDiario() {
   const mm = String(today.getMonth()+1).padStart(2,'0');
   const dd = String(today.getDate()).padStart(2,'0');
   document.getElementById('d-date').value = `${yyyy}-${mm}-${dd}`;
+  // Popolo dinamicamente i dropdown delle piante con sPlants completo,
+  // che include sia le 26 native sia le piante custom dell'utente.
+  // Lo facciamo a runtime così le custom aggiunte dopo il primo caricamento
+  // appaiono automaticamente quando l'utente apre il diario.
+  // Le opzioni HTML hardcoded preesistenti vengono sostituite completamente.
+  dPopulatePlantDropdowns();
   dPingServer().then(()=>dRender());
+}
+
+// Popola i due dropdown del diario (selettore voce + filtro) con la lista
+// corrente di sPlants. Salva la selezione attuale dell'utente e la ripristina
+// dopo aver rigenerato l'HTML, così filtri attivi non vengono persi.
+function dPopulatePlantDropdowns() {
+  const dPlantSel = document.getElementById('d-plant');
+  const dFilterSel = document.getElementById('d-filter-plant');
+
+  // Costruisco le option a partire da sPlants. Per le custom aggiungo un
+  // piccolo pallino dorato al nome, coerente col pattern visivo delle
+  // altre sezioni (Mensile, Annaffiature, Vasi). Il valore dell'option
+  // resta il nome puro, perché il backend del diario filtra/cerca per nome.
+  const plantOptions = sPlants.map(p => {
+    const badge = p.isCustom ? ' ●' : '';
+    // Escape minimo del nome per attribute value: solo virgolette doppie
+    const nameAttr = p.name.replace(/"/g, '&quot;');
+    return `<option value="${nameAttr}">${p.name}${badge}</option>`;
+  }).join('');
+
+  // Selettore per inserire nuova voce: opzione vuota di default, poi le piante
+  if (dPlantSel) {
+    const currentValue = dPlantSel.value;  // Conserva la selezione attuale
+    dPlantSel.innerHTML = '<option value="">— Seleziona —</option>' + plantOptions;
+    if (currentValue) dPlantSel.value = currentValue;  // Ripristina se esisteva
+  }
+
+  // Selettore filtro: "Tutte le piante" come default, poi le piante
+  if (dFilterSel) {
+    const currentFilter = dFilterSel.value;
+    dFilterSel.innerHTML = '<option value="">Tutte le piante</option>' + plantOptions;
+    if (currentFilter) dFilterSel.value = currentFilter;
+  }
 }
 
 async function dSaveEntry() {
@@ -3277,7 +3690,11 @@ wInitCalc = function() {
 // ⑨ CALCOLATORE FERTIRRIGAZIONE
 // ══════════════════════════════════════════════════════════════════════
 
-const FI_PLANTS = [
+// FI_PLANTS è esteso a runtime con le piante custom (vedi loadCustomPlants).
+// Per ogni pianta custom viene generato un record con waterMl/doseFactor
+// dedotti dal gruppo simulazione, e loc dedotta dal primo vaso registrato
+// (se esistente). Le 26 native restano hard-coded qui sotto.
+let FI_PLANTS = [
   {id:0,  name:'Sanseviera',      icon:'🌿', loc:'indoor',  waterMl:150, doseFactor:0.25},
   {id:1,  name:'Orchidea',        icon:'🌸', loc:'indoor',  waterMl:200, doseFactor:0.25},
   {id:2,  name:'Ficus Benjamina', icon:'🌳', loc:'indoor',  waterMl:400, doseFactor:0.5},
@@ -3392,7 +3809,10 @@ async function fiOpenFromCalendar() {
     if (!plantMap[pid]) plantMap[pid] = {id:pid, name:e.plant.name, icon:e.plant.icon||'🌿', pots:1, waterMl:500, products:[]};
     // Se non ha già prodotti da bbEvs, cerca nell'inventario
     if (!plantMap[pid].products.length) {
-      const invItems = inv.filter(it => sPlants[it.plantTypeIdx] && sPlants[it.plantTypeIdx].name === e.plant.name);
+      const invItems = inv.filter(it => {
+        const p = getPlantById(it.plantTypeIdx);
+        return p && p.name === e.plant.name;
+      });
       invItems.forEach(it => {
         (it.fertilizers||[]).forEach(fid => {
           const f = FERT_DB.find(x=>x.id===fid);
@@ -3414,7 +3834,7 @@ async function fiOpenFromCalendar() {
 
   Object.values(plantMap).forEach(pm => {
     const invItems = inv.filter(it => {
-      const p = sPlants[it.plantTypeIdx];
+      const p = getPlantById(it.plantTypeIdx);
       return p && p.name === pm.name;
     });
 
@@ -3946,10 +4366,15 @@ async function invInit() {
   // Ping API
   await invPingAPI();
   await invLoadFromAPI();
-  // Populate plant type dropdown
+  // Populate plant type dropdown.
+  // IMPORTANTE: il value dell'option è p.id (l'identificativo reale della
+  // pianta), NON l'indice di posizione nell'array. Per le 26 native questi
+  // due valori coincidono per coincidenza storica, ma per le piante custom
+  // sono diversi perché il backend le restituisce ordinate per nome. Usare
+  // l'id reale garantisce coerenza in ogni situazione e con qualsiasi ordine.
   const sel = document.getElementById('inv-plant-type');
-  sel.innerHTML = '<option value="">— Seleziona —</option>' + sPlants.map((p,i) =>
-    `<option value="${i}">${p.icon} ${p.name}</option>`
+  sel.innerHTML = '<option value="">— Seleziona —</option>' + sPlants.map(p =>
+    `<option value="${p.id}">${p.icon} ${p.name}${p.isCustom ? ' ●' : ''}</option>`
   ).join('');
   // Populate fertilizer grid
   invRenderFertGrid();
@@ -4233,7 +4658,7 @@ function invRender() {
   const search = (document.getElementById('inv-search')?.value||'').toLowerCase();
   const locFilter = document.getElementById('inv-filter-loc')?.value||'';
   const filtered = items.filter(it => {
-    const p = sPlants[it.plantTypeIdx];
+    const p = getPlantById(it.plantTypeIdx);
     if (!p) return false;
     const nameMatch = !search || p.name.toLowerCase().includes(search) || (it.nickname||'').toLowerCase().includes(search);
     const locMatch = !locFilter || it.location === locFilter;
@@ -4245,7 +4670,7 @@ function invRender() {
   const grid = document.getElementById('inv-grid');
   let html = '';
   filtered.forEach(it => {
-    const p = sPlants[it.plantTypeIdx];
+    const p = getPlantById(it.plantTypeIdx);
     if (!p) return;
     const vol = invGetVolFromItem(it);
     const dimsLabel = invGetDimsLabel(it);
@@ -4533,7 +4958,7 @@ function meteoRenderSoil() {
     if (!it.wh51Ch) return;
     const ch = parseInt(it.wh51Ch);
     const data = soilByCh[ch] || {moisture:null, temp:null, ec:null};
-    const p = sPlants[it.plantTypeIdx];
+    const p = getPlantById(it.plantTypeIdx);
     if (!p) return;
     const cat = it.wh51Cat || 'universale';
     const thresh = soglie[cat] || SOGLIE_DEFAULT.universale;
@@ -4665,7 +5090,7 @@ function meteoRenderAlerts() {
     const ch = parseInt(it.wh51Ch);
     const m = soilData[ch];
     if (m === undefined) return;
-    const p = sPlants[it.plantTypeIdx];
+    const p = getPlantById(it.plantTypeIdx);
     if (!p) return;
     const cat = it.wh51Cat || 'universale';
     const thresh = soglie[cat] || SOGLIE_DEFAULT.universale;
@@ -4764,7 +5189,7 @@ async function meteoRenderHistory() {
     let html = '';
     wh52Items.forEach(it => {
       const ch = parseInt(it.wh51Ch);
-      const p = sPlants[it.plantTypeIdx];
+      const p = getPlantById(it.plantTypeIdx);
       if (!p) return;
       const name = it.nickname || p.name;
       const cat = it.wh51Cat || 'universale';
@@ -5063,7 +5488,10 @@ const BB_PRODUCTS = {
   root:   {label:'Root·Juice',color:'#7a4820', abbr:'R'},
 };
 
-const bbPlants = [
+// bbPlants è esteso a runtime ma le piante custom non generano schedule
+// BioBizz automatici (l'utente può aggiungere voci al diario manualmente
+// se serve). Restano comunque elencate qui per coerenza degli id.
+let bbPlants = [
   {id:0,  name:'Sanseviera',      latin:'',                    icon:'🌿', color:'#5a7a4a',
     schedules:[{prod:'grow',months:[4,5,6,7,8,9],interval:30,start:new Date(2026,3,10),dose:'¼ dose',note:'Molto diluito — pianta abituata a terreni poveri'},{prod:'alg',months:[4,5,6,7,8,9],interval:45,start:new Date(2026,3,25),dose:'¼ dose',note:'Alternativa più delicata al Bio·Grow'}]},
   {id:1,  name:'Orchidea',        latin:'Phalaenopsis',        icon:'🌸', color:'#c06080',
@@ -5130,7 +5558,8 @@ const TR_PRODUCTS = {
   obianco: {label:'Olio bianco',      color:'#7a7a7a', abbr:'Ob'},
 };
 
-const trPlants = [
+// trPlants segue la stessa logica di bbPlants per le piante custom.
+let trPlants = [
   {id:2,  name:'Ficus Benjamina', latin:'',                icon:'🌳', color:'#3d6b30',
     schedules:[{prod:'neem',months:[4,5,6,7,8],interval:30,start:new Date(2026,3,5),dose:'5 ml/L',note:'Cocciniglia e ragnetto rosso — ambienti secchi lo favoriscono'}]},
   {id:3,  name:'Ficus Elastica',  latin:'',                icon:'🌱', color:'#2e5522',
@@ -5204,7 +5633,7 @@ function buildCurativeEvents() {
     const activeDiseases = diseases.filter(d => !d.resolved && d.date);
     if (!activeDiseases.length) return;
 
-    const p = sPlants[it.plantTypeIdx];
+    const p = getPlantById(it.plantTypeIdx);
     if (!p) return;
 
     activeDiseases.forEach(disease => {
@@ -5269,7 +5698,7 @@ function cureToggleDone(dy, dm, dd, invId, diseaseType) {
   gRenderCalendar();
   if (document.getElementById('g-overlay').classList.contains('open')) {
     const k = gDateKey(date);
-    const fe = (gFilter==='all'||gFilter==='fert') ? (gDateMap[k]||[]).filter(e=>!gHiddenPlants.has(e.plant.id)) : [];
+    const fe = (gFilter==='all'||gFilter==='fert') ? (gDateMap[k]||[]).filter(e=>!gIsHiddenEvent(e)) : [];
     const be = (gFilter==='all'||gFilter==='biobizz') ? (bbDateMap[k]||[]).filter(e=>!bbHiddenProds.has(e.prod)) : [];
     const te = (gFilter==='all'||gFilter==='tratt') ? (trDateMap[k]||[]).filter(e=>!trHiddenProds.has(e.prod)) : [];
     const we = (gFilter==='all'||gFilter==='acqua') ? (waDateMap[k]||[]).filter(e=>!waHiddenPlants.has(e.plant.id)) : [];
@@ -5295,7 +5724,7 @@ function trToggleDone(dy,dm,dd,pid,prod){
   gRenderCalendar();
   if(document.getElementById('g-overlay').classList.contains('open')){
     const k=gDateKey(date);
-    const fe=(gFilter==='all'||gFilter==='fert')?(gDateMap[k]||[]).filter(e=>!gHiddenPlants.has(e.plant.id)):[];
+    const fe=(gFilter==='all'||gFilter==='fert')?(gDateMap[k]||[]).filter(e=>!gIsHiddenEvent(e)):[];
     const be=(gFilter==='all'||gFilter==='biobizz')?(bbDateMap[k]||[]).filter(e=>!bbHiddenProds.has(e.prod)):[];
     const te=(gFilter==='all'||gFilter==='tratt')?(trDateMap[k]||[]).filter(e=>!trHiddenProds.has(e.prod)):[];
     gOpenDay(date,fe,be,te);
@@ -5306,7 +5735,11 @@ function trToggleDone(dy,dm,dd,pid,prod){
 // ⑧ CALENDARIO ANNAFFIATURE
 // ══════════════════════════════════════════════════════════════════════
 const WA_COLOR = '#3a8abf';
-const waPlants = [
+// waPlants è esteso a runtime con le piante custom (vedi loadCustomPlants).
+// Per ogni pianta custom viene generato un record con schedules stagionali
+// dedotti dal gruppo simulazione. Le 26 native restano hard-coded qui sotto
+// con i loro programmi di annaffiatura curati a mano stagione per stagione.
+let waPlants = [
   {id:0,  name:'Sanseviera',      icon:'🌿', color:'#5a7a4a', method:'Terreno completamente asciutto',
     schedules:[{months:[4,5,6,7,8,9],interval:12,note:'Solo quando il terreno è completamente asciutto — ogni 10-14 giorni'},{months:[10,11,12,1,2,3],interval:25,note:'Inverno: 1× al mese o meno. Il nemico è l\'eccesso d\'acqua'}]},
   {id:1,  name:'Orchidea',        icon:'🌸', color:'#c06080', method:'Immersione 15 min + scolo completo',
@@ -5371,7 +5804,7 @@ function waToggleDone(dy,dm,dd,pid){
   gRenderCalendar();
   if(document.getElementById('g-overlay').classList.contains('open')){
     const k=gDateKey(date);
-    const fe=(gFilter==='all'||gFilter==='fert')?(gDateMap[k]||[]).filter(e=>!gHiddenPlants.has(e.plant.id)):[];
+    const fe=(gFilter==='all'||gFilter==='fert')?(gDateMap[k]||[]).filter(e=>!gIsHiddenEvent(e)):[];
     const be=(gFilter==='all'||gFilter==='biobizz')?(bbDateMap[k]||[]).filter(e=>!bbHiddenProds.has(e.prod)):[];
     const te=(gFilter==='all'||gFilter==='tratt')?(trDateMap[k]||[]).filter(e=>!trHiddenProds.has(e.prod)):[];
     const we=(gFilter==='all'||gFilter==='acqua')?(waDateMap[k]||[]).filter(e=>!waHiddenPlants.has(e.plant.id)):[];
@@ -5454,7 +5887,7 @@ async function waAnalyzeMeteo(waEvs, date) {
 
     // Cerca il vaso nell'inventario per determinare la location
     const invItem = inv.find(it => {
-      const p = sPlants[it.plantTypeIdx];
+      const p = getPlantById(it.plantTypeIdx);
       return p && p.name === e.plant.name;
     });
     const plantIsIndoor = invItem && invItem.location === 'indoor';
@@ -5462,7 +5895,7 @@ async function waAnalyzeMeteo(waEvs, date) {
 
     // 1. Check sensore terreno (WH51/WH52) — vale per indoor e outdoor
     const invItemWithSensor = inv.find(it => {
-      const p = sPlants[it.plantTypeIdx];
+      const p = getPlantById(it.plantTypeIdx);
       return p && p.name === e.plant.name && it.wh51Ch;
     });
 
@@ -5582,7 +6015,7 @@ function bbToggleDone(dy,dm,dd,pid,prod){
   gRenderCalendar();
   if(document.getElementById('g-overlay').classList.contains('open')){
     const k=gDateKey(date);
-    const fe=(gFilter==='all'||gFilter==='fert')?(gDateMap[k]||[]).filter(e=>!gHiddenPlants.has(e.plant.id)):[];
+    const fe=(gFilter==='all'||gFilter==='fert')?(gDateMap[k]||[]).filter(e=>!gIsHiddenEvent(e)):[];
     const be=(gFilter==='all'||gFilter==='biobizz')?(bbDateMap[k]||[]).filter(e=>!bbHiddenProds.has(e.prod)):[];
     const te=(gFilter==='all'||gFilter==='tratt')?(trDateMap[k]||[]).filter(e=>!trHiddenProds.has(e.prod)):[];
     gOpenDay(date,fe,be,te);
@@ -5815,7 +6248,10 @@ const SIM_KC_BY_GROUP = {
 };
 
 // Parametri simulazione per pianta: gruppo, profondità radicale (cm), p coefficient
-const SIM_PLANT_PARAMS = {
+// SIM_PLANT_PARAMS è esteso a runtime: per ogni pianta custom viene aggiunta
+// una entry con il sim_group scelto e, se l'utente ha compilato il livello
+// esperto del form, anche root_depth_cm e p_coef personalizzati.
+let SIM_PLANT_PARAMS = {
   0:  {group:'succulenta',   root:18, p:0.60}, // Sanseviera
   1:  {group:'orchidea',     root:10, p:0.35}, // Orchidea
   2:  {group:'tropicale',    root:25, p:0.40}, // Ficus Benjamina
@@ -5844,11 +6280,1128 @@ const SIM_PLANT_PARAMS = {
   25: {group:'bonsai',       root:15, p:0.40}, // Carmona Bonsai
 };
 
+// ════════════════════════════════════════════════════════════════════════
+// SISTEMA PIANTE CUSTOM
+// ════════════════════════════════════════════════════════════════════════
+// Le piante custom sono salvate in custom_plants nel database e fuse a
+// runtime con le 5 strutture native (sPlants, gPlants, bbPlants, trPlants,
+// SIM_PLANT_PARAMS). La fusione avviene tramite loadCustomPlants() chiamata
+// all'avvio dell'app e dopo ogni operazione di add/edit/delete pianta.
+//
+// Gli ID delle piante custom partono da 26 per non collidere con le 26
+// native (id 0-25). Il backend assegna l'ID via AUTOINCREMENT seedato a 25.
+
+// Cache dell'ultimo elenco caricato dal server. Serve per due motivi:
+// 1) Il pannello "Le mie piante" può mostrare la lista senza rifare la query
+// 2) Quando l'utente elimina una pianta dobbiamo sapere quali sono custom
+//    per poterle rimuovere correttamente dalle strutture native
+let customPlantsCache = [];
+
+// Mappa colori associati ai gruppi simulazione. Ogni pianta custom riceve
+// il colore del suo gruppo, così piante simili hanno tonalità coerenti nel
+// calendario. Le native hanno colori scelti uno ad uno e non passano da qui.
+const CUSTOM_GROUP_COLORS = {
+  succulenta:   '#7a8a4a',
+  orchidea:     '#a06aa8',
+  tropicale:    '#3d6b30',
+  agrume:       '#c79a2c',
+  mediterranea: '#7a6b3a',
+  bonsai:       '#5a4a3a',
+  arbusto:      '#5a7a4a',
+  albero:       '#3a5a2a',
+  aromatica:    '#6a8a5a',
+  fiorita:      '#c45a7a',
+};
+
+// Costruisce un record sPlants a partire da un row del database custom_plants.
+// Le sezioni della scheda colturale (con, pt, pg, pgr) vengono popolate solo
+// se l'utente ha compilato i campi corrispondenti nel form avanzato.
+// Se manca un campo, la sua sezione viene saltata e l'utente vedrà la scheda
+// con solo le info compilate, senza tab vuoti che confonderebbero.
+function buildCustomSPlant(row) {
+  const tcKeys = [];      // Quali tab mostrare (pt, pg, pgr) — guidato dai dati
+  const record = {
+    name: row.name,
+    latin: row.latin || '',
+    icon: row.icon || '🌱',
+    isNew: false,
+    tags: ['Personalizzata'],   // Tag visibile per distinguere le custom
+    tc: tcKeys,
+    isCustom: true,             // Flag interno per la UI di gestione
+    customId: row.id,           // Riferimento al record nel database
+  };
+
+  // Sezione concimazione (con). Questa è quasi sempre presente perché il
+  // form base salva fert_months e fert_interval con default ragionevoli.
+  if (row.fertilization || row.fert_product) {
+    record.con = {
+      periodo: _monthsToPeriod(row.fert_months),
+      frequenza: `Ogni ${row.fert_interval} giorni`,
+      concime: row.fert_product || 'Concime adatto al gruppo ' + row.sim_group,
+      stop: 'Stop in periodo di riposo vegetativo',
+      note: row.fertilization || row.fert_note || '',
+    };
+  }
+
+  // Sezione potatura. Solo se compilata.
+  if (row.pruning) {
+    record.pt = { note: row.pruning };
+    tcKeys.push('pt');
+  }
+
+  // Sezione parassiti. Solo se compilata.
+  if (row.pests) {
+    record.pg = { note: row.pests };
+    tcKeys.push('pg');
+  }
+
+  // Le altre informazioni del livello avanzato vengono raccolte in un campo
+  // "info" generico che la sezione Schede mostrerà come prima cosa.
+  const infoBlocks = [];
+  if (row.description) infoBlocks.push({label: 'Descrizione', value: row.description});
+  if (row.exposure)    infoBlocks.push({label: 'Esposizione', value: row.exposure});
+  if (row.watering)    infoBlocks.push({label: 'Annaffiatura', value: row.watering});
+  if (row.substrate)   infoBlocks.push({label: 'Substrato',  value: row.substrate});
+  if (row.temperature) infoBlocks.push({label: 'Temperatura',value: row.temperature});
+  if (infoBlocks.length) record.info = infoBlocks;
+
+  return record;
+}
+
+// Helper: converte una stringa CSV di mesi "3,4,5,6,7,8,9,10" in una
+// descrizione testuale leggibile come "Marzo – Ottobre" oppure "Mar–Mag, Set".
+// Per il manuale utente questa è una piccola gentilezza estetica.
+function _monthsToPeriod(monthsStr) {
+  if (!monthsStr) return '';
+  const months = monthsStr.split(',').map(s => parseInt(s.trim())).filter(n => n >= 1 && n <= 12).sort((a,b)=>a-b);
+  if (!months.length) return '';
+  const names = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+  // Caso più comune: mesi consecutivi → "Aprile – Settembre"
+  let allConsecutive = true;
+  for (let i = 1; i < months.length; i++) {
+    if (months[i] !== months[i-1] + 1) { allConsecutive = false; break; }
+  }
+  if (allConsecutive && months.length >= 3) {
+    return `${names[months[0]-1]} – ${names[months[months.length-1]-1]}`;
+  }
+  // Altrimenti elenco diretto
+  return months.map(m => names[m-1]).join(', ');
+}
+
+// Costruisce un record gPlants per il calendario fertilizzazione.
+// schedules deve avere months come array di numeri (non stringa CSV) e
+// interval come numero. La startDate è il primo giorno del primo mese attivo.
+function buildCustomGPlant(row) {
+  const months = row.fert_months
+    ? row.fert_months.split(',').map(s => parseInt(s.trim())).filter(n => n >= 1 && n <= 12)
+    : [4,5,6,7,8,9];
+  const firstMonth = months[0] || 4;
+  return {
+    id: row.id,
+    name: row.name,
+    latin: row.latin || '',
+    icon: row.icon || '🌱',
+    color: CUSTOM_GROUP_COLORS[row.sim_group] || '#5a7a4a',
+    concime: row.fert_product || `Concime gruppo ${row.sim_group}`,
+    schedules: [{
+      months: months,
+      interval: row.fert_interval || 21,
+    }],
+    startDate: new Date(2026, firstMonth - 1, 5),
+    isCustom: true,   // Flag per distinguere le custom in UI/leggenda
+  };
+}
+
+// Costruisce un record minimale per bbPlants e trPlants. Le piante custom
+// non generano automaticamente eventi BioBizz o trattamenti preventivi
+// (per quello servirebbe un livello di dettaglio che il form non chiede),
+// ma il record deve esistere comunque per consistenza degli id nelle
+// strutture parallele.
+function buildCustomMinimalPlant(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    latin: row.latin || '',
+    icon: row.icon || '🌱',
+    color: CUSTOM_GROUP_COLORS[row.sim_group] || '#5a7a4a',
+    schedules: [],   // Vuoto: nessun evento generato automaticamente
+    isCustom: true,
+  };
+}
+
+// Costruisce l'entry SIM_PLANT_PARAMS per il simulatore FAO-56.
+// I parametri esperti (root_depth_cm, p_coef, kc_*) sono opzionali nel
+// database. Se l'utente li ha compilati nel form esperto, li uso. Altrimenti
+// uso i default del gruppo presi da SIM_KC_BY_GROUP.
+function buildCustomSimParams(row) {
+  // Default: profondità radicale ragionevole per il gruppo
+  const groupDefaults = {
+    succulenta:18, orchidea:10, tropicale:25, agrume:30, mediterranea:30,
+    bonsai:15, arbusto:30, albero:45, aromatica:25, fiorita:25
+  };
+  const groupP = {
+    succulenta:0.60, orchidea:0.35, tropicale:0.40, agrume:0.50, mediterranea:0.45,
+    bonsai:0.40, arbusto:0.50, albero:0.55, aromatica:0.50, fiorita:0.50
+  };
+  return {
+    group: row.sim_group || 'arbusto',
+    root: row.root_depth_cm != null ? row.root_depth_cm : (groupDefaults[row.sim_group] || 25),
+    p:    row.p_coef        != null ? row.p_coef        : (groupP[row.sim_group]        || 0.45),
+  };
+}
+
+// Costruisce un record cPlants per la sezione Mensile. Questa è la funzione
+// più sottile delle 5 builder perché cPlants ha una struttura "ricca" che le
+// piante native compilano a mano per ogni mese.
+//
+// Strategia a due percorsi:
+//
+// PERCORSO 1 — Calendario manuale: l'utente ha compilato monthly_states
+// nel form (livello "Calendario annuale"). In questo caso usiamo i suoi
+// valori esatti, sia per gli stati che per le note mensili.
+//
+// PERCORSO 2 — Deduzione automatica: l'utente non ha toccato il calendario
+// annuale. Deduciamo gli stati dai fert_months (mese in fert → stato 1
+// "concimazione attiva", mese fuori → stato 0 "riposo"). Le note restano
+// vuote: meglio uno spazio pulito che placeholder generici tipo
+// "Concimazione regolare" che apparirebbero come segnaposto vuoti.
+//
+// I campi accessori freq e concime li costruiamo dai dati base che la
+// pianta ha sempre: fert_interval e fert_product. Per freq scegliamo una
+// formulazione naturale stile "ogni X giorni", coerente con quanto
+// scritto a mano nelle 26 native.
+function buildCustomCPlant(row) {
+  // ── Stati mensili ──────────────────────────────────────────────
+  let months;
+  if (row.monthly_states && row.monthly_states.trim()) {
+    // PERCORSO 1: parsing della stringa CSV salvata.
+    // Validazione difensiva: se per qualche motivo non ho 12 valori
+    // o ho valori fuori range, fallback alla deduzione automatica.
+    const parsed = row.monthly_states.split(',').map(s => parseInt(s.trim()));
+    const allValid = parsed.length === 12 && parsed.every(v => v >= 0 && v <= 3 && !isNaN(v));
+    months = allValid ? parsed : null;
+  }
+  if (!months) {
+    // PERCORSO 2: deduzione automatica dai fert_months.
+    const fertSet = new Set(
+      (row.fert_months || '')
+        .split(',')
+        .map(s => parseInt(s.trim()))
+        .filter(n => n >= 1 && n <= 12)
+    );
+    // Costruisco l'array di 12 elementi: il mese i (1-12) ha stato 1
+    // se è in fertSet, altrimenti 0. Nota che l'array è 0-indexed
+    // mentre i mesi sono 1-indexed, da qui il +1.
+    months = Array.from({length: 12}, (_, i) => fertSet.has(i + 1) ? 1 : 0);
+  }
+
+  // ── Note mensili ───────────────────────────────────────────────
+  // monthly_notes arriva già deserializzato dal backend come oggetto.
+  // Le chiavi sono stringhe "1"-"12" (mese), i valori sono i testi.
+  // cPlants nativo usa lo stesso formato (chiavi 1-12), quindi posso
+  // passarlo direttamente — basta solo difendersi da valori sporchi.
+  const notes = {};
+  if (row.monthly_notes && typeof row.monthly_notes === 'object') {
+    for (const [k, v] of Object.entries(row.monthly_notes)) {
+      const monthNum = parseInt(k);
+      if (monthNum >= 1 && monthNum <= 12 && v && typeof v === 'string') {
+        notes[monthNum] = v;
+      }
+    }
+  }
+
+  // ── Frequenza testuale ─────────────────────────────────────────
+  // Costruisco una formulazione naturale dal valore numerico di
+  // fert_interval, scegliendo la dicitura più appropriata per range.
+  // Le 26 native usano stili variabili: "1× al mese", "ogni 2 settimane",
+  // "Ogni 3-4 settimane". Imito quello stile con scaglioni sensati.
+  const interval = row.fert_interval || 21;
+  let freq;
+  if (interval <= 7)        freq = 'Settimanale';
+  else if (interval <= 10)  freq = 'Ogni 7-10 giorni';
+  else if (interval <= 16)  freq = 'Ogni 2 settimane';
+  else if (interval <= 24)  freq = 'Ogni 3 settimane';
+  else if (interval <= 35)  freq = 'Mensile';
+  else                      freq = `Ogni ${interval} giorni`;
+
+  // ── Concime ────────────────────────────────────────────────────
+  // Se l'utente ha specificato un prodotto, usiamo quello. Altrimenti
+  // un fallback generico ma onesto basato sul gruppo simulazione.
+  const groupConcimeDefaults = {
+    succulenta:   'Liquido per succulente, ½ dose',
+    orchidea:     'Specifico orchidee, ¼ dose',
+    tropicale:    'Universale bilanciato, ½ dose',
+    agrume:       'Granulare specifico agrumi',
+    mediterranea: 'Universale o specifico mediterranee',
+    bonsai:       'Liquido bonsai, dose ridotta',
+    arbusto:      'Universale bilanciato',
+    albero:       'Universale a lenta cessione',
+    aromatica:    'Leggero P-K per aromatiche',
+    fiorita:      'Specifico piante da fiore P-K',
+  };
+  const concime = row.fert_product
+    || groupConcimeDefaults[row.sim_group]
+    || 'Universale bilanciato';
+
+  return {
+    name:    row.name,
+    latin:   row.latin || '',
+    icon:    row.icon || '🌱',
+    months:  months,
+    freq:    freq,
+    concime: concime,
+    notes:   notes,
+    isCustom: true,
+    customId: row.id,   // Per il pulsante "modifica" nei dettagli mensili
+  };
+}
+
+// Costruisce un record waPlants per il calendario annaffiature. Questa è
+// la struttura più ricca delle 26 native: ogni pianta ha 1-3 schedules
+// stagionali con intervalli, mesi e note specifiche. Per le custom non
+// chiediamo all'utente di compilare tutto questo: deduciamo dal gruppo
+// simulazione dei valori sensati che siano almeno un buon punto di partenza.
+//
+// La filosofia è la stessa di buildCustomCPlant: meglio una stima ragionevole
+// dedotta che un campo vuoto. L'utente può sempre raffinare il proprio
+// calendario annaffiature osservando la pianta nel tempo, e in futuro
+// potremmo aggiungere un livello dedicato nel form se servisse controllo fine.
+function buildCustomWaPlant(row) {
+  // Mappa di profili di annaffiatura per gruppo simulazione. Ogni profilo
+  // ha 3 schedules che coprono tutti e 12 i mesi: estate calda, mezze stagioni,
+  // inverno. I valori sono basati su come sono strutturate le 26 native
+  // — Sanseviera per le succulente, Ficus per le tropicali, ecc.
+  const profiles = {
+    succulenta: {
+      method: 'Soak & dry — completamente asciutto tra una annaffiatura e l\'altra',
+      schedules: [
+        {months:[5,6,7,8,9],   interval:14, note:'Soak & dry: bagno abbondante, poi asciugatura completa'},
+        {months:[10,11,12,1,2,3,4], interval:28, note:'Inverno: 1× al mese o meno. Eccesso d\'acqua = morte'},
+      ],
+    },
+    orchidea: {
+      method: 'Immersione 15 minuti, poi scolo completo',
+      schedules: [
+        {months:[5,6,7,8],     interval:7,  note:'Immergere il vaso 15 min, scolare completamente'},
+        {months:[3,4,9,10],    interval:10, note:'Radici grigie = vuole acqua, radici verdi = idratata'},
+        {months:[11,12,1,2],   interval:14, note:'Inverno: ogni 2 settimane'},
+      ],
+    },
+    tropicale: {
+      method: 'Terreno leggermente umido, mai saturo',
+      schedules: [
+        {months:[6,7,8],       interval:5,  note:'Estate: terreno leggermente umido, mai saturo'},
+        {months:[3,4,5,9,10],  interval:7,  note:'Annaffiare quando i primi 2-3 cm sono asciutti'},
+        {months:[11,12,1,2],   interval:12, note:'Inverno: ridurre molto. Nebulizzare con riscaldamenti'},
+      ],
+    },
+    agrume: {
+      method: 'Regolare e abbondante, no ristagni',
+      schedules: [
+        {months:[6,7,8],       interval:3,  note:'Estate: abbondante. Preferire acqua piovana o decantata'},
+        {months:[3,4,5,9,10],  interval:5,  note:'Mantenere il terreno fresco'},
+        {months:[11,12,1,2],   interval:10, note:'Inverno: ridurre ma non sospendere'},
+      ],
+    },
+    mediterranea: {
+      method: 'Solo terreno completamente asciutto',
+      schedules: [
+        {months:[6,7,8],       interval:7,  note:'Estate: solo quando completamente asciutto. Tollera siccità'},
+        {months:[3,4,5,9,10],  interval:12, note:'Mezze stagioni: molto moderata'},
+      ],
+    },
+    bonsai: {
+      method: 'Controllare ogni giorno — il vaso bonsai asciuga rapidamente',
+      schedules: [
+        {months:[6,7,8],       interval:2,  note:'Estate: il bonsai asciuga in fretta! Controllare ogni giorno'},
+        {months:[4,5,9,10],    interval:3,  note:'Primavera/autunno: ogni 2-3 giorni'},
+        {months:[11,12,1,2,3], interval:7,  note:'Inverno: ridurre ma non far seccare le radici'},
+      ],
+    },
+    arbusto: {
+      method: 'Moderata, regolare in vaso',
+      schedules: [
+        {months:[6,7,8],       interval:5,  note:'Estate: regolare in vaso, abbondante'},
+        {months:[3,4,5,9,10],  interval:8,  note:'Primavera/autunno: moderata'},
+        {months:[11,12,1,2],   interval:14, note:'Inverno: ridurre sensibilmente'},
+      ],
+    },
+    albero: {
+      method: 'Regolare nei primi anni, poi autonomo',
+      schedules: [
+        {months:[6,7,8],       interval:5,  note:'Estate: regolare nei primi 3 anni'},
+        {months:[4,5,9,10],    interval:8,  note:'Primavera/autunno: moderata'},
+      ],
+    },
+    aromatica: {
+      method: 'Solo terreno completamente asciutto — meglio poca che troppa',
+      schedules: [
+        {months:[6,7,8],       interval:7,  note:'Estate: solo quando completamente asciutto'},
+        {months:[3,4,5,9,10],  interval:12, note:'Molto moderata. Troppo poco > troppo!'},
+      ],
+    },
+    fiorita: {
+      method: 'Moderata e costante in fioritura',
+      schedules: [
+        {months:[5,6,7,8],     interval:4,  note:'Fioritura: terreno leggermente umido, mai saturo'},
+        {months:[3,4,9,10],    interval:7,  note:'Primavera/autunno: moderata'},
+        {months:[11,12,1,2],   interval:12, note:'Inverno: ridurre'},
+      ],
+    },
+  };
+
+  // Selezione del profilo: gruppo richiesto, fallback ad arbusto se gruppo
+  // sconosciuto. arbusto è il "default più ragionevole" perché ha esigenze medie.
+  const profile = profiles[row.sim_group] || profiles.arbusto;
+
+  // Se l'utente ha compilato il campo testuale "watering" nel form, lo
+  // preferiamo come metodo descrittivo perché è specifico per quella pianta.
+  // Altrimenti usiamo il metodo del profilo.
+  const method = (row.watering && row.watering.trim()) || profile.method;
+
+  return {
+    id:        row.id,
+    name:      row.name,
+    icon:      row.icon || '🌱',
+    color:     CUSTOM_GROUP_COLORS[row.sim_group] || '#5a7a4a',
+    method:    method,
+    schedules: profile.schedules.map(s => ({...s})),  // Copia per evitare mutation indiretta
+    isCustom:  true,
+  };
+}
+
+// Costruisce un record FI_PLANTS per il calcolatore di fertirrigazione.
+// Anche qui: deduciamo dal gruppo simulazione dei valori sensati. Per loc
+// (indoor/outdoor) c'è un'opzione in più rispetto a cPlants/waPlants: se
+// l'utente ha registrato vasi per questa pianta nell'inventario, possiamo
+// leggere la location dal primo vaso. Questo è il dato più accurato perché
+// tiene conto di dove l'utente ha effettivamente messo la pianta.
+//
+// waterMl e doseFactor seguono invece tabelle per gruppo simulazione, perché
+// dipendono da caratteristiche fisiologiche della pianta (succulente bevono
+// poco e tollerano poco concime, alberi grandi vogliono volumi imponenti).
+function buildCustomFIPlant(row) {
+  // Profilo per gruppo: waterMl per dose tipica, doseFactor (concentrazione).
+  // I valori sono presi mediando le 26 native dello stesso "tipo".
+  const groupProfiles = {
+    succulenta:   {waterMl: 200, doseFactor: 0.25},
+    orchidea:     {waterMl: 200, doseFactor: 0.25},
+    tropicale:    {waterMl: 400, doseFactor: 0.5},
+    agrume:       {waterMl: 1500, doseFactor: 1.0},
+    mediterranea: {waterMl: 600, doseFactor: 0.5},
+    bonsai:       {waterMl: 250, doseFactor: 0.5},
+    arbusto:      {waterMl: 800, doseFactor: 0.5},
+    albero:       {waterMl: 2000, doseFactor: 1.0},
+    aromatica:    {waterMl: 300, doseFactor: 0.5},
+    fiorita:      {waterMl: 500, doseFactor: 1.0},
+  };
+  const profile = groupProfiles[row.sim_group] || groupProfiles.arbusto;
+
+  // Tentativo di lettura della location dai vasi: se invLoad è disponibile
+  // e l'utente ha già un vaso per questa pianta, usiamo quella info.
+  // Altrimenti default 'outdoor' che è il caso più frequente per le piante
+  // che un utente potrebbe aggiungere come custom (acquisti vivaio).
+  let loc = 'outdoor';
+  try {
+    if (typeof invLoad === 'function') {
+      const inv = invLoad();
+      const pot = inv.find(it => it.plantTypeIdx === row.id);
+      if (pot && pot.location) loc = pot.location;
+    }
+  } catch (e) {
+    // Lettura inventario fallita: uso il default. Non bloccare il rendering.
+  }
+
+  return {
+    id:         row.id,
+    name:       row.name,
+    icon:       row.icon || '🌱',
+    loc:        loc,
+    waterMl:    profile.waterMl,
+    doseFactor: profile.doseFactor,
+    isCustom:   true,
+  };
+}
+
+// Funzione principale: carica le piante custom dal database e le fonde
+// nelle 8 strutture native (7 array + SIM_PLANT_PARAMS oggetto).
+// È idempotente: chiamandola più volte non duplica i record (rimuove prima
+// quelli custom precedenti, poi aggiunge i nuovi).
+//
+// Questo è importante perché viene chiamata sia all'avvio sia dopo ogni
+// add/edit/delete, e dobbiamo sempre avere lo stato in memoria coerente
+// con quello del database.
+async function loadCustomPlants() {
+  let items = [];
+  try {
+    const res = await apiFetch('/api/plants');
+    if (res.ok) {
+      const data = await res.json();
+      items = data.items || [];
+    }
+  } catch (e) {
+    // Se il backend non risponde, l'app continua a funzionare con le sole
+    // 26 native. Il fallimento qui non deve bloccare l'avvio.
+    console.warn('Impossibile caricare piante custom:', e);
+    return;
+  }
+
+  // STEP 1: Rimuovi tutti i record custom precedenti (id >= 26).
+  // Questo permette di chiamare la funzione più volte senza duplicare.
+  // Le 7 strutture array filtrano per il flag isCustom (più robusto del
+  // controllo per id che alcune strutture come cPlants non espongono).
+  // SIM_PLANT_PARAMS è un oggetto e cancelliamo le chiavi custom per id.
+  sPlants   = sPlants.filter(p   => !p.isCustom);
+  gPlants   = gPlants.filter(p   => !p.isCustom);
+  bbPlants  = bbPlants.filter(p  => !p.isCustom);
+  trPlants  = trPlants.filter(p  => !p.isCustom);
+  cPlants   = cPlants.filter(p   => !p.isCustom);
+  waPlants  = waPlants.filter(p  => !p.isCustom);
+  FI_PLANTS = FI_PLANTS.filter(p => !p.isCustom);
+  Object.keys(SIM_PLANT_PARAMS).forEach(k => {
+    if (parseInt(k) >= 26) delete SIM_PLANT_PARAMS[k];
+  });
+
+  // STEP 2: Per ogni pianta custom, crea gli 8 record e fondili nelle strutture.
+  items.forEach(row => {
+    sPlants.push(buildCustomSPlant(row));
+    gPlants.push(buildCustomGPlant(row));
+    bbPlants.push(buildCustomMinimalPlant(row));
+    trPlants.push(buildCustomMinimalPlant(row));
+    cPlants.push(buildCustomCPlant(row));
+    waPlants.push(buildCustomWaPlant(row));
+    FI_PLANTS.push(buildCustomFIPlant(row));
+    SIM_PLANT_PARAMS[row.id] = buildCustomSimParams(row);
+  });
+
+  // STEP 3: Aggiorna la cache locale per il pannello "Le mie piante".
+  customPlantsCache = items;
+
+  // STEP 4: Invalida le sezioni che dipendono dalle piante.
+  // Quando l'utente le riaprirà, verranno re-inizializzate con i dati nuovi.
+  // Questo meccanismo sfrutta sectionInited già esistente.
+  if (typeof sectionInited !== 'undefined') {
+    sectionInited.schede  = false;
+    sectionInited.mensile = false;
+    sectionInited.giorni  = false;
+    sectionInited.vasi    = false;
+    sectionInited.diario  = false;  // Il filtro pianta del diario deve aggiornarsi
+  }
+  // Il calcolatore di fertirrigazione ha un suo flag separato perché viene
+  // inizializzato fuori dal sistema sectionInited centrale. Resetto anche
+  // lui così le custom appaiono nella lista al prossimo accesso.
+  if (typeof fiInited !== 'undefined') {
+    fiInited = false;
+  }
+
+  // Inoltre invalida le date map che il calendario usa, così alla prossima
+  // visita di Giorni vengano rigenerate con le piante custom incluse.
+  if (typeof gDateMap !== 'undefined') {
+    Object.keys(gDateMap).forEach(k => delete gDateMap[k]);
+    Object.keys(bbDateMap).forEach(k => delete bbDateMap[k]);
+    Object.keys(trDateMap).forEach(k => delete trDateMap[k]);
+  }
+
+  console.log(`✅ Caricate ${items.length} piante custom (id 26-${items.length ? Math.max(...items.map(i=>i.id)) : 25})`);
+}
+
 // State
 let _simPotId = null;
 let _simForecast = null;
 let _simLiveMoisture = null;
 let _simIndoorLive = null;  // Dati live dal WN31 CH1 per piante indoor
+
+// ════════════════════════════════════════════════════════════════════════
+// UI DI GESTIONE PIANTE CUSTOM
+// ════════════════════════════════════════════════════════════════════════
+// Stato del form. cpEditingId è null in modalità "aggiunta" e contiene
+// l'id della pianta in modalità "modifica". Distinguere serve per sapere
+// se chiamare POST o PUT al salvataggio, e per mostrare/nascondere il
+// pulsante "elimina".
+let cpEditingId = null;
+let cpFertMonths = new Set();  // Set dei mesi attivi nel selettore
+let cpDirty = false;            // True se l'utente ha modificato qualcosa
+let cpSectionStates = {advanced: false, monthly: false, expert: false};  // Persistenza espansioni
+// Stato del calendario annuale (sezione Mensile). Array di 12 numeri 0-3
+// (0=auto/riposo, 1=attivo, 2=ridotto, 3=speciale) e dict {mese: nota}.
+// All'apertura del form questi due valori vengono inizializzati da cpResetForm
+// o da cpPopulateForm a seconda che si stia creando o modificando una pianta.
+let cpMonthlyStates = new Array(12).fill(0);
+let cpMonthlyNotes = {};
+// Flag: true se l'utente ha esplicitamente toccato il calendario annuale.
+// Lo uso per decidere se la deduzione automatica dai fert_months deve
+// ancora aggiornarsi quando l'utente modifica il selettore mesi del livello
+// avanzato. Una volta che l'utente ha customizzato, smetto di sovrascrivere.
+let cpMonthlyTouched = false;
+
+// ── Rendering del pannello "Le mie piante personalizzate" ───────────
+// Disegna il contenuto di #cp-panel in cima alla sezione Schede.
+// Se non ci sono piante custom, mostra solo un piccolo invito.
+// Se ce ne sono, mostra una griglia con card cliccabili per modificarle.
+function cpRenderPanel() {
+  const panel = document.getElementById('cp-panel');
+  if (!panel) return;
+  const items = customPlantsCache || [];
+
+  if (!items.length) {
+    // Stato vuoto: invito discreto. Non vogliamo che l'utente che non userà
+    // mai questa funzione veda un pannello vistoso. Solo un link sottile.
+    panel.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:10px;border:1px dashed #ccc;border-radius:8px;background:#fafaf6;font-size:13px;color:var(--muted)">
+        <span>🌱 Hai 26 piante predefinite. Vuoi aggiungerne una?</span>
+        <button class="ctrl-btn" style="padding:4px 12px;font-size:12px" onclick="cpOpenAddForm()">➕ Aggiungi pianta</button>
+      </div>`;
+    return;
+  }
+
+  // Stato popolato: griglia di card per ogni pianta custom + pulsante aggiungi.
+  // Le card hanno lo stesso look delle native ma con un piccolo badge "personalizzata"
+  // sull'icona e un pulsante di edit sempre visibile.
+  let html = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:13px;font-weight:600;color:var(--accent)">🌱 Le mie piante (${items.length})</div>
+      <button class="ctrl-btn" style="padding:4px 12px;font-size:12px" onclick="cpOpenAddForm()">➕ Aggiungi</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">`;
+
+  items.forEach(p => {
+    const groupLabel = {succulenta:'Succ.',orchidea:'Orc.',tropicale:'Trop.',agrume:'Agr.',mediterranea:'Med.',bonsai:'Bon.',arbusto:'Arb.',albero:'Alb.',aromatica:'Arom.',fiorita:'Fior.'}[p.sim_group] || p.sim_group;
+    html += `
+      <div style="position:relative;padding:10px 8px 8px;background:white;border:1px solid #e0e0d8;border-radius:8px;cursor:pointer;text-align:center" onclick="cpOpenEditForm(${p.id})">
+        <div style="position:absolute;top:4px;right:6px;font-size:9px;background:var(--accent);color:white;padding:1px 6px;border-radius:8px">custom</div>
+        <div style="font-size:28px;line-height:1">${p.icon || '🌱'}</div>
+        <div style="font-size:12px;font-weight:600;margin-top:4px;color:var(--text)">${cpEscape(p.name)}</div>
+        ${p.latin ? `<div style="font-size:10px;font-style:italic;color:var(--muted)">${cpEscape(p.latin)}</div>` : ''}
+        <div style="font-size:9px;color:var(--muted);margin-top:2px">${groupLabel}</div>
+      </div>`;
+  });
+  html += `</div>`;
+  panel.innerHTML = html;
+}
+
+// Helper per l'escape HTML. Necessario perché usiamo innerHTML con dati
+// dell'utente (nome, latino) che potrebbero contenere caratteri speciali.
+// Senza escape, un nome del tipo "Pianta <con tag>" romperebbe il rendering.
+function cpEscape(text) {
+  if (text == null) return '';
+  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ── Apertura del form in modalità "aggiungi" ─────────────────────────
+// Resetta tutti i campi e mostra il modal. Il pulsante "elimina" resta
+// nascosto perché non c'è nulla da eliminare in modalità aggiunta.
+function cpOpenAddForm() {
+  cpEditingId = null;
+  cpDirty = false;
+  cpResetForm();
+  document.getElementById('cp-form-title').textContent = '🌱 Nuova pianta personalizzata';
+  document.getElementById('cp-form-sub').textContent = 'Compila i campi base. I livelli avanzato ed esperto sono opzionali.';
+  document.getElementById('cp-delete-btn').style.display = 'none';
+  document.getElementById('cp-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  // Focus automatico sul primo campo: nice-to-have per UX da tastiera
+  setTimeout(() => document.getElementById('cp-name').focus(), 50);
+}
+
+// ── Apertura del form in modalità "modifica" ─────────────────────────
+// Carica la pianta dalla cache, popola tutti i campi del form, mostra
+// il pulsante elimina.
+function cpOpenEditForm(plantId) {
+  const plant = customPlantsCache.find(p => p.id === plantId);
+  if (!plant) {
+    cpToast('Pianta non trovata', 'error');
+    return;
+  }
+  cpEditingId = plantId;
+  cpDirty = false;
+  cpResetForm();
+  cpPopulateForm(plant);
+  document.getElementById('cp-form-title').textContent = `✏️ Modifica: ${plant.name}`;
+  document.getElementById('cp-form-sub').textContent = 'Modifica i campi che vuoi aggiornare.';
+  document.getElementById('cp-delete-btn').style.display = 'inline-flex';
+  document.getElementById('cp-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+// ── Reset del form a valori vuoti ────────────────────────────────────
+function cpResetForm() {
+  // Livello base
+  document.getElementById('cp-name').value = '';
+  document.getElementById('cp-latin').value = '';
+  document.getElementById('cp-icon').value = '🌱';
+  document.getElementById('cp-sim-group').value = 'arbusto';
+  document.getElementById('cp-sensor-cat').value = 'universale';
+  // Livello avanzato — testi scheda
+  ['description','exposure','watering','substrate-text','temperature','pruning','pests','fertilization'].forEach(id => {
+    const el = document.getElementById('cp-' + id);
+    if (el) el.value = '';
+  });
+  // Livello avanzato — calendario fertilizzazione
+  cpFertMonths = new Set([3,4,5,6,7,8,9,10]);  // Default: primavera-autunno
+  cpRenderFertMonths();
+  document.getElementById('cp-fert-interval').value = 21;
+  document.getElementById('cp-fert-product').value = '';
+  document.getElementById('cp-fert-note').value = '';
+  // Livello esperto — parametri Kc (vuoti = usa default del gruppo)
+  ['root-depth','p-coef','kc-initial','kc-dev','kc-mid','kc-late','kc-dormant'].forEach(id => {
+    document.getElementById('cp-' + id).value = '';
+  });
+  // Livello calendario annuale: parto con tutti gli stati a 0 (auto/riposo)
+  // e nessuna nota. La griglia verrà popolata dalla deduzione automatica
+  // quando l'utente apre la sezione, oppure dai dati salvati in cpPopulateForm
+  // se sta modificando una pianta esistente.
+  cpMonthlyStates = new Array(12).fill(0);
+  cpMonthlyNotes = {};
+  cpMonthlyTouched = false;
+  // Pre-deduco una volta dai fert_months di default (3-10) così la griglia,
+  // se l'utente la apre subito, mostra già una proposta sensata.
+  cpDeduceFromFertMonths(true);  // silent=true, niente toast
+  // Sezioni: ripristina lo stato espansione preferito dell'utente
+  document.getElementById('cp-section-advanced').style.display = cpSectionStates.advanced ? 'block' : 'none';
+  document.getElementById('cp-section-monthly').style.display = cpSectionStates.monthly ? 'block' : 'none';
+  document.getElementById('cp-section-expert').style.display = cpSectionStates.expert ? 'block' : 'none';
+  document.getElementById('cp-toggle-advanced').textContent = cpSectionStates.advanced ? '▲' : '▼';
+  document.getElementById('cp-toggle-monthly').textContent = cpSectionStates.monthly ? '▲' : '▼';
+  document.getElementById('cp-toggle-expert').textContent = cpSectionStates.expert ? '▲' : '▼';
+}
+
+// ── Popolamento del form con i dati di una pianta esistente ─────────
+function cpPopulateForm(plant) {
+  // Livello base
+  document.getElementById('cp-name').value = plant.name || '';
+  document.getElementById('cp-latin').value = plant.latin || '';
+  document.getElementById('cp-icon').value = plant.icon || '🌱';
+  document.getElementById('cp-sim-group').value = plant.sim_group || 'arbusto';
+  document.getElementById('cp-sensor-cat').value = plant.sensor_cat || 'universale';
+  // Livello avanzato — testi
+  document.getElementById('cp-description').value = plant.description || '';
+  document.getElementById('cp-exposure').value = plant.exposure || '';
+  document.getElementById('cp-watering').value = plant.watering || '';
+  document.getElementById('cp-substrate-text').value = plant.substrate || '';
+  document.getElementById('cp-temperature').value = plant.temperature || '';
+  document.getElementById('cp-pruning').value = plant.pruning || '';
+  document.getElementById('cp-pests').value = plant.pests || '';
+  document.getElementById('cp-fertilization').value = plant.fertilization || '';
+  // Livello avanzato — calendario
+  if (plant.fert_months) {
+    cpFertMonths = new Set(plant.fert_months.split(',').map(s => parseInt(s.trim())).filter(n => n >= 1 && n <= 12));
+  } else {
+    cpFertMonths = new Set([3,4,5,6,7,8,9,10]);
+  }
+  cpRenderFertMonths();
+  document.getElementById('cp-fert-interval').value = plant.fert_interval || 21;
+  document.getElementById('cp-fert-product').value = plant.fert_product || '';
+  document.getElementById('cp-fert-note').value = plant.fert_note || '';
+  // Livello esperto — usa stringa vuota se null per non mostrare "null" nel campo
+  const setNum = (id, val) => {
+    document.getElementById(id).value = (val == null) ? '' : val;
+  };
+  setNum('cp-root-depth', plant.root_depth_cm);
+  setNum('cp-p-coef', plant.p_coef);
+  setNum('cp-kc-initial', plant.kc_initial);
+  setNum('cp-kc-dev', plant.kc_dev);
+  setNum('cp-kc-mid', plant.kc_mid);
+  setNum('cp-kc-late', plant.kc_late);
+  setNum('cp-kc-dormant', plant.kc_dormant);
+  // Se ci sono dati esperti compilati, espando automaticamente quella sezione
+  // perché altrimenti l'utente potrebbe non accorgersi che ci sono valori salvati lì
+  const hasExpertData = plant.root_depth_cm != null || plant.p_coef != null ||
+    plant.kc_initial != null || plant.kc_dev != null || plant.kc_mid != null ||
+    plant.kc_late != null || plant.kc_dormant != null;
+  if (hasExpertData) {
+    cpSectionStates.expert = true;
+    document.getElementById('cp-section-expert').style.display = 'block';
+    document.getElementById('cp-toggle-expert').textContent = '▲';
+  }
+  // Stessa logica per i contenuti avanzati
+  const hasAdvancedData = plant.description || plant.exposure || plant.watering ||
+    plant.substrate || plant.temperature || plant.pruning || plant.pests || plant.fertilization;
+  if (hasAdvancedData) {
+    cpSectionStates.advanced = true;
+    document.getElementById('cp-section-advanced').style.display = 'block';
+    document.getElementById('cp-toggle-advanced').textContent = '▲';
+  }
+
+  // ── Calendario annuale: due percorsi di caricamento ─────────────
+  // PERCORSO 1: l'utente aveva già personalizzato (monthly_states non vuoto).
+  // Carico i suoi valori esatti e marco touched=true così ulteriori modifiche
+  // ai fert_months non sovrascriveranno le sue scelte.
+  // PERCORSO 2: l'utente non aveva ancora personalizzato. Deduco dai
+  // fert_months appena caricati così la griglia mostra una proposta sensata
+  // se l'utente aprirà la sezione, ma touched resta false e le successive
+  // modifiche ai mesi di concimazione continueranno a sincronizzare.
+  const monthlyStatesStr = (plant.monthly_states || '').trim();
+  if (monthlyStatesStr) {
+    const parsed = monthlyStatesStr.split(',').map(s => parseInt(s.trim()));
+    if (parsed.length === 12 && parsed.every(v => v >= 0 && v <= 3 && !isNaN(v))) {
+      cpMonthlyStates = parsed;
+      cpMonthlyTouched = true;
+    } else {
+      // Stati salvati non validi: cado in deduzione automatica
+      cpDeduceFromFertMonths(true);
+    }
+  } else {
+    // Nessun calendario manuale salvato: deduco dai fert_months attuali
+    cpDeduceFromFertMonths(true);
+  }
+  // Le note arrivano già come oggetto deserializzato dal backend
+  cpMonthlyNotes = (plant.monthly_notes && typeof plant.monthly_notes === 'object')
+    ? Object.assign({}, plant.monthly_notes)  // Copia per evitare mutation indiretta
+    : {};
+  // Se ci sono dati nel calendario annuale, espando la sezione automaticamente
+  // così l'utente vede subito il suo lavoro precedente quando riapre la pianta.
+  const hasMonthlyData = cpMonthlyTouched || Object.keys(cpMonthlyNotes).length > 0;
+  if (hasMonthlyData) {
+    cpSectionStates.monthly = true;
+    document.getElementById('cp-section-monthly').style.display = 'block';
+    document.getElementById('cp-toggle-monthly').textContent = '▲';
+  }
+  // Aggiorno il rendering della griglia con i dati appena caricati
+  cpRenderMonthlyGrid();
+}
+
+// ── Rendering del selettore mesi attivi ──────────────────────────────
+// Genera 12 piccoli pulsanti, uno per mese. Quelli attivi (presenti in
+// cpFertMonths) sono colorati col verde dell'app, gli altri sono grigi.
+function cpRenderFertMonths() {
+  const container = document.getElementById('cp-fert-months');
+  if (!container) return;
+  const names = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+  let html = '';
+  for (let m = 1; m <= 12; m++) {
+    const active = cpFertMonths.has(m);
+    const bg = active ? 'var(--accent)' : '#f0f0e8';
+    const color = active ? 'white' : 'var(--muted)';
+    html += `<button type="button" onclick="cpToggleMonth(${m})" style="padding:5px 10px;border-radius:6px;border:1px solid ${active ? 'var(--accent)' : '#d0d0c8'};background:${bg};color:${color};font-size:11px;font-weight:500;cursor:pointer">${names[m-1]}</button>`;
+  }
+  container.innerHTML = html;
+}
+
+function cpToggleMonth(m) {
+  if (cpFertMonths.has(m)) cpFertMonths.delete(m);
+  else cpFertMonths.add(m);
+  cpRenderFertMonths();
+  cpDirty = true;
+  // Se l'utente non ha ancora customizzato manualmente il calendario annuale,
+  // ri-deduco dagli fert_months aggiornati. Questo crea una sincronizzazione
+  // bidirezionale gradevole: chi compila solo il livello avanzato vede il
+  // calendario annuale aggiornarsi automaticamente, chi vuole controllo fine
+  // entra nel livello monthly e da quel momento il sistema rispetta le sue scelte.
+  if (!cpMonthlyTouched) {
+    cpDeduceFromFertMonths(true);  // silent=true: non avviso l'utente
+  }
+}
+
+// ── Gestione del calendario annuale per la sezione Mensile ──────────
+// Disegna la griglia di 12 righe, una per mese. Ogni riga contiene
+// il nome del mese, 4 pillole di stato cliccabili, e un campo testo
+// per la nota personalizzata. Lo stato attivo viene evidenziato con
+// colore semantico (verde=attivo, giallo=ridotto, rosso=speciale).
+function cpRenderMonthlyGrid() {
+  const container = document.getElementById('cp-monthly-grid');
+  if (!container) return;
+  const monthNames = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+                      'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  // Mappa stato → {label breve, colore}. Coerente con i colori usati nella
+  // sezione Mensile dalle 26 native, così l'utente trova continuità visiva.
+  const stateConfig = [
+    {label: 'Auto',      color: '#d8d8d8', textColor: '#666'},     // 0
+    {label: 'Attiva',    color: '#7a9a50', textColor: 'white'},    // 1
+    {label: 'Ridotta',   color: '#c0a040', textColor: 'white'},    // 2
+    {label: 'Speciale',  color: '#c06040', textColor: 'white'},    // 3
+  ];
+
+  let html = '';
+  for (let m = 0; m < 12; m++) {
+    const currentState = cpMonthlyStates[m] || 0;
+    const currentNote = cpMonthlyNotes[m + 1] || '';
+    // Riga compatta: nome mese a sinistra, pillole stato al centro,
+    // campo nota sotto. Su mobile la disposizione si compatta automaticamente
+    // grazie a flex-wrap.
+    html += `
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid #eaeae0">
+        <div style="min-width:75px;font-size:12px;font-weight:600;color:#444">${monthNames[m]}</div>
+        <div style="display:flex;gap:3px;flex-wrap:wrap">`;
+    for (let s = 0; s < 4; s++) {
+      const isActive = currentState === s;
+      const cfg = stateConfig[s];
+      const bg = isActive ? cfg.color : '#f5f5ef';
+      const tc = isActive ? cfg.textColor : '#888';
+      const border = isActive ? cfg.color : '#d8d8d0';
+      html += `<button type="button" onclick="cpSetMonthlyState(${m},${s})" style="padding:3px 8px;border-radius:5px;border:1px solid ${border};background:${bg};color:${tc};font-size:10.5px;font-weight:500;cursor:pointer">${cfg.label}</button>`;
+    }
+    html += `
+        </div>
+        <input type="text" placeholder="Nota per ${monthNames[m].toLowerCase()} (opzionale)"
+               value="${cpEscape(currentNote).replace(/"/g, '&quot;')}"
+               oninput="cpSetMonthlyNote(${m + 1}, this.value)"
+               style="flex:1;min-width:180px;padding:4px 8px;font-size:11px;border:1px solid #d0d0c8;border-radius:4px;background:#fafaf6">
+      </div>`;
+  }
+  container.innerHTML = html;
+}
+
+// Imposta lo stato di un mese specifico nella griglia mensile.
+// Marca cpMonthlyTouched a true così la deduzione automatica dai
+// fert_months smette di sovrascrivere le scelte dell'utente.
+function cpSetMonthlyState(monthIndex, state) {
+  cpMonthlyStates[monthIndex] = state;
+  cpMonthlyTouched = true;
+  cpDirty = true;
+  cpRenderMonthlyGrid();
+}
+
+// Salva la nota di un mese specifico. Diversamente dagli stati, le note
+// non triggerano cpMonthlyTouched perché possono coesistere benissimo
+// con la deduzione automatica degli stati: l'utente potrebbe voler
+// dedurre gli stati ma aggiungere note descrittive a mano.
+function cpSetMonthlyNote(monthNum, value) {
+  if (value && value.trim()) {
+    cpMonthlyNotes[monthNum] = value;
+  } else {
+    delete cpMonthlyNotes[monthNum];
+  }
+  cpDirty = true;
+  // Non chiamo cpRenderMonthlyGrid qui per evitare di perdere il focus
+  // del campo input mentre l'utente sta digitando. Il render sincronizzato
+  // avverrà al prossimo cambio di stato o alla riapertura del form.
+}
+
+// Ricalcola gli stati mensili dai mesi di fertilizzazione del livello
+// avanzato. Usato sia automaticamente (quando l'utente modifica i
+// fert_months e non ha ancora customizzato il calendario annuale) sia
+// manualmente tramite il pulsante "Deduci da concimazione".
+function cpDeduceFromFertMonths(silent) {
+  const newStates = new Array(12).fill(0);
+  cpFertMonths.forEach(m => {
+    if (m >= 1 && m <= 12) newStates[m - 1] = 1;  // Mesi attivi → stato 1
+  });
+  cpMonthlyStates = newStates;
+  if (!silent) {
+    cpMonthlyTouched = false;  // Reset esplicito: l'utente vuole ripartire
+    cpToast('Calendario annuale rigenerato dai mesi di concimazione', 'info');
+    cpDirty = true;
+  }
+  // Se la sezione monthly è aperta, aggiorno il rendering. Se è chiusa,
+  // verrà aggiornata alla prossima apertura grazie al salvataggio in stato.
+  cpRenderMonthlyGrid();
+}
+
+// ── Espansione/compressione delle sezioni del form ──────────────────
+// Ricorda lo stato in cpSectionStates per persistenza durante la sessione.
+function cpToggleSection(name) {
+  cpSectionStates[name] = !cpSectionStates[name];
+  document.getElementById('cp-section-' + name).style.display = cpSectionStates[name] ? 'block' : 'none';
+  document.getElementById('cp-toggle-' + name).textContent = cpSectionStates[name] ? '▲' : '▼';
+}
+
+// ── Chiusura del form ──────────────────────────────────────────────
+// Se l'utente ha modificato qualcosa, chiede conferma prima di scartare.
+function cpCloseForm() {
+  if (cpDirty) {
+    if (!confirm('Hai modifiche non salvate. Vuoi davvero chiudere senza salvare?')) {
+      return;
+    }
+  }
+  document.getElementById('cp-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  cpEditingId = null;
+  cpDirty = false;
+}
+
+// ── Salvataggio (crea o aggiorna) ──────────────────────────────────
+async function cpSavePlant() {
+  // Validazione: il nome è l'unico campo obbligatorio
+  const name = document.getElementById('cp-name').value.trim();
+  if (!name) {
+    cpToast('Il nome è obbligatorio', 'error');
+    document.getElementById('cp-name').focus();
+    return;
+  }
+
+  // Costruisco il payload prendendo solo i campi compilati per i parametri
+  // numerici opzionali. Una stringa vuota verrà inviata come stringa vuota
+  // e il backend la interpreterà come null grazie alla funzione opt_num.
+  const numOrEmpty = (id) => {
+    const v = document.getElementById(id).value.trim();
+    return v === '' ? null : parseFloat(v);
+  };
+  const payload = {
+    name: name,
+    latin: document.getElementById('cp-latin').value.trim(),
+    icon: document.getElementById('cp-icon').value.trim() || '🌱',
+    simGroup: document.getElementById('cp-sim-group').value,
+    sensorCat: document.getElementById('cp-sensor-cat').value,
+    description: document.getElementById('cp-description').value.trim(),
+    exposure: document.getElementById('cp-exposure').value.trim(),
+    watering: document.getElementById('cp-watering').value.trim(),
+    substrate: document.getElementById('cp-substrate-text').value.trim(),
+    temperature: document.getElementById('cp-temperature').value.trim(),
+    pruning: document.getElementById('cp-pruning').value.trim(),
+    pests: document.getElementById('cp-pests').value.trim(),
+    fertilization: document.getElementById('cp-fertilization').value.trim(),
+    fertMonths: Array.from(cpFertMonths).sort((a,b) => a-b),
+    fertInterval: parseInt(document.getElementById('cp-fert-interval').value) || 21,
+    fertProduct: document.getElementById('cp-fert-product').value.trim(),
+    fertNote: document.getElementById('cp-fert-note').value.trim(),
+    // Calendario annuale: invio gli stati solo se l'utente ha customizzato
+    // manualmente (touched=true). Altrimenti mando stringa vuota e il backend
+    // saprà che deve dedurre dai fert_months al momento del rendering.
+    // Le note invece le mando sempre, perché possono coesistere con la
+    // deduzione automatica degli stati.
+    monthlyStates: cpMonthlyTouched ? cpMonthlyStates.slice() : [],
+    monthlyNotes: Object.assign({}, cpMonthlyNotes),
+    rootDepthCm: numOrEmpty('cp-root-depth'),
+    pCoef: numOrEmpty('cp-p-coef'),
+    kcInitial: numOrEmpty('cp-kc-initial'),
+    kcDev: numOrEmpty('cp-kc-dev'),
+    kcMid: numOrEmpty('cp-kc-mid'),
+    kcLate: numOrEmpty('cp-kc-late'),
+    kcDormant: numOrEmpty('cp-kc-dormant'),
+  };
+
+  try {
+    let res;
+    if (cpEditingId) {
+      // Modifica: PUT
+      res = await apiFetch(`/api/plants/${cpEditingId}`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload),
+      });
+    } else {
+      // Aggiunta: POST
+      res = await apiFetch('/api/plants', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload),
+      });
+    }
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({error: 'Errore sconosciuto'}));
+      cpToast(err.error || 'Errore nel salvataggio', 'error');
+      return;
+    }
+
+    cpToast(cpEditingId ? `✅ ${name} aggiornata` : `✅ ${name} aggiunta`, 'success');
+    cpDirty = false;
+
+    // Ricarica le piante custom: la fusione è idempotente, quindi questo
+    // aggiorna sia la cache che le 5 strutture native in memoria.
+    await loadCustomPlants();
+    cpRenderPanel();
+
+    // Re-inizializza la sezione Schede se è quella attiva, così l'utente
+    // vede subito il nuovo stato senza dover cambiare sezione e tornare.
+    if (typeof sInitSchede === 'function') {
+      sInitSchede();
+    }
+
+    // Chiudi il form
+    document.getElementById('cp-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+    cpEditingId = null;
+  } catch (e) {
+    cpToast('Errore di rete: ' + e.message, 'error');
+  }
+}
+
+// ── Eliminazione protetta ───────────────────────────────────────────
+// Se la pianta è in uso da vasi o voci diario, il backend risponde 409
+// con la lista dei blocchi. Mostriamo all'utente un messaggio chiaro
+// con suggerimento esplicito su cosa fare prima di poter eliminare.
+async function cpDeletePlant() {
+  if (!cpEditingId) return;
+  const plant = customPlantsCache.find(p => p.id === cpEditingId);
+  if (!plant) return;
+
+  if (!confirm(`Eliminare definitivamente la pianta "${plant.name}"?\n\nQuesta operazione non può essere annullata.`)) {
+    return;
+  }
+
+  try {
+    const res = await apiFetch(`/api/plants/${cpEditingId}`, {method: 'DELETE'});
+
+    if (res.status === 409) {
+      // Eliminazione bloccata: ci sono dipendenze. Mostro lista dettagliata.
+      const data = await res.json();
+      const pots = data.blocking?.pots || [];
+      const diaryCount = data.blocking?.diary_entries || 0;
+      let msg = `Non posso eliminare "${plant.name}" perché è ancora in uso.\n\n`;
+      if (pots.length) {
+        msg += `🪴 Vasi che la usano (${pots.length}):\n`;
+        pots.slice(0, 5).forEach(p => msg += `  • ${p.nickname || 'senza nome'} (id ${p.id})\n`);
+        if (pots.length > 5) msg += `  ... e altri ${pots.length - 5}\n`;
+        msg += '\n';
+      }
+      if (diaryCount > 0) {
+        msg += `📓 Voci diario che la nominano: ${diaryCount}\n\n`;
+      }
+      msg += `Per eliminare questa pianta, prima rimuovi i vasi associati dalla sezione Vasi.\nLe voci diario possono restare: si riferiranno solo al nome storico.`;
+      alert(msg);
+      return;
+    }
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({error: 'Errore'}));
+      cpToast(err.error || 'Errore eliminazione', 'error');
+      return;
+    }
+
+    cpToast(`🗑️ ${plant.name} eliminata`, 'success');
+
+    // Ricarica e chiudi
+    await loadCustomPlants();
+    cpRenderPanel();
+    if (typeof sInitSchede === 'function') {
+      sInitSchede();
+    }
+    document.getElementById('cp-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+    cpEditingId = null;
+  } catch (e) {
+    cpToast('Errore di rete: ' + e.message, 'error');
+  }
+}
+
+// ── Sistema toast (notifiche temporanee) ────────────────────────────
+// Riusiamo lo stesso pattern delle notifiche già usate in altre sezioni:
+// un piccolo banner che appare in alto, sparisce dopo 3 secondi.
+function cpToast(message, type = 'info') {
+  // Rimuovi eventuali toast esistenti
+  document.querySelectorAll('.cp-toast').forEach(t => t.remove());
+  const colors = {
+    success: {bg: '#e0f2e0', border: '#7aaa7a', text: '#2a5a2a'},
+    error:   {bg: '#fdf0f0', border: '#d8a0a0', text: '#a04040'},
+    info:    {bg: '#edf5ff', border: '#a8c8e8', text: '#2a5a8a'},
+  };
+  const c = colors[type] || colors.info;
+  const toast = document.createElement('div');
+  toast.className = 'cp-toast';
+  toast.style.cssText = `position:fixed;top:60px;left:50%;transform:translateX(-50%);background:${c.bg};border:1px solid ${c.border};color:${c.text};padding:10px 18px;border-radius:8px;font-size:13px;font-weight:500;z-index:10000;box-shadow:0 4px 12px rgba(0,0,0,0.1);max-width:90vw`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.style.transition = 'opacity 0.3s';
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// ── Tracking del flag dirty ─────────────────────────────────────────
+// Quando l'utente modifica qualunque campo del form, alziamo il flag
+// che ci serve per la conferma di chiusura non salvata. Usiamo event
+// delegation sul modal così non dobbiamo attaccarlo a ogni singolo input.
+document.addEventListener('input', (e) => {
+  if (e.target.closest('#cp-overlay')) {
+    cpDirty = true;
+  }
+});
+
+// ── Gestione tasto Escape ───────────────────────────────────────────
+// Aggiungo cpCloseForm() alla lista degli handler del tasto Escape già
+// gestita nel codice esistente. Vedere keydown handler globale.
 
 // ── Gestione parametri di simulazione persistenti per vaso ───────────
 // Questa funzione è la fonte di verità unica: dato un vaso, ritorna sempre
@@ -6035,7 +7588,7 @@ async function simOpen(potId) {
   if (!item) return;
   _simPotId = potId;
 
-  const p = sPlants[item.plantTypeIdx];
+  const p = getPlantById(item.plantTypeIdx);
   // Usa la funzione unificata che fonde saved + default — stessa logica del batch
   const params = simGetParamsForPot(item);
   const vol = invGetVolFromItem(item);
@@ -6369,7 +7922,7 @@ function simRun() {
   const item = inv.find(x => x.id === _simPotId);
   if (!item) return;
 
-  const p = sPlants[item.plantTypeIdx];
+  const p = getPlantById(item.plantTypeIdx);
   const vol = invGetVolFromItem(item);
 
   // Parametri
@@ -6827,7 +8380,7 @@ async function buildSimWateringSchedule() {
   today.setHours(0,0,0,0);
 
   inv.forEach(item => {
-    const p = sPlants[item.plantTypeIdx];
+    const p = getPlantById(item.plantTypeIdx);
     if (!p) return;
 
     // Scegli il meteo in base alla location della pianta
@@ -6978,7 +8531,21 @@ function pwaInstall() {
 }
 
 // ══════════════════════════════════════════════════════════════════════
+// AVVIO APP
+// ══════════════════════════════════════════════════════════════════════
+// Mostriamo subito la sezione Schede con le 26 native (UI immediata).
+// In parallelo carichiamo le piante custom dal database: quando arrivano,
+// vengono fuse nelle strutture e le sezioni vengono invalidate per essere
+// re-inizializzate alla prossima visita. Subito dopo il caricamento, anche
+// il pannello "Le mie piante" viene renderizzato così l'utente lo vede
+// popolato fin dalla prima visualizzazione.
 showSection('schede');
+loadCustomPlants().then(() => {
+  cpRenderPanel();
+  // Re-inizializzo la sezione Schede se è quella attiva, perché potrebbero
+  // esserci piante custom da mostrare insieme alle native
+  if (typeof sInitSchede === 'function') sInitSchede();
+});
 </script>
 </body>
 </html>
