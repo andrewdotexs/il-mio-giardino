@@ -454,15 +454,17 @@ class Handler(BaseHTTPRequestHandler):
         return item
 
     def _inv_fields(self, data):
-        # Gestione difensiva del campo plant_type_idx: deve essere sempre un
-        # numero perché la colonna SQL ha vincolo NOT NULL. Il payload del
-        # frontend potrebbe contenere null se la dropdown ha value="undefined"
-        # (caso che si verificava per le 26 native quando mancavano gli id
-        # espliciti, scoperto in un bug del Passo 6). Adesso convertiamo
-        # esplicitamente null/None in 0 con un fallback sicuro.
+        # Validazione del campo plant_type_idx: deve sempre essere un numero
+        # valido perché è la chiave che collega il vaso alla sua pianta.
+        # Storicamente ho avuto un bug dove la dropdown salvava "undefined"
+        # per le custom (mancava il campo id nelle builder), e una difesa
+        # silenziosa che convertiva null→0 mascherava il problema facendo
+        # apparire la prima pianta dell'array (Sanseviera) al posto della
+        # pianta scelta. Adesso preferisco un errore esplicito che faccia
+        # emergere subito eventuali bug futuri simili.
         plant_idx = data.get("plantTypeIdx")
         if plant_idx is None or plant_idx == "":
-            plant_idx = 0
+            raise ValueError("plantTypeIdx mancante o nullo nel payload")
         return {
             "plant_type_idx": plant_idx,
             "qty": data.get("qty", 1),
@@ -623,11 +625,14 @@ class Handler(BaseHTTPRequestHandler):
             if data is None:
                 self.send_json({"error": "JSON non valido"}, 400)
                 return
-            # 🔍 LOG DIAGNOSTICO TEMPORANEO: stampo cosa arriva veramente
-            print(f"  📥 PAYLOAD inventory ricevuto:")
-            print(f"     plantTypeIdx = {data.get('plantTypeIdx')!r} (tipo={type(data.get('plantTypeIdx')).__name__})")
-            fields = self._inv_fields(data)
-            print(f"     dopo _inv_fields → plant_type_idx = {fields['plant_type_idx']!r}")
+            try:
+                fields = self._inv_fields(data)
+            except ValueError as e:
+                # _inv_fields lancia ValueError se plant_type_idx è null o vuoto.
+                # Questo è un errore di validazione del payload, non un bug del
+                # database, quindi rispondo 400 Bad Request con messaggio chiaro.
+                self.send_json({"error": str(e)}, 400)
+                return
             cols = ", ".join(fields.keys())
             placeholders = ", ".join(["?"] * len(fields))
             with get_db() as conn:
@@ -640,17 +645,6 @@ class Handler(BaseHTTPRequestHandler):
                 row = conn.execute("SELECT * FROM inventory WHERE id = ?", (new_id,)).fetchone()
             print(f"  ➕ Nuovo vaso: idx={fields['plant_type_idx']} — {fields['nickname'] or 'senza nome'}")
             self.send_json({"item": self._inv_row_to_dict(row)}, 201)
-            return
-
-        # POST /api/diag — endpoint diagnostico temporaneo per ricevere log
-        # dal frontend e visualizzarli nel terminal Termux. Da rimuovere
-        # quando il bug del salvataggio sarà completamente risolto.
-        if path == "/api/diag":
-            data = self._read_json_body() or {}
-            print(f"  🔍 DIAG dal frontend:")
-            for k, v in data.items():
-                print(f"     {k} = {v!r}")
-            self.send_json({"ok": True})
             return
 
         # POST /api/plants — crea una nuova pianta custom.
@@ -729,7 +723,12 @@ class Handler(BaseHTTPRequestHandler):
                 if not row:
                     self.send_json({"error": "Vaso non trovato"}, 404)
                     return
-                fields = self._inv_fields(data)
+                try:
+                    fields = self._inv_fields(data)
+                except ValueError as e:
+                    # Stessa logica del POST: errore esplicito invece di silent fallback
+                    self.send_json({"error": str(e)}, 400)
+                    return
                 sets = ", ".join(f"{k}=?" for k in fields)
                 conn.execute(f"UPDATE inventory SET {sets} WHERE id=?", list(fields.values()) + [entry_id])
                 conn.commit()
