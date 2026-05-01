@@ -104,6 +104,14 @@ def init_db():
             if col not in cols:
                 conn.execute(sql)
                 print(f"  🔄 Migrazione: aggiunta colonna {col}")
+
+        # Indici per query frequenti (idempotenti, costo zero se già esistono)
+        # Il diario può crescere a centinaia di righe; senza indici le query
+        # "ultimi 30 giorni" e "tutto su Carmona" fanno full scan
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_diary_date ON diary(date)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_diary_plant ON diary(plant)")
+        # Inventario: query frequente per plant_type_idx (calendario, simulazione)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_inventory_plant ON inventory(plant_type_idx)")
         conn.commit()
     print(f"✅ Database pronto: {DB_FILE}")
 
@@ -536,9 +544,13 @@ class Handler(BaseHTTPRequestHandler):
 # ── Avvio ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     init_db()
-    server = HTTPServer(("localhost", PORT), Handler)
+    # Bind su 0.0.0.0 = raggiungibile da tutta la LAN (necessario per
+    # Tailscale, Cloudflare Tunnel, accesso da altri device). Se preferisci
+    # limitare al solo localhost per ragioni di sicurezza, cambia in "localhost".
+    server = HTTPServer(("0.0.0.0", PORT), Handler)
     print(f"\n🌿 Giardino App Server avviato")
-    print(f"   Apri il browser su:  http://localhost:{PORT}")
+    print(f"   Locale:              http://localhost:{PORT}")
+    print(f"   LAN:                 http://<ip-del-dispositivo>:{PORT}")
     print(f"   Database:            {DB_FILE}")
     if ECOWITT_ENABLED:
         print(f"   🌤️  Ecowitt:          Attivo (MAC: {ECOWITT_MAC[:8]}...)")

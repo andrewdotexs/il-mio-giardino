@@ -1621,6 +1621,30 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
 <script>
 // ══════════════════════════════════════════════════════════════════════
+// API HELPERS
+// ══════════════════════════════════════════════════════════════════════
+// Wrapper su fetch() che applica un timeout di default a tutte le chiamate API.
+// Evita che il browser resti appeso se il server o Ecowitt si bloccano.
+// Uso: apiFetch('/api/inventory') oppure apiFetch(url, {method:'POST', body:..., timeout:10000})
+// Se il chiamante passa un signal proprio (es. AbortSignal.timeout(1200) per ping veloci),
+// quello ha precedenza sul timeout di default.
+async function apiFetch(url, options = {}) {
+  if (options.signal) {
+    // Il chiamante ha già un suo AbortSignal — lo rispettiamo
+    return fetch(url, options);
+  }
+  const timeout = options.timeout || 8000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    const res = await fetch(url, {...options, signal: controller.signal});
+    return res;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════════════════════════════
 const sectionInited = {schede:false, mensile:false, giorni:false, diario:false, acqua:false, vasi:false, meteo:false, params:false};
@@ -2493,7 +2517,7 @@ const dOpLabels = {
   osservazione:'🔍 Osservazione', altro:'📝 Altro'
 };
 const dMonths = ["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"];
-const API = 'http://localhost:8765/api/diary';
+const API = '/api/diary';
 let dUseAPI = false;  // verrà impostato al primo ping
 
 // Indicatore modalità (API o locale)
@@ -2513,7 +2537,7 @@ function dSetMode(isAPI) {
 // Ping al server per capire se è attivo
 async function dPingServer() {
   try {
-    const res = await fetch(API + '?_ping=1', {signal: AbortSignal.timeout(1200)});
+    const res = await apiFetch(API + '?_ping=1', {signal: AbortSignal.timeout(1200)});
     dSetMode(res.ok);
   } catch {
     dSetMode(false);
@@ -2552,7 +2576,7 @@ async function dLoadEntries(plant='', op='') {
 async function dAddEntry(entry) {
   if (dUseAPI) {
     try {
-      const res = await fetch(API, {
+      const res = await apiFetch(API, {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify(entry)
@@ -2571,7 +2595,7 @@ async function dDeleteEntry(id) {
   if (!confirm('Eliminare questa voce?')) return;
   if (dUseAPI) {
     try {
-      await fetch(API+'/'+id, {method:'DELETE'});
+      await apiFetch(API+'/'+id, {method:'DELETE'});
     } catch { dSetMode(false); }
   } else {
     const entries = dLSLoad().filter(e=>e.id!==id);
@@ -2583,7 +2607,7 @@ async function dDeleteEntry(id) {
 async function dUpdateEntry(id, data) {
   if (dUseAPI) {
     try {
-      const res = await fetch(API+'/'+id, {
+      const res = await apiFetch(API+'/'+id, {
         method:'PUT',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify(data)
@@ -2921,7 +2945,7 @@ async function wFetchET0() {
   dataDiv.style.display = 'none';
 
   try {
-    const res = await fetch('http://localhost:8765/api/ecowitt/realtime');
+    const res = await apiFetch('/api/ecowitt/realtime');
     const json = await res.json();
     if (!json.configured) {
       loading.innerHTML = '⚠️ Ecowitt non configurato — inserisci le chiavi in <b>config.json</b>';
@@ -3325,7 +3349,7 @@ async function fiOpenFromCalendar() {
   // Fetch dati sensori WH52 (EC + temp) se disponibili
   let soilByCh = {};
   try {
-    const res = await fetch('http://localhost:8765/api/ecowitt/realtime');
+    const res = await apiFetch('/api/ecowitt/realtime');
     const json = await res.json();
     if (json.configured && json.code === 0) {
       for (let ch=1; ch<=16; ch++) {
@@ -3737,7 +3761,7 @@ const INV_DISEASE_LABELS = {
 };
 
 // Inventory persistence — API SQLite con fallback localStorage
-const INV_API = 'http://localhost:8765/api/inventory';
+const INV_API = '/api/inventory';
 let invUseAPI = false;
 let invCache = null;
 
@@ -3777,7 +3801,7 @@ function invDbToJs(row) {
 
 async function invPingAPI() {
   try {
-    const res = await fetch(INV_API, {signal: AbortSignal.timeout(1200)});
+    const res = await apiFetch(INV_API, {signal: AbortSignal.timeout(1200)});
     invUseAPI = res.ok;
   } catch { invUseAPI = false; }
 }
@@ -3790,7 +3814,7 @@ function invLoad() {
 async function invLoadFromAPI() {
   if (invUseAPI) {
     try {
-      const res = await fetch(INV_API);
+      const res = await apiFetch(INV_API);
       const data = await res.json();
       const items = (data.items||[]).map(invDbToJs);
       invCache = items;
@@ -3805,7 +3829,7 @@ async function invLoadFromAPI() {
 async function invAPIAdd(entry) {
   if (invUseAPI) {
     try {
-      const res = await fetch(INV_API, {
+      const res = await apiFetch(INV_API, {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify(entry)
       });
@@ -3825,7 +3849,7 @@ async function invAPIAdd(entry) {
 async function invAPIUpdate(id, entry) {
   if (invUseAPI) {
     try {
-      const res = await fetch(INV_API+'/'+id, {
+      const res = await apiFetch(INV_API+'/'+id, {
         method:'PUT', headers:{'Content-Type':'application/json'},
         body: JSON.stringify(entry)
       });
@@ -3840,7 +3864,7 @@ async function invAPIUpdate(id, entry) {
 
 async function invAPIDelete(id) {
   if (invUseAPI) {
-    try { await fetch(INV_API+'/'+id, {method:'DELETE'}); } catch { invUseAPI = false; }
+    try { await apiFetch(INV_API+'/'+id, {method:'DELETE'}); } catch { invUseAPI = false; }
   } else {
     const items = invLSLoad().filter(i=>i.id!==id);
     invLSSave(items);
@@ -4268,7 +4292,7 @@ function invRender() {
 // ⑪ METEO E SENSORI ECOWITT
 // ══════════════════════════════════════════════════════════════════════
 
-const METEO_API = 'http://localhost:8765/api/ecowitt';
+const METEO_API = '/api/ecowitt';
 let meteoData = null;
 let meteoConfig = null;
 let meteoTimer = null;
@@ -4286,7 +4310,7 @@ const SOGLIE_DEFAULT = {
 
 async function meteoInit() {
   try {
-    const res = await fetch(METEO_API+'/config');
+    const res = await apiFetch(METEO_API+'/config');
     meteoConfig = await res.json();
   } catch { meteoConfig = {configured:false, soglie:SOGLIE_DEFAULT}; }
 }
@@ -4304,7 +4328,7 @@ async function meteoRefresh() {
   }
   statusEl.textContent = '⏳ Caricamento dati...';
   try {
-    const res = await fetch(METEO_API+'/realtime');
+    const res = await apiFetch(METEO_API+'/realtime');
     meteoData = await res.json();
     if (meteoData.code !== 0 && meteoData.code !== undefined) {
       statusEl.textContent = '❌ Errore API: '+(meteoData.msg||meteoData.message||'sconosciuto');
@@ -4727,7 +4751,7 @@ async function meteoRenderHistory() {
   const dateStr = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 
   try {
-    const res = await fetch(`http://localhost:8765/api/ecowitt/history?start_date=${dateStr(yesterday)}&end_date=${dateStr(today)}&call_back=soil`);
+    const res = await apiFetch(`/api/ecowitt/history?start_date=${dateStr(yesterday)}&end_date=${dateStr(today)}&call_back=soil`);
     const json = await res.json();
     if (!json.configured || json.code !== 0) {
       el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:1rem;font-size:11px">Storico non disponibile — verifica configurazione Ecowitt</div>';
@@ -4897,7 +4921,7 @@ async function meteoFetchForecast() {
   if (!fcEl) return;
 
   try {
-    const res = await fetch('http://localhost:8765/api/forecast');
+    const res = await apiFetch('/api/forecast');
     const data = await res.json();
     if (data.error) {
       fcEl.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:11px;padding:1rem">❌ ${data.error}</div>`;
@@ -5362,7 +5386,7 @@ async function waAnalyzeMeteo(waEvs, date) {
 
   let ewData = null;
   try {
-    const res = await fetch('http://localhost:8765/api/ecowitt/realtime');
+    const res = await apiFetch('/api/ecowitt/realtime');
     const json = await res.json();
     if (json.configured && json.code === 0) ewData = json.data;
   } catch {}
@@ -6062,7 +6086,7 @@ async function simOpen(potId) {
   // Singolo fetch Ecowitt che raccoglie tutto: moisture dal WH51/WH52 + dati WN31
   let ewJson = null;
   try {
-    const res = await fetch('http://localhost:8765/api/ecowitt/realtime');
+    const res = await apiFetch('/api/ecowitt/realtime');
     const j = await res.json();
     if (j.configured && j.code === 0) ewJson = j;
   } catch {}
@@ -6137,7 +6161,7 @@ async function simOpen(potId) {
   // Prefetch previsioni per lo scenario meteo live
   _simForecast = null;
   try {
-    const res = await fetch('http://localhost:8765/api/forecast');
+    const res = await apiFetch('/api/forecast');
     const data = await res.json();
     if (!data.error && data.daily) _simForecast = data;
   } catch {}
@@ -6772,7 +6796,7 @@ async function buildSimWateringSchedule() {
   // Prefetch previsioni (se non già in cache)
   if (!_simForecast) {
     try {
-      const res = await fetch('http://localhost:8765/api/forecast');
+      const res = await apiFetch('/api/forecast');
       const data = await res.json();
       if (!data.error && data.daily) _simForecast = data;
     } catch {}
@@ -6782,7 +6806,7 @@ async function buildSimWateringSchedule() {
   const liveMoisture = {};
   let indoorLive = null;
   try {
-    const res = await fetch('http://localhost:8765/api/ecowitt/realtime');
+    const res = await apiFetch('/api/ecowitt/realtime');
     const json = await res.json();
     if (json.configured && json.code === 0) {
       for (let ch = 1; ch <= 16; ch++) {
