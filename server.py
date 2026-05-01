@@ -454,8 +454,17 @@ class Handler(BaseHTTPRequestHandler):
         return item
 
     def _inv_fields(self, data):
+        # Gestione difensiva del campo plant_type_idx: deve essere sempre un
+        # numero perché la colonna SQL ha vincolo NOT NULL. Il payload del
+        # frontend potrebbe contenere null se la dropdown ha value="undefined"
+        # (caso che si verificava per le 26 native quando mancavano gli id
+        # espliciti, scoperto in un bug del Passo 6). Adesso convertiamo
+        # esplicitamente null/None in 0 con un fallback sicuro.
+        plant_idx = data.get("plantTypeIdx")
+        if plant_idx is None or plant_idx == "":
+            plant_idx = 0
         return {
-            "plant_type_idx": data.get("plantTypeIdx", 0),
+            "plant_type_idx": plant_idx,
             "qty": data.get("qty", 1),
             "nickname": data.get("nickname", ""),
             "location": data.get("location", "indoor"),
