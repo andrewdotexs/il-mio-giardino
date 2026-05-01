@@ -1479,12 +1479,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 -->
 <div class="overlay" id="cp-overlay" onclick="if(event.target===this)cpCloseForm()">
   <div class="panel" style="max-width:680px;max-height:92vh;overflow-y:auto">
-    <div class="panel-head">
-      <div>
-        <div class="panel-title" id="cp-form-title">🌱 Nuova pianta personalizzata</div>
-        <div class="panel-sub" id="cp-form-sub">Compila i campi base. I livelli avanzato ed esperto sono opzionali.</div>
+    <div class="panel-header">
+      <div style="flex:1;min-width:0">
+        <div class="panel-title" id="cp-form-title">🌱 Nuova pianta</div>
+        <div class="panel-subtitle" id="cp-form-sub">Compila i campi base, il resto è opzionale.</div>
       </div>
-      <button class="close-btn" onclick="cpCloseForm()">✕</button>
+      <button class="close-btn" onclick="cpCloseForm()" style="flex-shrink:0">✕</button>
     </div>
     <div class="panel-body">
 
@@ -1717,12 +1717,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 <!-- ── MODAL: SIMULATORE BILANCIO IDRICO ─────────────────────────── -->
 <div class="overlay" id="sim-overlay" onclick="if(event.target===this)simClose()">
   <div class="panel" style="max-width:720px;max-height:92vh;overflow-y:auto">
-    <div class="panel-head">
-      <div>
+    <div class="panel-header">
+      <div style="flex:1;min-width:0">
         <div class="panel-title">🔮 Simulazione bilancio idrico</div>
         <div class="panel-subtitle" id="sim-subtitle">FAO-56 · TAW/RAW · ET₀ Penman-Monteith</div>
       </div>
-      <button class="close-btn" onclick="simClose()">✕</button>
+      <button class="close-btn" onclick="simClose()" style="flex-shrink:0">✕</button>
     </div>
     <div style="padding:12px 16px">
 
@@ -4366,6 +4366,15 @@ async function invInit() {
   // Ping API
   await invPingAPI();
   await invLoadFromAPI();
+  // Carico le piante custom prima di popolare la dropdown.
+  // Senza questa chiamata, se l'utente apre la sezione Vasi prima che
+  // loadCustomPlants() iniziale sia completato, la dropdown mostrerebbe
+  // solo le 26 native e i vasi che riferiscono custom non verrebbero
+  // renderizzati (getPlantById restituisce null).
+  // La funzione è idempotente, quindi chiamarla più volte non duplica nulla.
+  if (typeof loadCustomPlants === 'function') {
+    await loadCustomPlants();
+  }
   // Populate plant type dropdown.
   // IMPORTANTE: il value dell'option è p.id (l'identificativo reale della
   // pianta), NON l'indice di posizione nell'array. Per le 26 native questi
@@ -4600,6 +4609,14 @@ async function invSave() {
   }
   invCache = null;
   await invLoadFromAPI();
+  // Garantisco che sPlants contenga le piante custom prima di renderizzare.
+  // Questo è cruciale perché invRender chiama getPlantById per ogni vaso,
+  // e se la pianta custom non è in sPlants la card non viene disegnata
+  // (l'utente vedrebbe la lista vuota anche se il vaso è stato salvato).
+  // loadCustomPlants è idempotente: chiamarla qui non causa duplicazioni.
+  if (typeof loadCustomPlants === 'function') {
+    await loadCustomPlants();
+  }
   invCloseForm();
   invRender();
   if (typeof buildCurativeEvents === 'function') buildCurativeEvents();
@@ -4611,6 +4628,12 @@ async function invDelete() {
   await invAPIDelete(editId);
   invCache = null;
   await invLoadFromAPI();
+  // Stesso pattern di invSave: garantisco che sPlants contenga le custom
+  // prima di renderizzare. Non strettamente necessario per il delete, ma
+  // mantiene la coerenza del codice e protegge da scenari di edge case.
+  if (typeof loadCustomPlants === 'function') {
+    await loadCustomPlants();
+  }
   invCloseForm();
   invRender();
   if (typeof buildCurativeEvents === 'function') buildCurativeEvents();
@@ -6142,13 +6165,26 @@ function paramsInit() {
   const grid = document.getElementById('p-soglie-grid');
   grid.innerHTML = Object.entries(SOGLIE_LABELS).map(([cat, label]) => {
     const s = PARAMS.soglie[cat] || PARAMS_DEFAULTS.soglie[cat];
-    return `<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;background:var(--bg);border:1px solid var(--border)">
-      <span style="font-size:11px;font-weight:500;min-width:130px">${label}</span>
-      <div style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--muted)">
-        <span>Secco&lt;</span><input type="number" id="ps-${cat}-secco" value="${s.secco}" min="0" max="50" style="width:42px;border:1px solid var(--border);border-radius:5px;padding:3px;font-size:11px;text-align:center">
-        <span>OK&lt;</span><input type="number" id="ps-${cat}-ok" value="${s.ok_max}" min="10" max="80" style="width:42px;border:1px solid var(--border);border-radius:5px;padding:3px;font-size:11px;text-align:center">
-        <span>Umido&gt;</span><input type="number" id="ps-${cat}-umido" value="${s.umido}" min="20" max="90" style="width:42px;border:1px solid var(--border);border-radius:5px;padding:3px;font-size:11px;text-align:center">
-        <span>%</span>
+    // Layout a due piani verticali per essere mobile-friendly:
+    // 1) Riga superiore: nome categoria a tutta larghezza
+    // 2) Riga inferiore: tre input flessibili che si adattano allo schermo
+    // Su desktop sembrano uguali a prima, su mobile non escono dallo schermo.
+    return `<div style="display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-radius:8px;background:var(--bg);border:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:600;color:var(--text)">${label}</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted)">
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+          <span>Secco &lt;</span>
+          <input type="number" id="ps-${cat}-secco" value="${s.secco}" min="0" max="50" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:4px;font-size:12px;text-align:center;box-sizing:border-box">
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+          <span>OK &lt;</span>
+          <input type="number" id="ps-${cat}-ok" value="${s.ok_max}" min="10" max="80" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:4px;font-size:12px;text-align:center;box-sizing:border-box">
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+          <span>Umido &gt;</span>
+          <input type="number" id="ps-${cat}-umido" value="${s.umido}" min="20" max="90" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:4px;font-size:12px;text-align:center;box-sizing:border-box">
+        </div>
+        <span style="min-width:14px;text-align:right">%</span>
       </div>
     </div>`;
   }).join('');
@@ -6157,13 +6193,24 @@ function paramsInit() {
   const ecGrid = document.getElementById('p-soglie-ec-grid');
   ecGrid.innerHTML = Object.entries(SOGLIE_LABELS).map(([cat, label]) => {
     const s = PARAMS.sogliEC[cat] || PARAMS_DEFAULTS.sogliEC[cat];
-    return `<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;background:var(--bg);border:1px solid var(--border)">
-      <span style="font-size:11px;font-weight:500;min-width:130px">${label}</span>
-      <div style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--muted)">
-        <span>Min</span><input type="number" id="pec-${cat}-min" value="${s.min}" min="0" max="3000" step="50" style="width:56px;border:1px solid var(--border);border-radius:5px;padding:3px;font-size:11px;text-align:center">
-        <span>Target</span><input type="number" id="pec-${cat}-target" value="${s.target}" min="0" max="3000" step="50" style="width:56px;border:1px solid var(--border);border-radius:5px;padding:3px;font-size:11px;text-align:center">
-        <span>Max</span><input type="number" id="pec-${cat}-max" value="${s.max}" min="0" max="5000" step="50" style="width:56px;border:1px solid var(--border);border-radius:5px;padding:3px;font-size:11px;text-align:center">
-        <span>µS/cm</span>
+    // Stesso layout a due piani della grid umidità, ma con campi più larghi
+    // perché i valori EC vanno fino a 5000 (4 cifre).
+    return `<div style="display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-radius:8px;background:var(--bg);border:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:600;color:var(--text)">${label}</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted)">
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+          <span>Min</span>
+          <input type="number" id="pec-${cat}-min" value="${s.min}" min="0" max="3000" step="50" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:4px;font-size:12px;text-align:center;box-sizing:border-box">
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+          <span>Target</span>
+          <input type="number" id="pec-${cat}-target" value="${s.target}" min="0" max="3000" step="50" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:4px;font-size:12px;text-align:center;box-sizing:border-box">
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+          <span>Max</span>
+          <input type="number" id="pec-${cat}-max" value="${s.max}" min="0" max="5000" step="50" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:4px;font-size:12px;text-align:center;box-sizing:border-box">
+        </div>
+        <span style="min-width:38px;text-align:right;font-size:9px">µS/cm</span>
       </div>
     </div>`;
   }).join('');
@@ -6894,8 +6941,8 @@ function cpOpenAddForm() {
   cpEditingId = null;
   cpDirty = false;
   cpResetForm();
-  document.getElementById('cp-form-title').textContent = '🌱 Nuova pianta personalizzata';
-  document.getElementById('cp-form-sub').textContent = 'Compila i campi base. I livelli avanzato ed esperto sono opzionali.';
+  document.getElementById('cp-form-title').textContent = '🌱 Nuova pianta';
+  document.getElementById('cp-form-sub').textContent = 'Compila i campi base, il resto è opzionale.';
   document.getElementById('cp-delete-btn').style.display = 'none';
   document.getElementById('cp-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';

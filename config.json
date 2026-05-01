@@ -1,8 +1,8 @@
 {
     "ecowitt": {
-        "application_key": "INSERISCI_QUI_LA_TUA_APPLICATION_KEY",
-        "api_key": "INSERISCI_QUI_LA_TUA_API_KEY",
-        "mac": "INSERISCI_QUI_IL_MAC_ADDRESS_DEL_GATEWAY",
+        "application_key": "BA35F68249F53F5AE8E8F518F8616AEC",
+        "api_key": "cce31b53-3be0-4495-bb7e-8bc7b02b4e09",
+        "mac": "88:13:BF:CB:5A:AF",
         "units": {
             "temperature": "celsius",
             "pressure": "hpa",
@@ -11,9 +11,9 @@
         }
     },
     "posizione": {
-        "latitudine": 41.9028,
-        "longitudine": 12.4964,
-        "nome": "Roma"
+        "latitudine": 45.6288,
+        "longitudine": 9.0357,
+        "nome": "Saronno"
     },
     "sms": {
         "metodo": "notifica",
