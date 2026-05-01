@@ -4563,6 +4563,22 @@ function invCloseForm() {
 
 async function invSave() {
   const plantIdx = document.getElementById('inv-plant-type').value;
+  // 🔍 LOG DIAGNOSTICO TEMPORANEO: capire da dove viene il bug della Sanseviera
+  // che appare al posto della pianta custom selezionata. Stampa nel server log
+  // perché Termux non ha console del browser facilmente accessibile.
+  // Da rimuovere quando il bug è risolto.
+  console.log('🔍 invSave: dropdown.value =', JSON.stringify(plantIdx),
+              'tipo =', typeof plantIdx,
+              '+plantIdx =', +plantIdx,
+              'isNaN =', isNaN(+plantIdx));
+  // Mando anche il log al server per vederlo in Termux
+  try {
+    fetch('/api/diag', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({source:'invSave', dropdownValue: plantIdx,
+                            converted: +plantIdx, isNaN: isNaN(+plantIdx),
+                            sPlantsLength: sPlants.length,
+                            sPlantsLast3: sPlants.slice(-3).map(p => ({id:p.id, name:p.name}))})});
+  } catch(e) {}
   if (plantIdx === '') { alert('Seleziona una pianta!'); return; }
   const editId = document.getElementById('inv-edit-id').value;
   const shape = document.getElementById('inv-pot-shape').value;

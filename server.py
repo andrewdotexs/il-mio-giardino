@@ -623,7 +623,11 @@ class Handler(BaseHTTPRequestHandler):
             if data is None:
                 self.send_json({"error": "JSON non valido"}, 400)
                 return
+            # 🔍 LOG DIAGNOSTICO TEMPORANEO: stampo cosa arriva veramente
+            print(f"  📥 PAYLOAD inventory ricevuto:")
+            print(f"     plantTypeIdx = {data.get('plantTypeIdx')!r} (tipo={type(data.get('plantTypeIdx')).__name__})")
             fields = self._inv_fields(data)
+            print(f"     dopo _inv_fields → plant_type_idx = {fields['plant_type_idx']!r}")
             cols = ", ".join(fields.keys())
             placeholders = ", ".join(["?"] * len(fields))
             with get_db() as conn:
@@ -636,6 +640,17 @@ class Handler(BaseHTTPRequestHandler):
                 row = conn.execute("SELECT * FROM inventory WHERE id = ?", (new_id,)).fetchone()
             print(f"  ➕ Nuovo vaso: idx={fields['plant_type_idx']} — {fields['nickname'] or 'senza nome'}")
             self.send_json({"item": self._inv_row_to_dict(row)}, 201)
+            return
+
+        # POST /api/diag — endpoint diagnostico temporaneo per ricevere log
+        # dal frontend e visualizzarli nel terminal Termux. Da rimuovere
+        # quando il bug del salvataggio sarà completamente risolto.
+        if path == "/api/diag":
+            data = self._read_json_body() or {}
+            print(f"  🔍 DIAG dal frontend:")
+            for k, v in data.items():
+                print(f"     {k} = {v!r}")
+            self.send_json({"ok": True})
             return
 
         # POST /api/plants — crea una nuova pianta custom.
