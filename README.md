@@ -91,6 +91,28 @@ Per accedere alla dashboard da fuori casa, opzioni consigliate:
 - **Cloudflare Tunnel**: espone il server pubblicamente con HTTPS, dominio
   custom, autenticazione opzionale.
 
+## Docker
+
+Comandi principali per la creazione di una immagine Docker
+
+Apri un terminale nella cartella del repository e digita
+
+``` bash
+docker compose up -d
+```
+
+Se vuoi vedere i log dell'app digita
+
+``` bash
+docker compose logs -f
+```
+
+Per ricostruire l'immagine dopo una modifica per eseguire l'update digita
+
+``` bash
+docker compose up -d --build
+```
+
 ## Licenza
 
 MIT — vedi `LICENSE`.
