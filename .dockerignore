@@ -1,0 +1,65 @@
+# File da NON copiare dentro l'immagine Docker.
+# Docker legge questo file durante "docker build" e ignora tutto quello
+# che corrisponde ai pattern qui sotto. Senza questo file finirebbero
+# nell'immagine cose inutili o sensibili.
+
+# Git: la cronologia del repository può essere grande quanto tutto il
+# resto, e dentro l'immagine non serve a nulla.
+.git/
+.gitignore
+.gitattributes
+
+# Python: file generati che vengono ricreati al volo
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.pytest_cache/
+
+# Database locale: NON deve finire nell'immagine perché contiene i dati
+# del singolo utente. Vive nella cartella data/ che viene montata come
+# volume esterno (vedi docker-compose.yml).
+data/
+giardino.sqlite
+giardino.sqlite-journal
+giardino.sqlite-wal
+giardino.sqlite-shm
+*.db
+
+# Configurazione locale: contiene credenziali Ecowitt e impostazioni
+# specifiche del singolo deployment. Anche questa vive nella cartella
+# data/ che viene montata come volume esterno.
+config.json
+
+# Log e cartelle di output dello sviluppo
+*.log
+node_modules/
+.venv/
+venv/
+env/
+
+# IDE e editor: cartelle e file di configurazione personali che non
+# riguardano il progetto in sé
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Docker stesso: evita di includere il Dockerfile nell'immagine
+# (sarebbe ricorsivo e inutile)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentazione di sviluppo che non serve in produzione
+README.md
+docs/
+*.docx
+
+# File temporanei e di backup
+*~
+*.bak
+*.tmp

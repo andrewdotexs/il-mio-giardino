@@ -18,9 +18,24 @@ from datetime import datetime
 
 # ── Configurazione ────────────────────────────────────────────────────
 PORT = 8765
-DB_FILE = os.path.join(os.path.dirname(__file__), "giardino.sqlite")
+
+# Cartella dei dati persistenti (database SQLite e config Ecowitt).
+# Comportamento:
+#   - Se la variabile d'ambiente DATA_DIR è impostata, uso quella cartella.
+#     Tipicamente "/app/data" quando l'app gira in container Docker, dove
+#     un volume monta una cartella host esterna per la persistenza.
+#   - Altrimenti uso la stessa cartella dello script, mantenendo il
+#     comportamento storico: chi gira "python server.py" come ha sempre
+#     fatto vedrà il database creato accanto al server.py come prima.
+# Se DATA_DIR è impostata ma la cartella non esiste, la creo
+# automaticamente con makedirs (evita errori al primo avvio).
+DATA_DIR = os.environ.get("DATA_DIR") or os.path.dirname(__file__)
+if DATA_DIR != os.path.dirname(__file__):
+    os.makedirs(DATA_DIR, exist_ok=True)
+
+DB_FILE = os.path.join(DATA_DIR, "giardino.sqlite")
 HTML_FILE = os.path.join(os.path.dirname(__file__), "giardino_app.html")
-CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
+CONFIG_FILE = os.path.join(DATA_DIR, "config.json")
 
 # ── Ecowitt Config ────────────────────────────────────────────────────
 def load_config():

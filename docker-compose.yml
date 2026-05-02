@@ -1,0 +1,71 @@
+# ── docker-compose.yml per Il Mio Giardino ──────────────────────────────
+#
+# Questo file descrive come deve essere eseguito il container in modo
+# dichiarativo. Invece di ricordarsi un lungo "docker run" con tanti
+# parametri, basterà fare "docker compose up" e tutto è già configurato.
+#
+# Posiziona questo file nella radice del repository, accanto al Dockerfile.
+
+services:
+  giardino:
+    # Costruisce l'immagine usando il Dockerfile nella stessa cartella.
+    # Alternativa: si potrebbe usare "image: utente/giardino:latest" se
+    # si pubblicasse l'immagine su Docker Hub, ma per uso personale build
+    # locale va benissimo.
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    # Nome esplicito del container, così è facile riferirsi a lui con
+    # "docker logs giardino", "docker exec -it giardino bash", ecc.
+    container_name: giardino
+
+    # Mappa la porta del container (8765, dove ascolta server.py) sulla
+    # stessa porta dell'host. Se vuoi servire l'app su un'altra porta
+    # senza modificare server.py, cambia il numero a sinistra:
+    # es. "9000:8765" servirebbe sulla 9000 dell'host.
+    ports:
+      - "8765:8765"
+
+    # Volumi: mappature tra cartelle dell'host e del container.
+    # CRITICI per la persistenza: senza di loro perderesti il database
+    # e la configurazione ad ogni rebuild dell'immagine.
+    volumes:
+      # Cartella unificata per i dati persistenti (database SQLite e
+      # config Ecowitt). Il container la vede come /app/data, e
+      # server.py legge la variabile DATA_DIR (impostata nel Dockerfile)
+      # per sapere dove cercare giardino.sqlite e config.json.
+      #
+      # Vantaggio rispetto a montare i singoli file: la cartella esiste
+      # sempre (Docker la crea da sola se manca), e server.py crea i
+      # due file dentro al primo avvio. Niente "touch" manuali.
+      #
+      # I file sono accessibili dall'host nella cartella ./data/ del
+      # repository: puoi ispezionare il database con sqlite3, modificare
+      # config.json con un editor, fare backup copiando la cartella.
+      - ./data:/app/data
+
+    # Politica di restart: il container si riavvia automaticamente se
+    # crasha o se il sistema viene riavviato. "unless-stopped" significa
+    # "riavvia sempre, tranne se l'ho fermato esplicitamente con
+    # docker stop". È quasi sempre la scelta giusta per un'app self-hosted.
+    restart: unless-stopped
+
+    # Variabili d'ambiente: posso passare configurazione al server.
+    # Per ora niente di particolare, ma se in futuro server.py leggesse
+    # variabili d'ambiente (per esempio per la porta o per credenziali),
+    # andrebbero qui.
+    environment:
+      - TZ=Europe/Rome   # Fuso orario corretto per i log e i timestamp
+
+    # Healthcheck: Docker controlla periodicamente che il server risponda.
+    # Se per tre tentativi consecutivi non risponde, il container viene
+    # marcato come "unhealthy" e (con la restart policy) verrà riavviato.
+    # È una protezione utile contro situazioni in cui il server resta in
+    # piedi ma smette di servire richieste.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8765/', timeout=3)"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
