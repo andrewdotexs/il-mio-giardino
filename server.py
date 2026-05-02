@@ -43,7 +43,7 @@ CONFIG_FILE = os.path.join(DATA_DIR, "config.json")
 # da modificare con le proprie credenziali e coordinate invece di doverlo
 # creare manualmente. Le chiavi vuote sono "self-documenting": basta
 # aprire il file (oppure la sezione Parametri della dashboard) per capire
-# quali campi vanno compilati.
+# quali campi vanno compilati..
 DEFAULT_CONFIG = {
     "ecowitt": {
         "application_key": "",
