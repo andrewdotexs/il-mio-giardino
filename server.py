@@ -38,13 +38,89 @@ HTML_FILE = os.path.join(os.path.dirname(__file__), "giardino_app.html")
 CONFIG_FILE = os.path.join(DATA_DIR, "config.json")
 
 # ── Ecowitt Config ────────────────────────────────────────────────────
+# Template del config.json di default. Viene scritto dal server al primo
+# avvio se il file non esiste, così l'utente trova subito un file pronto
+# da modificare con le proprie credenziali e coordinate invece di doverlo
+# creare manualmente. Le chiavi vuote sono "self-documenting": basta
+# aprire il file (oppure la sezione Parametri della dashboard) per capire
+# quali campi vanno compilati.
+DEFAULT_CONFIG = {
+    "ecowitt": {
+        "application_key": "",
+        "api_key": "",
+        "mac": ""
+    },
+    "posizione": {
+        "latitudine": 0.0,
+        "longitudine": 0.0,
+        "nome": ""
+    }
+}
+
 def load_config():
+    # Se il file non esiste, lo creo con la struttura di default. Questo
+    # accade tipicamente al primo avvio del container Docker, dove il
+    # volume monta una cartella data/ vuota. Sul Termux l'utente potrebbe
+    # comunque arrivare qui se ha cancellato il file per qualche motivo.
+    if not os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                json.dump(DEFAULT_CONFIG, f, indent=2, ensure_ascii=False)
+            print(f"📝 config.json non trovato — creato file vuoto in {CONFIG_FILE}")
+            print(f"   Modifica il file per inserire le credenziali Ecowitt")
+        except OSError as e:
+            # Caso raro: la cartella non è scrivibile. Non blocco l'avvio,
+            # mostro solo un avviso e procedo con config vuoto in memoria.
+            print(f"⚠️  Impossibile creare config.json ({e}) — Ecowitt disabilitato")
+            return DEFAULT_CONFIG.copy()
+
     try:
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    except FileNotFoundError:
-        print("⚠️  config.json non trovato — Ecowitt disabilitato")
-        return {}
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        # Se il file esiste ma è malformato (per esempio l'utente l'ha
+        # editato male), ritorno i default in memoria senza sovrascrivere
+        # quello su disco — l'utente potrebbe voler recuperare il suo
+        # contenuto guardando il file.
+        print(f"⚠️  config.json non leggibile ({e}) — Ecowitt disabilitato")
+        return DEFAULT_CONFIG.copy()
+
+
+def save_config(new_config):
+    """
+    Salva la configurazione su disco in modo atomico e aggiorna le
+    variabili globali in memoria così le modifiche hanno effetto
+    immediato senza richiedere il riavvio del server.
+
+    Uso il pattern "scrivi su file temporaneo, poi rinomina" perché
+    rename è un'operazione atomica sui filesystem moderni: o il file
+    finale è quello vecchio, o è quello nuovo, mai una via di mezzo
+    corrotta. Senza questo pattern, un'interruzione del server durante
+    la scrittura lascerebbe un config.json troncato e illeggibile.
+    """
+    global CFG, ECOWITT_APP_KEY, ECOWITT_API_KEY, ECOWITT_MAC, ECOWITT_ENABLED
+
+    # Validazione minima: deve essere un dict, non null o array
+    if not isinstance(new_config, dict):
+        raise ValueError("La configurazione deve essere un oggetto JSON")
+
+    # Scrivo prima su file temporaneo nella stessa cartella
+    # (importante perché os.replace è atomico solo se i due file sono
+    # sullo stesso filesystem, e cartelle diverse potrebbero non esserlo)
+    tmp_file = CONFIG_FILE + ".tmp"
+    with open(tmp_file, "w", encoding="utf-8") as f:
+        json.dump(new_config, f, indent=2, ensure_ascii=False)
+
+    # Rinomina atomica: sostituisce config.json con config.json.tmp
+    os.replace(tmp_file, CONFIG_FILE)
+
+    # Aggiorno le variabili globali in memoria con i nuovi valori
+    CFG = new_config
+    ECOWITT_APP_KEY = CFG.get("ecowitt", {}).get("application_key", "")
+    ECOWITT_API_KEY = CFG.get("ecowitt", {}).get("api_key", "")
+    ECOWITT_MAC     = CFG.get("ecowitt", {}).get("mac", "")
+    ECOWITT_ENABLED = all(k and not k.startswith("INSERISCI") for k in [ECOWITT_APP_KEY, ECOWITT_API_KEY, ECOWITT_MAC])
+    print(f"💾 Configurazione aggiornata e salvata in {CONFIG_FILE}")
 
 CFG = load_config()
 ECOWITT_APP_KEY = CFG.get("ecowitt", {}).get("application_key", "")
@@ -423,6 +499,27 @@ class Handler(BaseHTTPRequestHandler):
             })
             return
 
+        # GET /api/config — restituisce la configurazione completa per la
+        # sezione Parametri della dashboard. Diversamente da /api/ecowitt/config
+        # qui restituiamo i valori reali (non mascherati) perché l'utente
+        # deve poterli vedere e modificare. Questo endpoint dovrebbe essere
+        # usato solo da contesti fidati (LAN locale, Tailscale, ecc.) perché
+        # espone le credenziali Ecowitt in chiaro.
+        if path == "/api/config":
+            self.send_json({
+                "ecowitt": {
+                    "application_key": ECOWITT_APP_KEY,
+                    "api_key": ECOWITT_API_KEY,
+                    "mac": ECOWITT_MAC,
+                },
+                "posizione": CFG.get("posizione", {
+                    "latitudine": 0.0,
+                    "longitudine": 0.0,
+                    "nome": ""
+                })
+            })
+            return
+
         # GET /api/forecast — previsioni meteo 7 giorni via Open-Meteo (gratis, no API key)
         if path == "/api/forecast":
             pos = CFG.get("posizione", {})
@@ -608,6 +705,49 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         parsed = urlparse(self.path)
         path = parsed.path
+
+        # POST /api/config — salva la configurazione (Ecowitt + posizione)
+        # dalla sezione Parametri della dashboard. Il payload deve essere
+        # un oggetto JSON con la stessa struttura che GET /api/config
+        # restituisce. La modifica ha effetto immediato in memoria, e il
+        # file su disco viene aggiornato in modo atomico.
+        if path == "/api/config":
+            data = self._read_json_body()
+            if data is None:
+                self.send_json({"error": "JSON non valido"}, 400)
+                return
+            try:
+                # Costruisco il nuovo config preservando eventuali sezioni
+                # esistenti che la dashboard non gestisce (per esempio
+                # soglie_umidita o altre estensioni future). In pratica:
+                # parto dal CFG attuale e sovrascrivo solo le sezioni
+                # ecowitt e posizione che la dashboard ha modificato.
+                new_config = dict(CFG) if isinstance(CFG, dict) else {}
+                if "ecowitt" in data:
+                    eco = data["ecowitt"]
+                    new_config["ecowitt"] = {
+                        "application_key": str(eco.get("application_key", "")).strip(),
+                        "api_key":         str(eco.get("api_key", "")).strip(),
+                        "mac":             str(eco.get("mac", "")).strip(),
+                    }
+                if "posizione" in data:
+                    pos = data["posizione"]
+                    # Le coordinate possono arrivare come numeri o stringhe
+                    # (i form HTML inviano tutto come stringa). Le converto
+                    # in float, e in caso di errore uso 0.0 come fallback.
+                    def to_float(v):
+                        try: return float(v)
+                        except (TypeError, ValueError): return 0.0
+                    new_config["posizione"] = {
+                        "latitudine":  to_float(pos.get("latitudine")),
+                        "longitudine": to_float(pos.get("longitudine")),
+                        "nome":        str(pos.get("nome", "")).strip(),
+                    }
+                save_config(new_config)
+                self.send_json({"ok": True, "ecowitt_enabled": ECOWITT_ENABLED})
+            except (ValueError, OSError) as e:
+                self.send_json({"error": str(e)}, 400)
+            return
 
         # POST /api/diary
         if path == "/api/diary":

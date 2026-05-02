@@ -1056,6 +1056,89 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <p>Regola i fattori di calcolo per il tuo microclima e le tue piante</p>
   </div>
 
+  <!-- ── POSIZIONE GEOGRAFICA ──────────────────────────────────────── -->
+  <!-- Coordinate del giardino: usate dal forecast meteo Open-Meteo,
+       dai calcoli di evapotraspirazione, e in futuro per altri usi
+       basati sulla posizione. Il pulsante "Usa posizione corrente"
+       chiede al browser di rilevare automaticamente le coordinate
+       tramite l'API geolocation, evitando all'utente di doverle
+       cercare a mano su Google Maps. -->
+  <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
+    <div class="calc-card-title">📍 Posizione Giardino</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">
+      Coordinate usate per le previsioni meteo e i calcoli di evapotraspirazione.
+      Il nome è solo descrittivo (es. "Casa Milano").
+    </div>
+    <div class="calc-row">
+      <div class="calc-field" style="flex:1">
+        <label>Latitudine</label>
+        <input type="number" id="p-pos-lat" step="0.0001" min="-90" max="90" placeholder="45.4642">
+        <div class="param-hint">Gradi decimali, es. 45.4642 per Milano</div>
+      </div>
+      <div class="calc-field" style="flex:1">
+        <label>Longitudine</label>
+        <input type="number" id="p-pos-lng" step="0.0001" min="-180" max="180" placeholder="9.1900">
+        <div class="param-hint">Gradi decimali, es. 9.1900 per Milano</div>
+      </div>
+    </div>
+    <div class="calc-row">
+      <div class="calc-field" style="flex:1">
+        <label>Nome località</label>
+        <input type="text" id="p-pos-name" placeholder="Es. Casa Milano" maxlength="60">
+        <div class="param-hint">Etichetta descrittiva per riconoscere la posizione</div>
+      </div>
+    </div>
+    <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="paramsUseGeoLocation()" style="padding:6px 12px;font-size:12px;border:1px solid var(--border);background:var(--bg);border-radius:6px;cursor:pointer">
+        📡 Usa posizione corrente
+      </button>
+      <button onclick="paramsSaveConfig()" style="padding:6px 12px;font-size:12px;border:1px solid #6a8a4a;background:#7a9a50;color:white;border-radius:6px;cursor:pointer">
+        💾 Salva configurazione
+      </button>
+      <span id="p-config-status" style="font-size:11px;color:var(--muted);align-self:center"></span>
+    </div>
+  </div>
+
+  <!-- ── ECOWITT API ────────────────────────────────────────────────── -->
+  <!-- Credenziali della stazione Ecowitt. Sono dati sensibili: i campi
+       application_key e api_key sono di tipo password con un piccolo
+       pulsante "occhio" per rivelarli quando l'utente vuole verificarli.
+       Il MAC è meno sensibile (è solo un identificativo dell'hardware)
+       quindi resta in chiaro. -->
+  <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
+    <div class="calc-card-title">🌤️ Ecowitt API</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">
+      Credenziali per leggere i dati della stazione meteo Ecowitt.
+      Le ottieni da <a href="https://www.ecowitt.net/user/index" target="_blank" style="color:#5a8090">ecowitt.net</a> → API → Generate.
+      Senza queste chiavi le sezioni Acqua e Meteo funzionano solo con i dati pubblici.
+    </div>
+    <div class="calc-row">
+      <div class="calc-field" style="flex:1">
+        <label>Application Key</label>
+        <div style="display:flex;gap:4px">
+          <input type="password" id="p-ecowitt-app" placeholder="32 caratteri esadecimali" autocomplete="off" style="flex:1">
+          <button type="button" onclick="paramsToggleSecret('p-ecowitt-app')" title="Mostra/nascondi" style="padding:0 10px;border:1px solid var(--border);background:var(--bg);border-radius:6px;cursor:pointer;font-size:14px">👁</button>
+        </div>
+      </div>
+    </div>
+    <div class="calc-row">
+      <div class="calc-field" style="flex:1">
+        <label>API Key</label>
+        <div style="display:flex;gap:4px">
+          <input type="password" id="p-ecowitt-api" placeholder="32 caratteri esadecimali" autocomplete="off" style="flex:1">
+          <button type="button" onclick="paramsToggleSecret('p-ecowitt-api')" title="Mostra/nascondi" style="padding:0 10px;border:1px solid var(--border);background:var(--bg);border-radius:6px;cursor:pointer;font-size:14px">👁</button>
+        </div>
+      </div>
+    </div>
+    <div class="calc-row">
+      <div class="calc-field" style="flex:1">
+        <label>MAC stazione</label>
+        <input type="text" id="p-ecowitt-mac" placeholder="AA:BB:CC:DD:EE:FF" maxlength="17">
+        <div class="param-hint">Indirizzo MAC della stazione meteo (formato XX:XX:XX:XX:XX:XX)</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Calcolatore Acqua -->
   <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
     <div class="calc-card-title">💧 Calcolatore Acqua</div>
@@ -6214,6 +6297,129 @@ function paramsInit() {
       </div>
     </div>`;
   }).join('');
+
+  // Carica la configurazione server-side (Ecowitt + posizione) e popola
+  // i nuovi pannelli. La fetch è asincrona ma non blocco paramsInit
+  // perché gli altri campi della sezione (PARAMS dal localStorage)
+  // sono già stati popolati e l'utente può lavorare con loro.
+  paramsLoadServerConfig();
+}
+
+// Carica la configurazione lato server (config.json) e riempie i campi
+// dei pannelli Posizione ed Ecowitt. Viene chiamata sia all'apertura
+// della sezione Parametri sia dopo un salvataggio per riallineare i
+// campi con i valori effettivamente persistiti.
+async function paramsLoadServerConfig() {
+  try {
+    const res = await apiFetch('/api/config');
+    if (!res.ok) return;
+    const cfg = await res.json();
+    // Posizione
+    const pos = cfg.posizione || {};
+    document.getElementById('p-pos-lat').value  = pos.latitudine  || '';
+    document.getElementById('p-pos-lng').value  = pos.longitudine || '';
+    document.getElementById('p-pos-name').value = pos.nome || '';
+    // Ecowitt
+    const eco = cfg.ecowitt || {};
+    document.getElementById('p-ecowitt-app').value = eco.application_key || '';
+    document.getElementById('p-ecowitt-api').value = eco.api_key || '';
+    document.getElementById('p-ecowitt-mac').value = eco.mac || '';
+  } catch (e) {
+    console.warn('paramsLoadServerConfig fallita:', e);
+  }
+}
+
+// Salva la configurazione lato server (config.json) tramite POST /api/config.
+// Mostra feedback all'utente nello span p-config-status: messaggio di successo
+// o errore, che svanisce dopo qualche secondo per non restare a schermo.
+async function paramsSaveConfig() {
+  const status = document.getElementById('p-config-status');
+  status.textContent = 'Salvataggio in corso...';
+  status.style.color = 'var(--muted)';
+
+  const payload = {
+    ecowitt: {
+      application_key: document.getElementById('p-ecowitt-app').value.trim(),
+      api_key:         document.getElementById('p-ecowitt-api').value.trim(),
+      mac:             document.getElementById('p-ecowitt-mac').value.trim(),
+    },
+    posizione: {
+      latitudine:  document.getElementById('p-pos-lat').value,
+      longitudine: document.getElementById('p-pos-lng').value,
+      nome:        document.getElementById('p-pos-name').value.trim(),
+    }
+  };
+
+  try {
+    const res = await apiFetch('/api/config', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({error: 'Errore sconosciuto'}));
+      throw new Error(err.error || 'Errore nel salvataggio');
+    }
+    const result = await res.json();
+    status.textContent = result.ecowitt_enabled
+      ? '✅ Configurazione salvata, Ecowitt attivo'
+      : '✅ Configurazione salvata';
+    status.style.color = '#5a8050';
+  } catch (e) {
+    status.textContent = '❌ ' + e.message;
+    status.style.color = '#c04030';
+  }
+
+  // Il messaggio svanisce dopo 5 secondi per non restare a schermo.
+  setTimeout(() => { status.textContent = ''; }, 5000);
+}
+
+// Chiede al browser di rilevare la posizione corrente tramite l'API
+// geolocation, e popola i campi latitudine/longitudine con i valori
+// rilevati. Il browser chiede il permesso all'utente la prima volta.
+function paramsUseGeoLocation() {
+  const status = document.getElementById('p-config-status');
+  if (!navigator.geolocation) {
+    status.textContent = '❌ Geolocalizzazione non supportata dal browser';
+    status.style.color = '#c04030';
+    setTimeout(() => { status.textContent = ''; }, 4000);
+    return;
+  }
+  status.textContent = '📡 Rilevamento posizione...';
+  status.style.color = 'var(--muted)';
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      // Limito a 4 cifre decimali (precisione ~10 metri, più che
+      // sufficiente per il nostro uso e più leggibile)
+      document.getElementById('p-pos-lat').value = pos.coords.latitude.toFixed(4);
+      document.getElementById('p-pos-lng').value = pos.coords.longitude.toFixed(4);
+      status.textContent = '✅ Posizione rilevata, ricorda di salvare';
+      status.style.color = '#5a8050';
+      setTimeout(() => { status.textContent = ''; }, 4000);
+    },
+    (err) => {
+      // Errori tipici: utente nega il permesso, GPS non disponibile,
+      // timeout. Mostro un messaggio chiaro per ognuno.
+      const messages = {
+        1: 'Permesso negato. Inserisci le coordinate manualmente.',
+        2: 'Posizione non disponibile. Inserisci manualmente.',
+        3: 'Timeout. Riprova o inserisci manualmente.',
+      };
+      status.textContent = '❌ ' + (messages[err.code] || err.message);
+      status.style.color = '#c04030';
+      setTimeout(() => { status.textContent = ''; }, 5000);
+    },
+    {timeout: 8000, enableHighAccuracy: false}
+  );
+}
+
+// Pulsante "occhio" per rivelare/nascondere il contenuto di un campo
+// password. Cambia type da "password" a "text" e viceversa, mantenendo
+// invariato il contenuto. Utile per verificare di aver inserito le
+// credenziali Ecowitt corrette senza dover cancellare e reinserire.
+function paramsToggleSecret(inputId) {
+  const el = document.getElementById(inputId);
+  el.type = el.type === 'password' ? 'text' : 'password';
 }
 
 function paramsSave() {
