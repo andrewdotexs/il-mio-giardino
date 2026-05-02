@@ -16,7 +16,7 @@ name: Pubblica immagine Docker
 on:
   # Ad ogni push sul branch master
   push:
-    branches: [master]
+    branches: [main, master]
   # Permette anche di lanciarlo manualmente dall'interfaccia GitHub
   # (utile per ripubblicare l'immagine senza fare un commit fittizio)
   workflow_dispatch:
