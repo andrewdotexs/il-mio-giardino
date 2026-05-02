@@ -31,6 +31,45 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .section.active{display:block}
 
 /* ══════════════════════════════════════════════════════════════════
+   SFONDO SEZIONE SCHEDE
+   L'immagine "The Pot" come sfondo della sezione iniziale.
+   Sopra l'immagine sovrappongo un overlay con gradient scuro che
+   attenua i contrasti e migliora la leggibilità delle card.
+   Il pseudo-elemento ::before è la tecnica standard per applicare
+   un overlay che non interferisce con il contenuto: vive a livello
+   z-index 0 dietro al contenuto reale (z-index 1).
+   ══════════════════════════════════════════════════════════════════ */
+#sec-schede {
+  position: relative;
+  background-image: url('/static/the_pot_spring_bg.png');
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+#sec-schede::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  /* Gradient verticale: meno scuro in alto (per vedere il logo) e
+     più scuro in basso (per coprire le zone con riflessi sull'acqua,
+     che sono la parte più "rumorosa" dell'immagine). */
+  background: linear-gradient(180deg,
+    rgba(245, 240, 230, 0.85) 0%,
+    rgba(245, 240, 230, 0.92) 30%,
+    rgba(245, 240, 230, 0.95) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+/* Tutto il contenuto della sezione deve stare SOPRA l'overlay.
+   Forziamo z-index relative su tutti i figli diretti per evitare
+   che alcuni elementi finiscano dietro l'overlay. */
+#sec-schede > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ══════════════════════════════════════════════════════════════════
    CALENDARIO BIOBIZZ
 ══════════════════════════════════════════════════════════════════ */
 .bb-prod-legend{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;max-width:900px;margin:0 auto .8rem}
@@ -426,6 +465,59 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 </head>
 <body>
 
+<!-- ── SPLASH SCREEN ────────────────────────────────────────────────
+     Schermata di apertura con il branding "The Pot". Visibile per
+     2.5 secondi al primo caricamento dell'app, poi sfuma con
+     transizione fade-out di 500ms. Il dismissal automatico parte
+     dopo che la pagina ha finito di caricare, così su connessioni
+     lente l'utente vede comunque la schermata per il tempo previsto
+     senza che svanisca prima che sia pronta a essere mostrata.
+     L'utente può anche tappare/cliccare per chiudere prima. -->
+<div id="splash-screen" onclick="dismissSplash()" style="
+  position:fixed; inset:0; z-index:99999;
+  background-image: url('/static/the_pot_spring_bg.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #1a2820;
+  cursor: pointer;
+  transition: opacity 500ms ease-out;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 30px;
+">
+  <div style="
+    color: rgba(255,255,255,0.7);
+    font-size: 11px;
+    font-family: 'DM Sans', sans-serif;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  ">tap per continuare</div>
+</div>
+
+<script>
+  // Logica dello splash screen.
+  // Il dismissal è automatico dopo 2.5s dal load, ma l'utente può
+  // anticipare tappando lo splash. Il flag _splashDismissed evita
+  // chiamate doppie che produrrebbero transizioni glitch.
+  let _splashDismissed = false;
+  function dismissSplash() {
+    if (_splashDismissed) return;
+    _splashDismissed = true;
+    const el = document.getElementById('splash-screen');
+    if (!el) return;
+    el.style.opacity = '0';
+    // Rimuovo l'elemento dopo la transizione, così non occupa più
+    // spazio nel DOM e non intercetta più click accidentali.
+    setTimeout(() => el.remove(), 600);
+  }
+  window.addEventListener('load', () => {
+    setTimeout(dismissSplash, 2500);
+  });
+</script>
+
 <!-- Barra offline -->
 <div id="offline-bar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#c04040;color:#fff;padding:6px 16px;font-size:12px;font-weight:500;align-items:center;justify-content:center;gap:6px;font-family:'DM Sans',sans-serif">
   <span>📡 Offline — i dati meteo e le modifiche non saranno sincronizzate</span>
@@ -434,7 +526,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 <!-- ── SECTION: SCHEDE ─────────────────────────────────────────────── -->
 <div id="sec-schede" class="section">
   <div class="app-header">
-    <h1>The Pot 🌿</h1>
+    <h1>Le mie piante 🌿</h1>
     <p>Concimazione · Substrato · Esposizione · Cure · Terreno vivo</p>
     <button id="pwa-install-btn" onclick="pwaInstall()" style="display:none;margin-top:6px;padding:6px 14px;font-size:11px;border:1px solid var(--accent);background:var(--accent-light);color:var(--accent);border-radius:20px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500">📲 Installa app</button>
   </div>
@@ -7119,7 +7211,7 @@ function cpRenderPanel() {
   // sull'icona e un pulsante di edit sempre visibile.
   let html = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div style="font-size:13px;font-weight:600;color:var(--accent)"> 🌱 The Pot (${items.length})</div>
+      <div style="font-size:13px;font-weight:600;color:var(--accent)">🌱 Le mie piante (${items.length})</div>
       <button class="ctrl-btn" style="padding:4px 12px;font-size:12px" onclick="cpOpenAddForm()">➕ Aggiungi</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">`;

@@ -43,7 +43,7 @@ CONFIG_FILE = os.path.join(DATA_DIR, "config.json")
 # da modificare con le proprie credenziali e coordinate invece di doverlo
 # creare manualmente. Le chiavi vuote sono "self-documenting": basta
 # aprire il file (oppure la sezione Parametri della dashboard) per capire
-# quali campi vanno compilati..
+# quali campi vanno compilati.
 DEFAULT_CONFIG = {
     "ecowitt": {
         "application_key": "",
@@ -361,6 +361,52 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header("Content-Type", "image/png")
                 self.send_header("Content-Length", len(body))
+                self.send_header("Cache-Control", "public, max-age=604800")
+                self.end_headers()
+                self.wfile.write(body)
+            except FileNotFoundError:
+                self.send_response(404)
+                self.end_headers()
+            return
+
+        # ── Cartella /static/ per asset generici (immagini, CSS, ecc.) ──
+        # Pattern di sicurezza importante: validiamo che il percorso
+        # richiesto sia DENTRO la cartella static, non sopra. Senza questa
+        # difesa, una richiesta come "/static/../server.py" leggerebbe il
+        # codice del server stesso (path traversal attack). os.path.realpath
+        # risolve i ".." e i symlink, e poi confrontiamo che il risultato
+        # sia ancora dentro la cartella static autorizzata.
+        if path.startswith("/static/"):
+            static_dir = os.path.realpath(os.path.join(os.path.dirname(__file__), "static"))
+            requested = os.path.realpath(os.path.join(static_dir, path[len("/static/"):]))
+            if not requested.startswith(static_dir + os.sep) and requested != static_dir:
+                # Tentativo di uscire dalla cartella static: rifiuto
+                self.send_response(403)
+                self.end_headers()
+                return
+            # Determino il MIME type dall'estensione. Tabella minima ma
+            # copre i formati che servono per uno sfondo (immagini) e
+            # per eventuali CSS/JS futuri.
+            ext_to_type = {
+                ".png":  "image/png",
+                ".jpg":  "image/jpeg",
+                ".jpeg": "image/jpeg",
+                ".webp": "image/webp",
+                ".svg":  "image/svg+xml",
+                ".css":  "text/css",
+                ".js":   "application/javascript",
+            }
+            ext = os.path.splitext(requested)[1].lower()
+            ctype = ext_to_type.get(ext, "application/octet-stream")
+            try:
+                with open(requested, "rb") as f:
+                    body = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", ctype)
+                self.send_header("Content-Length", len(body))
+                # Cache aggressiva (1 settimana) perché gli asset cambiano
+                # raramente. Se aggiorni un file, cambia il nome o forza
+                # il refresh con Ctrl+F5.
                 self.send_header("Cache-Control", "public, max-age=604800")
                 self.end_headers()
                 self.wfile.write(body)
