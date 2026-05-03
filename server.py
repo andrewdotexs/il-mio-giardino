@@ -300,9 +300,53 @@ def init_db():
 # ── HTTP Handler ──────────────────────────────────────────────────────
 class Handler(BaseHTTPRequestHandler):
 
+    def handle_one_request(self):
+        # Override del metodo standard di BaseHTTPRequestHandler che gestisce
+        # una singola richiesta HTTP. La nostra modifica intercetta le tre
+        # eccezioni "il client si è disconnesso prima che finissi di
+        # rispondere" (BrokenPipeError quando scriviamo su un socket chiuso,
+        # ConnectionResetError quando il TCP è stato resettato, e
+        # ConnectionAbortedError che si vede principalmente su Windows). Sono
+        # tutti scenari normali della vita quotidiana di un server HTTP:
+        # capitano quando l'utente naviga via dalla pagina mentre il server
+        # sta ancora rispondendo, quando un service worker decide di servire
+        # dalla cache mentre la richiesta di rete è ancora in volo, o quando
+        # il browser annulla una richiesta speculativa. Catturarle e ignorarle
+        # silenziosamente evita di stampare un traceback di trenta righe per
+        # ogni evento del genere, che inquinerebbe il log e darebbe la falsa
+        # impressione che il server stia funzionando male.
+        try:
+            super().handle_one_request()
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            # Client disconnesso: comportamento normale, non un errore.
+            pass
+
     def log_message(self, format, *args):
-        # Silenzia i log di ogni richiesta (troppo rumorosi)
-        pass
+        # Log selettivo delle richieste: silenzio i 200 e 304 (successo,
+        # ovvero la stragrande maggioranza delle richieste in condizioni
+        # normali) e mostro tutto il resto. Così il terminale resta pulito
+        # quando tutto va bene, ma diventa subito parlante se il browser
+        # sta chiedendo qualcosa che il server non riesce a servire (404),
+        # se c'è un errore interno (500), o se ci sono redirect inattesi.
+        # Per ogni richiesta non-OK aggiungo un'icona di stato che rende
+        # immediato individuare il problema scorrendo il log.
+        try:
+            # args = (request_line, status_code, response_size)
+            # esempio: ('"GET /static/css/giardino.css HTTP/1.1"', '404', '-')
+            status = int(args[1]) if len(args) > 1 else 0
+        except (ValueError, IndexError):
+            status = 0
+
+        # Successi (200, 201, 204, 304) → silenzio per non inquinare il log
+        if 200 <= status < 400:
+            return
+
+        # Errori client (4xx) e server (5xx) → mostro con icona evidente
+        icon = '⚠️' if status < 500 else '🔴'
+        try:
+            super().log_message(f"{icon} " + format, *args)
+        except Exception:
+            pass
 
     def send_json(self, data, status=200):
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")

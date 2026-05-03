@@ -14,6 +14,72 @@
 <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/css/giardino.css">
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SELEZIONE IMMAGINI STAGIONALI
+     Questo piccolo script viene eseguito subito, prima che il browser
+     inizi a parsare il <body>, in modo che le CSS variables --bg-image
+     e --splash-image siano già impostate quando il browser disegna lo
+     splash screen e la sezione Schede. Mettendolo qui inline anziché
+     in un file esterno evitiamo il "flash of unstyled content": senza
+     questo accorgimento l'utente vedrebbe per qualche frame un rettan-
+     golo scuro al posto della splash, prima che il JavaScript esterno
+     finisca di caricarsi e applicasse l'immagine.
+
+     La funzione updateSeasonalImages() è esposta sul global scope così
+     può essere richiamata in altri momenti — in particolare quando
+     l'utente ridimensiona la finestra o ruota il dispositivo, perché
+     in quei casi può cambiare la fascia mobile/desktop e quindi va
+     rivalutata la variante d'immagine da mostrare.
+     ══════════════════════════════════════════════════════════════════ -->
+<script>
+(function() {
+  // Determinazione della stagione corrente con il calendario meteorologico
+  // (più semplice e visivamente equivalente al calendario astronomico per
+  // i nostri scopi decorativi). I mesi getMonth() sono 0-based (0=gennaio).
+  function currentSeason() {
+    const month = new Date().getMonth();
+    if (month >= 2  && month <= 4)  return 'spring';   // Mar, Apr, Mag
+    if (month >= 5  && month <= 7)  return 'summer';   // Giu, Lug, Ago
+    if (month >= 8  && month <= 10) return 'autumn';   // Set, Ott, Nov
+    return 'winter';                                    // Dic, Gen, Feb
+  }
+
+  // Determinazione mobile vs desktop in base alla larghezza del viewport.
+  // Soglia 768px è la convenzione standard: distingue tablet portrait
+  // (e telefoni) da tablet landscape e desktop. Uso matchMedia perché
+  // ritorna un oggetto a cui posso anche attaccare un listener per
+  // reagire ai cambi (rotazione, ridimensionamento finestra).
+  const mq = window.matchMedia('(max-width: 768px)');
+
+  function variant() {
+    return mq.matches ? 'mobile' : 'desktop';
+  }
+
+  // Funzione principale: combina stagione e variante per ottenere i due
+  // path immagine, e li scrive nelle CSS variables sull'elemento <html>.
+  // Le scrivo su :root (cioè documentElement) perché da lì cascano sia
+  // sul body che su qualsiasi altro elemento che voglia usarle.
+  window.updateSeasonalImages = function() {
+    const season = currentSeason();
+    const v = variant();
+    const root = document.documentElement;
+    root.style.setProperty('--bg-image',     `url('/static/images/${season}_bg_${v}.png')`);
+    root.style.setProperty('--splash-image', `url('/static/images/splash_screen_${v}.png')`);
+  };
+
+  // Prima chiamata immediata, prima del rendering del body.
+  window.updateSeasonalImages();
+
+  // Listener per cambio fascia di viewport: se l'utente ruota il
+  // dispositivo o ridimensiona la finestra attraversando la soglia 768px,
+  // la variante cambia e ricalcoliamo. Uso 'change' del MediaQueryList
+  // anziché un resize listener generico perché scatta solo quando
+  // serve davvero (al passaggio della soglia), non a ogni pixel di
+  // ridimensionamento — molto più efficiente.
+  mq.addEventListener('change', window.updateSeasonalImages);
+})();
+</script>
 </head>
 <body>
 
@@ -24,29 +90,14 @@
      dopo che la pagina ha finito di caricare, così su connessioni
      lente l'utente vede comunque la schermata per il tempo previsto
      senza che svanisca prima che sia pronta a essere mostrata.
-     L'utente può anche tappare/cliccare per chiudere prima. -->
-<div id="splash-screen" onclick="dismissSplash()" style="
-  position:fixed; inset:0; z-index:99999;
-  background-image: url('/static/the_pot_spring_bg.png');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-color: #1a2820;
-  cursor: pointer;
-  transition: opacity 500ms ease-out;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 30px;
-">
-  <div style="
-    color: rgba(255,255,255,0.7);
-    font-size: 11px;
-    font-family: 'DM Sans', sans-serif;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.6);
-  ">tap per continuare</div>
+     L'utente può anche tappare/cliccare per chiudere prima.
+     L'immagine di sfondo è scelta a runtime in base al dispositivo
+     (mobile o desktop) tramite la CSS variable --splash-image — vedi
+     lo script inline nell'<head> che la imposta. Tutto lo styling
+     vive nella regola CSS #splash-screen del foglio di stile, così
+     qui nel markup resta solo la struttura logica. -->
+<div id="splash-screen" onclick="dismissSplash()">
+  <div class="splash-hint">tap per continuare</div>
 </div>
 
 <script src="/static/js/splash.js"></script>

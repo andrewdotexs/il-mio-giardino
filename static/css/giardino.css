@@ -31,8 +31,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
 /* ══════════════════════════════════════════════════════════════════
    SFONDO SEZIONE SCHEDE
-   L'immagine "The Pot" come sfondo della sezione iniziale.
-   Sopra l'immagine sovrappongo un overlay con gradient scuro che
+   L'immagine di sfondo è scelta a runtime in base alla stagione e al
+   dispositivo (mobile o desktop) tramite la CSS variable --bg-image.
+   La variable viene impostata da uno script inline nell'<head> del
+   documento, prima ancora che il browser inizi a disegnare il body,
+   così la schermata appare con lo sfondo giusto fin dal primo frame.
+   Sopra l'immagine sovrappongo un overlay con gradient chiaro che
    attenua i contrasti e migliora la leggibilità delle card.
    Il pseudo-elemento ::before è la tecnica standard per applicare
    un overlay che non interferisce con il contenuto: vive a livello
@@ -40,11 +44,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
    ══════════════════════════════════════════════════════════════════ */
 #sec-schede {
   position: relative;
-  background-image: url('/static/the_pot_spring_bg.png');
+  background-image: var(--bg-image);
   background-size: cover;
   background-position: center top;
   background-repeat: no-repeat;
   background-attachment: fixed;
+  /* Fallback se la variable non è ancora settata (es. JS disabilitato):
+     il colore di base dell'app evita il rettangolo bianco brutto. */
+  background-color: var(--bg);
 }
 #sec-schede::before {
   content: '';
@@ -66,6 +73,44 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 #sec-schede > * {
   position: relative;
   z-index: 1;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   SPLASH SCREEN
+   La schermata di apertura "The Pot". L'immagine è scelta a runtime
+   in base al dispositivo (mobile o desktop) tramite la CSS variable
+   --splash-image, settata dallo stesso script inline che setta
+   --bg-image. La splash NON cambia in base alla stagione: l'immagine
+   è la stessa per tutto l'anno, perché l'identità visiva del marchio
+   è elemento costante. Cambia solo la variante mobile/desktop perché
+   il taglio dell'immagine deve adattarsi al rapporto d'aspetto dello
+   schermo.
+   ══════════════════════════════════════════════════════════════════ */
+#splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background-image: var(--splash-image);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  /* Fallback colore scuro se l'immagine tarda a caricare o non c'è:
+     evita il flash bianco prima che l'immagine sia pronta. */
+  background-color: #1a2820;
+  cursor: pointer;
+  transition: opacity 500ms ease-out;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 30px;
+}
+#splash-screen .splash-hint {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  font-family: 'DM Sans', sans-serif;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
 /* ══════════════════════════════════════════════════════════════════

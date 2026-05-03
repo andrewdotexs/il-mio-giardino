@@ -7,13 +7,21 @@
 // importante bumpare la versione quando si modifica la lista dei file
 // precachati o quando si rilascia una modifica strutturale del codice
 // (come la separazione di CSS e JS in file dedicati introdotta in v2,
-// la rimozione delle 26 piante native introdotta in v3, o la pulizia
+// la rimozione delle 26 piante native introdotta in v3, la pulizia
 // delle ultime strutture native + dropdown del diario popolati a runtime
-// introdotta in v4 — accompagnata anche dall'header Cache-Control:
-// no-cache sul file sw.js stesso lato server, perché senza quello il
-// browser potrebbe servire una vecchia versione di questo file dalla
-// sua HTTP cache e il bump non avrebbe alcun effetto).
-const CACHE_NAME = 'giardino-v4';
+// introdotta in v4, o l'introduzione del sistema di immagini stagionali
+// introdotta in v5 — l'HTML cambia perché c'è uno script inline nuovo
+// nell'<head>, e il CSS cambia perché lo splash è stato spostato dal
+// markup a una regola di stile vera e propria).
+//
+// Le immagini stagionali in /static/images/ NON sono in PRECACHE_URLS:
+// sarebbero 27 MB di download al primo install per asset di cui solo
+// uno è utile alla volta (l'utente vede una sola stagione per volta).
+// La strategia network-first del fetch handler le caccia comunque al
+// primo accesso, così la stagione corrente diventa disponibile offline
+// dopo il primo utilizzo, e le altre stagioni si aggiungeranno alla
+// cache man mano che arriveranno i loro mesi nel calendario.
+const CACHE_NAME = 'giardino-v5';
 
 // File da precaricare nella cache.
 // L'inserimento di /static/css/giardino.css, /static/js/splash.js e
