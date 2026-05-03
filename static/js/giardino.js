@@ -958,14 +958,15 @@ let dUseAPI = false;  // verrà impostato al primo ping
 // Indicatore modalità (API o locale)
 function dSetMode(isAPI) {
   dUseAPI = isAPI;
-  const ind = document.getElementById('d-mode-indicator');
-  if (!ind) return;
+  const ind = document.querySelectorAll('.d-mode-indicator');
   if (isAPI) {
-    ind.textContent = '🟢 Database SQLite attivo';
-    ind.style.color = 'var(--accent)';
+    ind.forEach(element => {
+      element.textContent = '🟢 Database SQLite attivo';
+    });
   } else {
-    ind.textContent = '🟡 Modalità locale (avvia server.py per SQLite)';
-    ind.style.color = 'var(--warn)';
+    ind.forEach(element => {
+      element.textContent = '🟡 Modalità locale (avvia server.py per SQLite)';
+    });
   }
 }
 

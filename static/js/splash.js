@@ -34,5 +34,5 @@
     setTimeout(() => el.remove(), 600);
   }
   window.addEventListener('load', () => {
-    setTimeout(dismissSplash, 2500);
+    setTimeout(dismissSplash, 2000);
   });

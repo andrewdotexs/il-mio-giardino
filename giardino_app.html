@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Giardino">
 <meta name="description" content="Dashboard gestione giardino — piante, irrigazione, sensori meteo">
-<title>Il mio Giardino 🌿</title>
+<title>The Pot </title>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/icons/icon-192x192.png" type="image/png">
 <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
@@ -116,7 +116,7 @@
 <div id="sec-schede" class="section">
   <div class="app-header">
     <h1 style="color: white;">Le mie piante 🌿</h1>
-    <p>Concimazione · Substrato · Esposizione · Cure · Terreno vivo</p>
+    <p class="d-mode-indicator" style="color: white;font-size:11px;margin-top:4px">⏳ Connessione al database...</p>
     <button id="pwa-install-btn" onclick="pwaInstall()" style="display:none;margin-top:6px;padding:6px 14px;font-size:11px;border:1px solid var(--accent);background:var(--accent-light);color:var(--accent);border-radius:20px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500">📲 Installa app</button>
   </div>
   <input type="text" placeholder="Cerca pianta o caratteristica..." oninput="sFilter(this.value)" />
@@ -168,8 +168,9 @@
 <!-- ── SECTION: CALENDARIO MENSILE ────────────────────────────────── -->
 <div id="sec-mensile" class="section">
   <div class="app-header">
-    <h1>Calendario 2026 📅</h1>
-    <p>Panoramica mensile · clicca un mese per i dettagli</p>
+    <h1 style="color: white;">Calendario 2026 📅</h1>
+    <p style="color: white;">Panoramica mensile · clicca un mese per i dettagli</p>
+    <p class="d-mode-indicator" style="color: white;font-size:11px;margin-top:4px">⏳ Connessione al database...</p>
   </div>
   <div class="legend-row">
     <div class="legend-chip"><div class="legend-dot" style="background:var(--accent)"></div>Attiva</div>
@@ -197,8 +198,8 @@
 <!-- ── SECTION: CALENDARIO GIORNI ─────────────────────────────────── -->
 <div id="sec-giorni" class="section">
   <div class="app-header">
-    <h1>Calendario 📆</h1>
-    <p>Fertilizzazioni · BioBizz · Fertilizzazioni · BioBizz · Trattamenti · Annaffiature · spunta ✓</p>
+    <h1 style="color: white;">Calendario 📆</h1>
+    <p class="d-mode-indicator" style="color: white;font-size:11px;margin-top:4px">⏳ Connessione al database...</p>
   </div>
   <!-- Filtro tipo visualizzazione -->
   <div style="display:flex;gap:6px;justify-content:center;max-width:900px;margin:0 auto .8rem;flex-wrap:wrap">
@@ -261,9 +262,9 @@
 <!-- ── SECTION: DIARIO ────────────────────────────────────────────── -->
 <div id="sec-diario" class="section">
   <div class="app-header">
-    <h1>Diario del giardino 📓</h1>
-    <p>Tieni traccia di tutte le operazioni sulle tue piante</p>
-    <p id="d-mode-indicator" style="font-size:11px;margin-top:4px">⏳ Connessione al database...</p>
+    <h1 style="color: white;">Diario del giardino 📓</h1>
+    <p style="color: white;">Tieni traccia di tutte le operazioni sulle tue piante</p>
+    <p class="d-mode-indicator" style="color: white;font-size:11px;margin-top:4px">⏳ Connessione al database...</p>
   </div>
 
   <!-- Form nuova voce -->
@@ -395,8 +396,8 @@
 <!-- ── SECTION: CALCOLATORE ACQUA ─────────────────────────────── -->
 <div id="sec-acqua" class="section">
   <div class="app-header">
-    <h1>Calcolatore Acqua 💧</h1>
-    <p>Quantità d'acqua ottimale in base al vaso e al substrato</p>
+    <h1 style="color: white;">Calcolatore Acqua 💧</h1>
+    <p style="color: white;">Quantità d'acqua ottimale in base al vaso e al substrato</p>
   </div>
 
   <!-- Volume vaso -->
@@ -739,6 +740,7 @@
   <div class="app-header">
     <h1>Parametri ⚙️</h1>
     <p>Regola i fattori di calcolo per il tuo microclima e le tue piante</p>
+    <p class="d-mode-indicator" style="color: white;font-size:11px;margin-top:4px">⏳ Connessione al database...</p>
   </div>
 
   <!-- ── POSIZIONE GEOGRAFICA ──────────────────────────────────────── -->
@@ -929,8 +931,9 @@
 <!-- ── SECTION: METEO E SENSORI ────────────────────────────── -->
 <div id="sec-meteo" class="section">
   <div class="app-header">
-    <h1>Meteo e Sensori 🌤️</h1>
-    <p>Stazione Ecowitt · Umidità terreno · Allerte piante</p>
+    <h1 style="color: white;">Meteo e Sensori 🌤️</h1>
+    <p style="color: white;">Stazione Ecowitt · Umidità terreno · Allerte piante</p>
+    <p class="d-mode-indicator" style="color: white;font-size:11px;margin-top:4px">⏳ Connessione al database...</p>
   </div>
   <div id="meteo-status" style="text-align:center;font-size:11px;margin-bottom:12px;color:var(--muted)"></div>
 
@@ -967,8 +970,8 @@
 <!-- ── SECTION: INVENTARIO VASI ────────────────────────────── -->
 <div id="sec-vasi" class="section">
   <div class="app-header">
-    <h1>I miei vasi 📦</h1>
-    <p>Inventario · Dimensioni · Concimi · Malattie</p>
+    <h1 style="color: white;">I miei vasi 📦</h1>
+    <p class="d-mode-indicator" style="color: white;font-size:11px;margin-top:4px">⏳ Connessione al database...</p>
   </div>
   <div class="inv-search">
     <input type="text" id="inv-search" placeholder="Cerca pianta..." oninput="invRender()">

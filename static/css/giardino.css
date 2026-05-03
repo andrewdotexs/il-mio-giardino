@@ -94,9 +94,9 @@ body {
      più scuro in basso (per coprire le zone con riflessi sull'acqua,
      che sono la parte più "rumorosa" dell'immagine). */
   background: linear-gradient(180deg,
-    rgba(245, 240, 230, 0.2) 0%,
-    rgba(245, 240, 230, 0.25) 30%,
-    rgba(245, 240, 230, 0.3) 100%);
+    rgba(245, 240, 230, 0.3) 0%,
+    rgba(245, 240, 230, 0.35) 30%,
+    rgba(245, 240, 230, 0.4) 100%);
   pointer-events: none;
   z-index: 0;
 }
