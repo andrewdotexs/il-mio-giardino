@@ -6,8 +6,11 @@
 // diverso, forzando il browser a scaricare di nuovo le risorse. È
 // importante bumpare la versione quando si modifica la lista dei file
 // precachati o quando si rilascia una modifica strutturale del codice
-// (come la separazione di CSS e JS in file dedicati introdotta in v2).
-const CACHE_NAME = 'giardino-v2';
+// (come la separazione di CSS e JS in file dedicati introdotta in v2,
+// o come la rimozione delle 26 piante native introdotta in v3 — senza
+// il bump, i client già installati continuerebbero a vedere le piante
+// pre-impostate dal vecchio JavaScript cachato).
+const CACHE_NAME = 'giardino-v3';
 
 // File da precaricare nella cache.
 // L'inserimento di /static/css/giardino.css, /static/js/splash.js e

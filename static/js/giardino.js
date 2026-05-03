@@ -1755,34 +1755,11 @@ wInitCalc = function() {
 // Per ogni pianta custom viene generato un record con waterMl/doseFactor
 // dedotti dal gruppo simulazione, e loc dedotta dal primo vaso registrato
 // (se esistente). Le 26 native restano hard-coded qui sotto.
-let FI_PLANTS = [
-  {id:0,  name:'Sanseviera',      icon:'🌿', loc:'indoor',  waterMl:150, doseFactor:0.25},
-  {id:1,  name:'Orchidea',        icon:'🌸', loc:'indoor',  waterMl:200, doseFactor:0.25},
-  {id:2,  name:'Ficus Benjamina', icon:'🌳', loc:'indoor',  waterMl:400, doseFactor:0.5},
-  {id:3,  name:'Ficus Elastica',  icon:'🌱', loc:'indoor',  waterMl:500, doseFactor:0.5},
-  {id:4,  name:'Oleandro',        icon:'🌺', loc:'outdoor', waterMl:1500,doseFactor:1.0},
-  {id:5,  name:'Glicine Bonsai',  icon:'💜', loc:'outdoor', waterMl:300, doseFactor:0.5},
-  {id:6,  name:'Limone',          icon:'🍋', loc:'outdoor', waterMl:2000,doseFactor:1.0},
-  {id:7,  name:'Moneta Cinese',   icon:'🪙', loc:'indoor',  waterMl:250, doseFactor:0.25},
-  {id:8,  name:'Vinca',           icon:'🔵', loc:'outdoor', waterMl:400, doseFactor:0.5},
-  {id:9,  name:'Mimosa',          icon:'🌼', loc:'outdoor', waterMl:800, doseFactor:0.5},
-  {id:10, name:'Melograno',       icon:'🍎', loc:'outdoor', waterMl:1500,doseFactor:1.0},
-  {id:11, name:'Stella di Natale',icon:'🌟', loc:'indoor',  waterMl:300, doseFactor:1.0},
-  {id:12, name:'Aloe Vera',       icon:'🌵', loc:'indoor',  waterMl:200, doseFactor:0.25},
-  {id:13, name:'Liquidambar',     icon:'🍂', loc:'outdoor', waterMl:2000,doseFactor:1.0},
-  {id:14, name:'Ippocastano',     icon:'🌰', loc:'outdoor', waterMl:3000,doseFactor:1.0},
-  {id:15, name:'Betulla',         icon:'🌿', loc:'outdoor', waterMl:2000,doseFactor:0.5},
-  {id:16, name:'Acero Campestre', icon:'🍁', loc:'outdoor', waterMl:1500,doseFactor:0.5},
-  {id:17, name:'Pitosforo',       icon:'🌿', loc:'outdoor', waterMl:1000,doseFactor:1.0},
-  {id:18, name:'Spino di Giuda',  icon:'🌿', loc:'outdoor', waterMl:2000,doseFactor:1.0},
-  {id:19, name:'Gelso Bonsai',    icon:'🍃', loc:'outdoor', waterMl:300, doseFactor:0.5},
-  {id:20, name:'Tradescantia',    icon:'💜', loc:'indoor',  waterMl:250, doseFactor:0.25},
-  {id:21, name:'Rosmarino',       icon:'🌿', loc:'outdoor', waterMl:300, doseFactor:0.5},
-  {id:22, name:'Salvia',          icon:'🍃', loc:'outdoor', waterMl:300, doseFactor:0.5},
-  {id:23, name:'Paulownia',       icon:'🌸', loc:'outdoor', waterMl:3000,doseFactor:1.0},
-  {id:24, name:'Crassula Ovata',  icon:'🪴', loc:'indoor',  waterMl:150, doseFactor:0.25},
-  {id:25, name:'Carmona Bonsai',  icon:'🌳', loc:'indoor',  waterMl:200, doseFactor:0.5},
-];
+// Calcolatore fertirrigazione — popolato dinamicamente da loadCustomPlants()
+// che, per ogni pianta custom, deduce waterMl/doseFactor dal gruppo di
+// simulazione e loc dal primo vaso registrato. Le 26 native originali
+// avevano questo array pre-popolato; oggi nasce vuoto.
+let FI_PLANTS = [];
 
 let fiInited = false;
 
@@ -3744,53 +3721,12 @@ const WA_COLOR = '#3a8abf';
 // Per ogni pianta custom viene generato un record con schedules stagionali
 // dedotti dal gruppo simulazione. Le 26 native restano hard-coded qui sotto
 // con i loro programmi di annaffiatura curati a mano stagione per stagione.
-let waPlants = [
-  {id:0,  name:'Sanseviera',      icon:'🌿', color:'#5a7a4a', method:'Terreno completamente asciutto',
-    schedules:[{months:[4,5,6,7,8,9],interval:12,note:'Solo quando il terreno è completamente asciutto — ogni 10-14 giorni'},{months:[10,11,12,1,2,3],interval:25,note:'Inverno: 1× al mese o meno. Il nemico è l\'eccesso d\'acqua'}]},
-  {id:1,  name:'Orchidea',        icon:'🌸', color:'#c06080', method:'Immersione 15 min + scolo completo',
-    schedules:[{months:[4,5,6,7,8],interval:7,note:'Immergere il vaso 15 min, poi scolare completamente'},{months:[3,9,10],interval:10,note:'Ridurre. Radici grigie = vuole acqua'},{months:[11,12,1,2],interval:14,note:'Inverno: ogni 2 settimane. Radici verdi = idratata'}]},
-  {id:2,  name:'Ficus Benjamina', icon:'🌳', color:'#3d6b30', method:'Terreno leggermente umido',
-    schedules:[{months:[6,7,8],interval:5,note:'Estate: terreno leggermente umido, mai saturo'},{months:[3,4,5,9,10],interval:7,note:'Annaffiare quando i primi 2-3 cm sono asciutti'},{months:[11,12,1,2],interval:12,note:'Inverno: ridurre molto. Nebulizzare con riscaldamento'}]},
-  {id:3,  name:'Ficus Elastica',  icon:'🌱', color:'#2e5522', method:'Primi 3-4 cm asciutti',
-    schedules:[{months:[6,7,8],interval:5,note:'Estate: annaffiare quando i primi 3-4 cm sono asciutti'},{months:[3,4,5,9,10],interval:8,note:'Controllare il terreno prima di annaffiare'},{months:[11,12,1,2],interval:14,note:'Inverno: ridurre sensibilmente'}]},
-  {id:4,  name:'Oleandro',        icon:'🌺', color:'#c03050', method:'Abbondante in estate',
-    schedules:[{months:[6,7,8],interval:3,note:'Estate: annaffiatura abbondante'},{months:[4,5,9],interval:5,note:'Primavera/autunno: regolare'},{months:[10,11,12,1,2,3],interval:14,note:'Inverno: ridurre molto'}]},
-  {id:5,  name:'Glicine Bonsai',  icon:'💜', color:'#7b5ea7', method:'Controllare ogni giorno',
-    schedules:[{months:[6,7,8],interval:2,note:'Estate: il bonsai asciuga in fretta! Controllare ogni giorno'},{months:[4,5,9,10],interval:4,note:'Primavera/autunno: ogni 3-4 giorni'},{months:[11,12,1,2,3],interval:8,note:'Inverno: ridurre ma non far seccare'}]},
-  {id:6,  name:'Limone',          icon:'🍋', color:'#c08a10', method:'Regolare e abbondante, no ristagni',
-    schedules:[{months:[6,7,8],interval:3,note:'Estate: abbondante. Preferire acqua piovana o decantata'},{months:[3,4,5,9,10],interval:5,note:'Mantenere il terreno fresco'},{months:[11,12,1,2],interval:10,note:'Inverno: ridurre ma non sospendere'}]},
-  {id:7,  name:'Moneta Cinese',   icon:'🪙', color:'#7a9a50', method:'Primi 2-3 cm asciutti',
-    schedules:[{months:[5,6,7,8],interval:5,note:'Estate: quando i primi 2-3 cm sono asciutti'},{months:[3,4,9,10],interval:7,note:'Primavera/autunno: moderata'},{months:[11,12,1,2],interval:12,note:'Inverno: ridurre. Foglie gialle = troppa acqua'}]},
-  {id:8,  name:'Vinca',           icon:'🔵', color:'#4060b0', method:'Moderata, tollera siccità',
-    schedules:[{months:[6,7,8],interval:4,note:'Estate: regolare in vaso'},{months:[4,5,9,10],interval:7,note:'Primavera/autunno: moderata'}]},
-  {id:9,  name:'Mimosa',          icon:'🌼', color:'#c0a020', method:'Moderata, tollera siccità',
-    schedules:[{months:[6,7,8],interval:5,note:'Estate: moderata'},{months:[3,4,5,9,10],interval:8,note:'Primavera/autunno: regolare'}]},
-  {id:10, name:'Melograno',       icon:'🍎', color:'#b03030', method:'Regolare — irregolarità = frutti spaccati',
-    schedules:[{months:[6,7,8],interval:3,note:'Estate: regolare e costante! Irregolarità = frutti spaccati'},{months:[4,5,9,10],interval:5,note:'Mantenere costanza'},{months:[11,12,1,2,3],interval:14,note:'Inverno: ridurre molto'}]},
-  {id:11, name:'Stella di Natale',icon:'🌟', color:'#c04030', method:'Moderata e costante',
-    schedules:[{months:[4,5,6,7],interval:5,note:'Crescita: quando i primi 2 cm sono asciutti. Acqua a temp. ambiente'},{months:[10,11,12],interval:7,note:'Fase decorativa: moderata e costante'},{months:[1,2,3],interval:12,note:'Riposo: annaffiatura minima'}]},
-  {id:12, name:'Aloe Vera',       icon:'🌵', color:'#5a9060', method:'Soak & dry — completamente asciutto',
-    schedules:[{months:[5,6,7,8,9],interval:12,note:'Soak & dry: bagno abbondante, poi asciugatura completa'},{months:[10,11,12,1,2,3,4],interval:25,note:'Inverno: 1× al mese. Foglie appiattite = sete'}]},
-  {id:13, name:'Liquidambar',     icon:'🍂', color:'#c05020', method:'Regolare (solo giovani piante)',
-    schedules:[{months:[6,7,8],interval:5,note:'Estate: regolare nei primi 3 anni'},{months:[4,5,9,10],interval:8,note:'Primavera/autunno: moderata (giovani)'}]},
-  {id:17, name:'Pitosforo',       icon:'🌿', color:'#3a6850', method:'Moderata in vaso',
-    schedules:[{months:[6,7,8],interval:4,note:'Estate: regolare in vaso'},{months:[4,5,9,10],interval:7,note:'Primavera/autunno: moderata'}]},
-  {id:19, name:'Gelso Bonsai',    icon:'🍃', color:'#4a7a38', method:'Controllare ogni giorno in estate',
-    schedules:[{months:[6,7,8],interval:2,note:'Estate: il bonsai asciuga in fretta! Controllare ogni giorno'},{months:[4,5,9,10],interval:3,note:'Ogni 3 giorni circa'},{months:[11,12,1,2,3],interval:8,note:'Inverno (riposo): quasi stop, non far seccare le radici'}]},
-  {id:20, name:'Tradescantia',    icon:'💜', color:'#9060a0', method:'Terreno leggermente umido',
-    schedules:[{months:[5,6,7,8],interval:4,note:'Estate: terreno leggermente umido, mai saturo'},{months:[3,4,9,10],interval:7,note:'Primavera/autunno: moderata'},{months:[11,12,1,2],interval:12,note:'Inverno: ridurre'}]},
-  {id:21, name:'Rosmarino',       icon:'🌿', color:'#4a7060', method:'Solo terreno completamente asciutto',
-    schedules:[{months:[6,7,8],interval:7,note:'Estate: solo quando completamente asciutto. Troppo poco > troppo!'},{months:[3,4,5,9,10],interval:12,note:'Molto moderata'}]},
-  {id:22, name:'Salvia',          icon:'🍃', color:'#6a8050', method:'Solo terreno completamente asciutto',
-    schedules:[{months:[6,7,8],interval:7,note:'Estate: solo quando completamente asciutto'},{months:[3,4,5,9,10],interval:12,note:'Molto moderata'}]},
-  {id:23, name:'Paulownia',       icon:'🌸', color:'#8060b0', method:'Abbondante (giovani piante)',
-    schedules:[{months:[6,7,8],interval:3,note:'Estate: abbondante nei primi 2-3 anni'},{months:[4,5,9,10],interval:5,note:'Primavera/autunno: regolare (giovani)'}]},
-  {id:24, name:'Crassula Ovata',  icon:'🪴', color:'#5a8a50', method:'Soak & dry — completamente asciutto',
-    schedules:[{months:[5,6,7,8,9],interval:12,note:'Soak & dry: bagno abbondante, poi asciugatura completa'},{months:[10,11,12,1,2,3,4],interval:25,note:'Inverno: 1× al mese o meno'}]},
-  {id:25, name:'Carmona Bonsai',  icon:'🌳', color:'#4a6a3a', method:'Substrato leggermente umido, mai secco',
-    schedules:[{months:[6,7,8],interval:2,note:'Estate: controllare ogni giorno! Il vaso bonsai asciuga rapidamente'},{months:[4,5,9,10],interval:3,note:'Primavera/autunno: ogni 2-3 giorni'},{months:[11,12,1,2,3],interval:5,note:'Inverno: ogni 4-5 giorni se temp >18°C. Non far mai seccare completamente'}]}
-
-];
+// Calendario annaffiature — popolato dinamicamente da loadCustomPlants()
+// a partire dai parametri di ogni pianta custom. Le 26 native originali
+// avevano questo array pre-popolato a mano con programmi stagionali curati
+// uno per uno; oggi nasce vuoto e viene riempito dal sistema custom
+// tramite buildCustomWaPlant.
+let waPlants = [];
 
 const waDateMap = {};
 let waHiddenPlants = new Set();
