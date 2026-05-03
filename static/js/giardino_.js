@@ -1104,14 +1104,7 @@ function dInitDiario() {
   // appaiono automaticamente quando l'utente apre il diario.
   // Le opzioni HTML hardcoded preesistenti vengono sostituite completamente.
   dPopulatePlantDropdowns();
-  // Il ping al server NON è più qui dentro: lo facciamo una sola volta
-  // all'avvio dell'app (vedi blocco "AVVIO APP" in fondo al file). In
-  // questo modo gli indicatori di stato del database sono già aggiornati
-  // su tutte le sezioni, indipendentemente da quale tab l'utente apre per
-  // prima. Quando arriva qui, dUseAPI è già stato settato dal ping iniziale,
-  // quindi dRender() può partire direttamente con la modalità giusta
-  // (API o locale) senza dover aspettare nient'altro.
-  dRender();
+  dPingServer().then(()=>dRender());
 }
 
 // Popola i due dropdown del diario (selettore voce + filtro) con la lista
@@ -6820,16 +6813,3 @@ loadCustomPlants().then(() => {
   // esserci piante custom da mostrare insieme alle native
   if (typeof sInitSchede === 'function') sInitSchede();
 });
-
-// Ping al server per determinare se il database SQLite è raggiungibile.
-// Questo aggiorna dUseAPI e tutti gli indicatori .d-mode-indicator nelle
-// varie sezioni dell'app (la pillola in alto sotto al titolo di ogni tab).
-// Lo chiamiamo qui all'avvio invece che dentro dInitDiario perché vogliamo
-// che lo stato della connessione sia visibile su qualsiasi tab — anche
-// Schede, Mensile, Acqua ecc. — non solo sul Diario. Il ping ha un timeout
-// di 1.2 secondi, quindi se il server non risponde l'app non resta
-// "appesa" sul messaggio di connessione: dopo poco più di un secondo
-// passa in modalità locale. Non incatenamo niente al .then() perché il
-// risultato (dUseAPI settato + indicatori aggiornati) è un effetto
-// collaterale che a chi chiama qui non serve direttamente.
-dPingServer();
