@@ -24,18 +24,23 @@
    SFONDO STAGIONALE GLOBALE
    L'immagine di sfondo è scelta a runtime in base alla stagione e al
    dispositivo (mobile o desktop) tramite la CSS variable --bg-image,
-   impostata da uno script inline nell'<head>. La applichiamo sul body
-   anziché su una singola sezione, così funge da "tappeto" comune a
-   tutte le tab dell'app: passando da Schede a Mensile a Diario ecc.
-   l'immagine resta visibile dietro al contenuto, dando coerenza visiva
-   con la stagione corrente. background-attachment: fixed mantiene
-   l'immagine ferma durante lo scroll, dando l'effetto di un fondale
-   che non si muove mentre il contenuto scorre sopra di esso.
+   impostata da uno script inline nell'<head>. La applichiamo sull'
+   elemento <html> (non sul body) per una ragione tecnica importante:
+   nella spec CSS, l'elemento root del documento è il solo che ha la
+   garanzia di "promuovere" il proprio background all'intero viewport,
+   anche quando il documento scrolla oltre l'altezza della finestra.
+   Mettendola sul body, alcuni browser (in particolare Edge/Chrome con
+   background-attachment: fixed) limitano la zona di rendering al solo
+   "body naturale" e le zone delle sezioni che vanno oltre 100vh
+   apparirebbero trasparenti — il che si manifesta come "lo sfondo
+   sparisce nel calendario". Sull'html questo problema non si pone.
+   background-attachment: fixed mantiene l'immagine ferma durante lo
+   scroll, dando l'effetto di un fondale che non si muove mentre il
+   contenuto scorre sopra di esso.
    ══════════════════════════════════════════════════════════════════ */
-body {
-  font-family: 'DM Sans', sans-serif;
+html {
   /* Il color resta come fallback: se le CSS variables non si caricano
-     o l'immagine non è disponibile, il body è comunque un avorio
+     o l'immagine non è disponibile, html è comunque un avorio
      coerente con il brand invece di un rettangolo bianco. */
   background-color: var(--bg);
   background-image: var(--bg-image);
@@ -43,6 +48,15 @@ body {
   background-position: center top;
   background-repeat: no-repeat;
   background-attachment: fixed;
+  min-height: 100vh;
+}
+body {
+  font-family: 'DM Sans', sans-serif;
+  /* Il body deve essere trasparente per lasciar trasparire lo sfondo
+     dell'html sottostante. Senza questo, il colore var(--bg) di
+     default del body coprirebbe l'immagine ovunque tranne che nelle
+     zone esplicitamente "buca" come la sezione Schede. */
+  background-color: transparent;
   color: var(--text);
   min-height: 100vh;
 }
