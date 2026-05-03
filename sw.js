@@ -27,6 +27,15 @@
 // cache man mano che arriveranno i loro mesi nel calendario.
 const CACHE_NAME = 'giardino-v7';
 
+// Log diagnostico al livello globale dello script SW. Questo viene
+// eseguito una volta sola quando il browser parsa il file sw.js, e
+// rende visibile in console quale versione del SW è in memoria —
+// utile per disambiguare casi in cui il file in Docker è stato
+// aggiornato ma il browser sta ancora servendo la versione vecchia
+// dalla sua HTTP cache, o casi in cui il SW vecchio è ancora in
+// stato 'active' mentre il nuovo è bloccato in 'waiting'.
+console.log('🌱 [SW] Script caricato, versione:', CACHE_NAME);
+
 // File da precaricare nella cache.
 // L'inserimento di /static/css/giardino.css, /static/js/splash.js e
 // /static/js/giardino.js qui garantisce che siano disponibili offline
@@ -44,15 +53,28 @@ const PRECACHE_URLS = [
 
 // ── Install: precache risorse essenziali ─────────────────────────────
 self.addEventListener('install', event => {
+  console.log('🔧 [SW] Install fired per', CACHE_NAME);
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(PRECACHE_URLS))
-      .then(() => self.skipWaiting())
+      .then(() => {
+        console.log('✓ [SW] Precache completato per', CACHE_NAME);
+        return self.skipWaiting();
+      })
+      .catch(err => {
+        // Se l'install fallisce (es. uno dei file in PRECACHE_URLS
+        // non è disponibile), il SW resta in stato di errore e il
+        // vecchio SW continua a vivere indefinitamente. Logghiamo
+        // l'errore esplicitamente così se succede sappiamo perché.
+        console.error('✗ [SW] Install fallito:', err);
+        throw err;
+      })
   );
 });
 
 // ── Activate: pulisci vecchie cache + forza reload delle tab aperte ──
 self.addEventListener('activate', event => {
+  console.log('🚀 [SW] Activate fired per', CACHE_NAME);
   event.waitUntil(
     (async () => {
       // Primo passaggio: cancello le cache di tutte le versioni precedenti.
