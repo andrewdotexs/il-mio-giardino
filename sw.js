@@ -1,12 +1,25 @@
 // ══════════════════════════════════════════════════════════════════════
 // Il Mio Giardino — Service Worker (PWA)
 // ══════════════════════════════════════════════════════════════════════
-const CACHE_NAME = 'giardino-v1';
+// Bump del numero di versione: ogni volta che cambia,
+// il listener "activate" più sotto cancella tutte le cache con un nome
+// diverso, forzando il browser a scaricare di nuovo le risorse. È
+// importante bumpare la versione quando si modifica la lista dei file
+// precachati o quando si rilascia una modifica strutturale del codice
+// (come la separazione di CSS e JS in file dedicati introdotta in v2).
+const CACHE_NAME = 'giardino-v2';
 
-// File da precaricare nella cache
+// File da precaricare nella cache.
+// L'inserimento di /static/css/giardino.css, /static/js/splash.js e
+// /static/js/giardino.js qui garantisce che siano disponibili offline
+// anche al primo avvio successivo all'installazione del service worker,
+// senza dover prima visitare la pagina HTML che li referenzia.
 const PRECACHE_URLS = [
   '/',
   '/manifest.json',
+  '/static/css/giardino.css',
+  '/static/js/splash.js',
+  '/static/js/giardino.js',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
 ];

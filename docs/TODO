@@ -1,3 +1,4 @@
 - Concimi utilizzati: creare connessione adatabase dei concimi, con la possibilità di aggiungere concime custom
 - BUG, non si apre la scheda di una pianta inserita da zero
 - BUG, non inserisce gli eventi del diario automatici per le irrigazioni
+- Automazione inserimento dati cure pianta
