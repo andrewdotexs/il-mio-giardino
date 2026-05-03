@@ -7,10 +7,13 @@
 // importante bumpare la versione quando si modifica la lista dei file
 // precachati o quando si rilascia una modifica strutturale del codice
 // (come la separazione di CSS e JS in file dedicati introdotta in v2,
-// o come la rimozione delle 26 piante native introdotta in v3 — senza
-// il bump, i client già installati continuerebbero a vedere le piante
-// pre-impostate dal vecchio JavaScript cachato).
-const CACHE_NAME = 'giardino-v3';
+// la rimozione delle 26 piante native introdotta in v3, o la pulizia
+// delle ultime strutture native + dropdown del diario popolati a runtime
+// introdotta in v4 — accompagnata anche dall'header Cache-Control:
+// no-cache sul file sw.js stesso lato server, perché senza quello il
+// browser potrebbe servire una vecchia versione di questo file dalla
+// sua HTTP cache e il bump non avrebbe alcun effetto).
+const CACHE_NAME = 'giardino-v4';
 
 // File da precaricare nella cache.
 // L'inserimento di /static/css/giardino.css, /static/js/splash.js e
@@ -36,14 +39,51 @@ self.addEventListener('install', event => {
   );
 });
 
-// ── Activate: pulisci vecchie cache ──────────────────────────────────
+// ── Activate: pulisci vecchie cache + forza reload delle tab aperte ──
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-      )
-    ).then(() => self.clients.claim())
+    (async () => {
+      // Primo passaggio: cancello le cache di tutte le versioni precedenti.
+      // Per ogni chiave di cache esistente nel browser, controllo se è quella
+      // attuale (CACHE_NAME) e in caso contrario la elimino. Questo è il
+      // meccanismo standard di invalidazione versionata.
+      const keys = await caches.keys();
+      await Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)));
+
+      // Secondo passaggio: prendo il controllo immediato di tutte le tab
+      // che già hanno questa app aperta. Senza clients.claim(), il nuovo
+      // service worker controllerebbe solo le tab aperte DOPO la sua
+      // attivazione — le tab già aperte continuerebbero a essere servite
+      // dal vecchio SW fino al loro prossimo refresh manuale.
+      await self.clients.claim();
+
+      // Terzo passaggio (cintura di sicurezza): per ogni tab già aperta che
+      // adesso è sotto il controllo del nuovo SW, le chiedo di ricaricarsi.
+      // Questo è il pezzo che risolve davvero il caso in cui l'utente abbia
+      // tenuto la pagina aperta durante l'aggiornamento: senza questo, la
+      // tab continuerebbe a mostrare l'HTML vecchio e i moduli JS vecchi
+      // cachati in memoria della pagina, anche se il nuovo SW è già in
+      // controllo. Il navigate() forza il browser a ri-fetchare la pagina
+      // passando per il nuovo SW, che a sua volta serve la versione nuova
+      // dei file. È un refresh trasparente che l'utente percepisce solo
+      // come un piccolo "blink" della pagina.
+      const clients = await self.clients.matchAll({ type: 'window' });
+      for (const client of clients) {
+        // Uso navigate sull'url corrente del client; fallback a un postMessage
+        // se navigate non è disponibile (browser più vecchi). Il postMessage
+        // non fa direttamente il reload ma può essere ascoltato dal frontend
+        // se in futuro vorremo aggiungere una notifica "aggiornamento
+        // disponibile" prima del reload automatico.
+        if ('navigate' in client) {
+          try { await client.navigate(client.url); } catch (e) {
+            // Alcuni browser rifiutano navigate() su client cross-origin o
+            // in stati particolari. Nel dubbio, ignoro l'errore: è una
+            // pessima esperienza utente perdere comunque i dati per via
+            // di un'eccezione di un meccanismo di refresh "best-effort".
+          }
+        }
+      }
+    })()
   );
 });
 

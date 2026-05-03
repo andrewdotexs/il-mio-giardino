@@ -220,17 +220,15 @@
       </div>
       <div class="form-field">
         <label>Pianta</label>
+        <!-- Le opzioni delle piante vengono popolate dinamicamente da
+             dPopulatePlantSelects() leggendo dal customPlantsCache, così
+             il dropdown riflette sempre l'elenco reale delle piante che
+             esistono nel giardino dell'utente, non un elenco cablato a
+             mano. Lascio qui solo le due opzioni "speciali" che hanno
+             senso in ogni momento: il segnaposto vuoto come default e
+             l'opzione "Tutte le piante" per le entry trasversali. -->
         <select id="d-plant">
           <option value="">— Seleziona —</option>
-          <option>Sanseviera</option><option>Orchidea</option><option>Ficus Benjamina</option>
-          <option>Ficus Elastica</option><option>Oleandro</option><option>Glicine Bonsai</option>
-          <option>Limone</option><option>Moneta Cinese</option><option>Vinca</option>
-          <option>Mimosa</option><option>Melograno</option><option>Stella di Natale</option>
-          <option>Aloe Vera</option><option>Liquidambar</option><option>Ippocastano</option>
-          <option>Betulla</option><option>Acero Campestre</option><option>Pitosforo</option>
-          <option>Spino di Giuda</option><option>Gelso Bonsai</option>
-          <option>Tradescantia</option><option>Rosmarino</option><option>Salvia</option>
-          <option>Paulownia</option><option>Crassula Ovata</option><option>Carmona Bonsai</option>
           <option>Tutte le piante</option>
         </select>
       </div>
@@ -260,17 +258,12 @@
 
   <!-- Filtri -->
   <div class="diary-filters">
+    <!-- Anche qui le opzioni delle piante vengono popolate dinamicamente
+         da dPopulatePlantSelects(). Per il filtro l'opzione "Tutte le
+         piante" coincide con il valore vuoto (è il default che mostra
+         tutto), quindi non aggiungo una option separata. -->
     <select id="d-filter-plant" onchange="dRender()">
       <option value="">Tutte le piante</option>
-      <option>Sanseviera</option><option>Orchidea</option><option>Ficus Benjamina</option>
-      <option>Ficus Elastica</option><option>Oleandro</option><option>Glicine Bonsai</option>
-      <option>Limone</option><option>Moneta Cinese</option><option>Vinca</option>
-      <option>Mimosa</option><option>Melograno</option><option>Stella di Natale</option>
-      <option>Aloe Vera</option><option>Liquidambar</option><option>Ippocastano</option>
-      <option>Betulla</option><option>Acero Campestre</option><option>Pitosforo</option>
-      <option>Spino di Giuda</option><option>Gelso Bonsai</option>
-      <option>Tradescantia</option><option>Rosmarino</option><option>Salvia</option>
-      <option>Paulownia</option><option>Crassula Ovata</option><option>Carmona Bonsai</option><option>Tutte le piante</option>
     </select>
     <select id="d-filter-op" onchange="dRender()">
       <option value="">Tutte le operazioni</option>
@@ -304,17 +297,12 @@
           </div>
           <div class="form-field">
             <label>Pianta</label>
+            <!-- Stesso pattern degli altri due select del diario:
+                 le opzioni delle piante vengono popolate a runtime da
+                 dPopulatePlantSelects(), così riflettono sempre l'elenco
+                 reale del giardino dell'utente. -->
             <select id="de-plant">
               <option value="">— Seleziona —</option>
-              <option>Sanseviera</option><option>Orchidea</option><option>Ficus Benjamina</option>
-              <option>Ficus Elastica</option><option>Oleandro</option><option>Glicine Bonsai</option>
-              <option>Limone</option><option>Moneta Cinese</option><option>Vinca</option>
-              <option>Mimosa</option><option>Melograno</option><option>Stella di Natale</option>
-              <option>Aloe Vera</option><option>Liquidambar</option><option>Ippocastano</option>
-              <option>Betulla</option><option>Acero Campestre</option><option>Pitosforo</option>
-              <option>Spino di Giuda</option><option>Gelso Bonsai</option>
-              <option>Tradescantia</option><option>Rosmarino</option><option>Salvia</option>
-              <option>Paulownia</option><option>Crassula Ovata</option><option>Carmona Bonsai</option>
               <option>Tutte le piante</option>
             </select>
           </div>

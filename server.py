@@ -360,6 +360,20 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header("Content-Length", len(body))
                 if path == "/sw.js":
                     self.send_header("Service-Worker-Allowed", "/")
+                    # Il file sw.js NON deve essere cachato dal browser. Senza
+                    # questo header, il browser potrebbe servire una vecchia
+                    # versione del service worker dalla sua HTTP cache, e di
+                    # conseguenza il nuovo CACHE_NAME non verrebbe mai letto:
+                    # la vecchia versione del SW continuerebbe a servire le
+                    # vecchie risorse dalla vecchia cache, e nessun bump di
+                    # versione dell'app raggiungerebbe mai i client già
+                    # installati. Il pattern "no-cache, no-store, must-
+                    # revalidate" è la combinazione standard che dice al
+                    # browser: ricontrolla questo file ad ogni richiesta,
+                    # non tenerlo nemmeno in memoria.
+                    self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+                    self.send_header("Pragma", "no-cache")
+                    self.send_header("Expires", "0")
                 self.end_headers()
                 self.wfile.write(body)
             except FileNotFoundError:

@@ -1163,6 +1163,63 @@ function dFormatDate(dateStr) {
   return wds[dt.getDay()]+' '+(+d)+' '+dMonths[+m-1]+' '+y;
 }
 
+// Popola dinamicamente i tre <select> del diario con i nomi delle piante
+// custom presenti nel giardino. Viene chiamata da loadCustomPlants ogni
+// volta che la cache delle piante viene aggiornata (avvio app, dopo
+// add/edit/delete pianta), così i dropdown riflettono sempre lo stato
+// reale del giardino.
+//
+// Pattern: per ognuno dei tre select rimuovo le option che rappresentano
+// piante (tutte tranne quelle "speciali" che erano già nell'HTML statico,
+// cioè il segnaposto vuoto e l'opzione "Tutte le piante"), e poi inserisco
+// una option per ogni pianta della cache. Conservo la selezione corrente
+// se la pianta selezionata esiste ancora, così l'utente non perde il
+// filtro che aveva impostato in seguito a una modifica del catalogo.
+function dPopulatePlantSelects() {
+  const plantNames = (customPlantsCache || []).map(p => p.name).sort();
+
+  // Helper: aggiorna un singolo <select> mantenendo le option speciali
+  // (quelle senza testo standard di una pianta, che riconosco perché hanno
+  // un value attribute esplicito o perché sono "Tutte le piante"). Se
+  // l'option speciale "Tutte le piante" esiste, la inserisco DOPO le
+  // piante perché è un'opzione catch-all che semanticamente sta in fondo;
+  // se invece non c'è, mi limito a mettere le piante dopo il segnaposto.
+  function refresh(selectId) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    const previousValue = sel.value;
+    // Tengo solo le option "speciali": quelle col value="" (segnaposti) e
+    // quella col testo "Tutte le piante" (opzione catch-all). Tutte le
+    // altre vengono rimosse perché sono piante che potrebbero non esistere
+    // più nel catalogo.
+    const specials = Array.from(sel.options).filter(opt =>
+      opt.value === '' || opt.textContent === 'Tutte le piante'
+    );
+    const placeholder = specials.find(opt => opt.value === '');
+    const tutte       = specials.find(opt => opt.textContent === 'Tutte le piante');
+
+    sel.innerHTML = '';
+    if (placeholder) sel.appendChild(placeholder);
+    plantNames.forEach(name => {
+      const opt = document.createElement('option');
+      opt.textContent = name;
+      sel.appendChild(opt);
+    });
+    if (tutte) sel.appendChild(tutte);
+
+    // Ripristino la selezione precedente se quel valore esiste ancora tra
+    // le option ricostruite. Se la pianta selezionata è stata eliminata,
+    // sel.value tornerà a stringa vuota di fatto resettando il filtro:
+    // è il comportamento più sensato perché qualsiasi cosa selezionassi
+    // automaticamente sarebbe una scelta arbitraria fatta a sua insaputa.
+    sel.value = previousValue;
+  }
+
+  refresh('d-plant');         // form di inserimento entry
+  refresh('d-filter-plant');  // filtro lista entries
+  refresh('de-plant');        // form di modifica entry
+}
+
 async function dRender() {
   const filterPlant = document.getElementById('d-filter-plant').value;
   const filterOp    = document.getElementById('d-filter-op').value;
@@ -4828,8 +4885,10 @@ async function loadCustomPlants() {
       items = data.items || [];
     }
   } catch (e) {
-    // Se il backend non risponde, l'app continua a funzionare con le sole
-    // 26 native. Il fallimento qui non deve bloccare l'avvio.
+    // Se il backend non risponde, l'app continua a funzionare ma con
+    // un giardino vuoto. Il fallimento qui non deve bloccare l'avvio:
+    // l'utente vedrà lo stato vuoto e potrà comunque navigare le altre
+    // sezioni che non dipendono dalla lista piante (Meteo, Parametri).
     console.warn('Impossibile caricare piante custom:', e);
     return;
   }
@@ -4864,6 +4923,17 @@ async function loadCustomPlants() {
 
   // STEP 3: Aggiorna la cache locale per il pannello "Le mie piante".
   customPlantsCache = items;
+
+  // STEP 3b: Aggiorna i tre <select> del diario perché le sue option
+  // di pianta sono ora popolate dinamicamente leggendo da customPlantsCache.
+  // La chiamata è guardata da typeof per non rompere se il diario è stato
+  // disabilitato o non ancora caricato (succede se la sezione Schede è
+  // attiva e quella del Diario non è ancora stata visitata: gli elementi
+  // <select> del diario esistono comunque nell'HTML, ma per sicurezza il
+  // typeof copre anche scenari futuri di lazy-loading dell'HTML).
+  if (typeof dPopulatePlantSelects === 'function') {
+    dPopulatePlantSelects();
+  }
 
   // STEP 4: Invalida le sezioni che dipendono dalle piante.
   // Quando l'utente le riaprirà, verranno re-inizializzate con i dati nuovi.

@@ -189,14 +189,17 @@ def get_inventory():
     except:
         return []
 
-# Nomi piante (corrispondono agli indici di sPlants nel frontend)
-PLANT_NAMES = [
-    "Sanseviera","Orchidea","Ficus Benjamina","Ficus Elastica","Oleandro",
-    "Glicine Bonsai","Limone","Moneta Cinese","Vinca","Mimosa",
-    "Melograno","Stella di Natale","Aloe Vera","Liquidambar","Ippocastano",
-    "Betulla","Acero Campestre","Pitosforo","Spino di Giuda","Gelso Bonsai",
-    "Tradescantia","Rosmarino","Salvia","Paulownia","Crassula Ovata","Carmona Bonsai"
-]
+# PLANT_NAMES era usato come fallback quando un record dell'inventario non
+# aveva un nickname personalizzato dall'utente: il notifier prendeva il nome
+# dall'array sfruttando il fatto che gli indici 0-25 corrispondevano alle 26
+# piante native cablate nel frontend. Adesso che le 26 native sono state
+# rimosse e il giardino si popola solo con piante custom (id da 26 in su),
+# questa corrispondenza non esiste più e l'array resta vuoto: il fallback
+# diventa quindi "Pianta #idx", che sarà sempre quello mostrato a meno che
+# l'utente non abbia impostato un nickname sul record di inventario. Per
+# avere nomi davvero leggibili nelle notifiche, conviene impostare sempre
+# il nickname al momento della registrazione di un nuovo vaso.
+PLANT_NAMES = []
 
 
 # ── Ecowitt ───────────────────────────────────────────────────────────
