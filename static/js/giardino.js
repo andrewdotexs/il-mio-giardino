@@ -4289,6 +4289,25 @@ function paramsUseGeoLocation() {
   }
   status.textContent = '📡 Rilevamento posizione...';
   status.style.color = 'var(--muted)';
+
+  // Verifica preliminare: la Geolocation API è disponibile solo in
+  // contesti sicuri (HTTPS o localhost). Se la pagina è servita via
+  // http:// su un IP della rete locale o tramite un tunnel HTTP non
+  // cifrato, il browser nega il permesso senza nemmeno chiedere
+  // all'utente, e arriverebbe al callback di errore con err.code === 1
+  // senza informazioni utili. Intercettiamo il caso prima di chiamare
+  // l'API per dare un messaggio specifico che spiega la causa vera.
+  // Questo è particolarmente importante per chi usa l'app da remoto
+  // tramite Tailscale, Cloudflare Tunnel, o IP della LAN: in tutti
+  // questi casi il problema non è il permesso ma il protocollo, e la
+  // soluzione è configurare HTTPS, non cliccare "Consenti" sul popup.
+  if (!window.isSecureContext) {
+    status.textContent = '🔒 Geolocalizzazione disponibile solo via HTTPS o localhost. Inserisci le coordinate manualmente.';
+    status.style.color = '#c04030';
+    setTimeout(() => { status.textContent = ''; }, 7000);
+    return;
+  }
+
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       // Limito a 4 cifre decimali (precisione ~10 metri, più che
@@ -4301,15 +4320,23 @@ function paramsUseGeoLocation() {
     },
     (err) => {
       // Errori tipici: utente nega il permesso, GPS non disponibile,
-      // timeout. Mostro un messaggio chiaro per ognuno.
+      // timeout. Mostro un messaggio chiaro per ognuno. Per il caso 1
+      // (PERMISSION_DENIED), che già ha escluso il problema secure
+      // context grazie al check sopra, le cause residue sono due:
+      // l'utente ha cliccato "Nega" sul popup nel passato e il browser
+      // ricorda quella scelta, oppure i servizi di localizzazione del
+      // sistema operativo sono spenti. Diamo all'utente un suggerimento
+      // pratico di come ripristinare il permesso, perché il messaggio
+      // "permesso negato" da solo non gli direbbe come uscire dallo
+      // stallo.
       const messages = {
-        1: 'Permesso negato. Inserisci le coordinate manualmente.',
-        2: 'Posizione non disponibile. Inserisci manualmente.',
-        3: 'Timeout. Riprova o inserisci manualmente.',
+        1: 'Permesso negato. Controlla le impostazioni del sito (icona del lucchetto nella barra indirizzi) o i servizi di localizzazione del sistema. Oppure inserisci manualmente.',
+        2: 'Posizione non disponibile. Il dispositivo non ha modo di determinarla in questo momento. Inserisci manualmente.',
+        3: 'Timeout: il sistema ha impiegato troppo tempo a rispondere. Riprova o inserisci manualmente.',
       };
       status.textContent = '❌ ' + (messages[err.code] || err.message);
       status.style.color = '#c04030';
-      setTimeout(() => { status.textContent = ''; }, 5000);
+      setTimeout(() => { status.textContent = ''; }, 7000);
     },
     {timeout: 8000, enableHighAccuracy: false}
   );
