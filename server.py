@@ -134,6 +134,16 @@ ECOWITT_BASE    = "https://api.ecowitt.net/api/v3"
 def get_db():
     conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
+    # Abilito esplicitamente le foreign key. SQLite per ragioni storiche di
+    # retrocompatibilità le tiene disattivate di default su ogni nuova
+    # connessione, anche quando lo schema le dichiara. Senza questo PRAGMA
+    # il vincolo `FOREIGN KEY (plant_id) REFERENCES custom_plants(id) ON
+    # DELETE CASCADE` delle tabelle plant_biobizz e plant_treatments verrebbe
+    # ignorato silenziosamente, e cancellando una pianta resterebbero schedule
+    # orfani nel database. Lo metto qui in get_db così vale per tutte le
+    # connessioni del processo, comprese quelle aperte dalle migrazioni di
+    # init_db al boot.
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 def init_db():
@@ -292,6 +302,98 @@ def init_db():
         if not already_seeded:
             conn.execute("INSERT INTO sqlite_sequence (name, seq) VALUES ('custom_plants', 25)")
             print("  🌱 Tabella custom_plants creata (ID partono da 26)")
+
+        # ────────────────────────────────────────────────────────────────
+        # Tabelle figlie: plant_biobizz e plant_treatments
+        # ────────────────────────────────────────────────────────────────
+        # Ogni pianta può avere N schedule BioBizz e M schedule trattamenti
+        # preventivi. Le due cose sono entità distinte (prodotti diversi,
+        # logiche diverse) anche se oggi hanno la stessa forma di dati.
+        # Le tengo in tabelle separate invece che in una unica con un campo
+        # "kind" per due ragioni: (a) la semantica dei prodotti è disgiunta
+        # — i sette prodotti BioBizz e i cinque trattamenti vivono in due
+        # dizionari distinti nel frontend, mescolarli in tabella renderebbe
+        # possibile salvare combinazioni semanticamente sbagliate (un
+        # record con kind='biobizz' e prod='neem'); (b) se in futuro le
+        # due entità divergono — pensa a un campo target_pest specifico
+        # per i trattamenti, o a un safety_interval_days — le modifiche
+        # restano locali alla tabella interessata.
+        #
+        # FOREIGN KEY ... ON DELETE CASCADE: se cancelli la pianta, i suoi
+        # schedule spariscono insieme. Funziona solo perché get_db() abilita
+        # PRAGMA foreign_keys. Senza quel pragma il vincolo viene ignorato
+        # e resterebbero schedule orfani.
+        #
+        # Le due tabelle hanno schema identico oggi (stessi nomi di colonna,
+        # stessi tipi). Le definisco comunque separatamente invece di
+        # generarle in un loop, perché tenerle esplicite rende lo schema più
+        # leggibile per chi farà manutenzione e perché eventuali divergenze
+        # future saranno naturali da introdurre.
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS plant_biobizz (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                plant_id        INTEGER NOT NULL,
+                -- Chiave del prodotto in BB_PRODUCTS del frontend.
+                -- Valori validi attuali: grow, bloom, alg, fish, calmag,
+                -- topmax, root. Non lo vincolo con un CHECK perché
+                -- l'enum potrebbe estendersi e non voglio una migrazione
+                -- ogni volta — la validazione vive nel frontend.
+                prod            TEXT    NOT NULL,
+                -- Mesi attivi in formato CSV "4,5,6,7,8,9", coerente con
+                -- come fert_months è già codificato in custom_plants.
+                months          TEXT    NOT NULL,
+                -- Intervallo in giorni tra applicazioni successive nei
+                -- mesi attivi. Suffisso _days esplicito per evitare
+                -- ambiguità: "interval" da solo potrebbe far credere
+                -- settimane o mesi.
+                interval_days   INTEGER NOT NULL,
+                -- Data di ancoraggio "YYYY-MM-DD" per la prima applicazione
+                -- da cui si calcolano le ricorrenze. Opzionale: se NULL,
+                -- il frontend genera eventi a partire dal primo giorno
+                -- del primo mese attivo dell'anno corrente.
+                start_date      TEXT,
+                -- Descrizione testuale della dose: "½ dose", "5 ml/L", ecc.
+                -- È libera perché il modo di esprimere la dose dipende dal
+                -- prodotto (alcuni in ml/L, altri in pallini, altri in
+                -- "dose piena"/"½ dose"). Vincolarla in colonne strutturate
+                -- richiederebbe più colonne e parser per ogni unità.
+                dose            TEXT    DEFAULT '',
+                -- Nota libera mostrata nel calendario sotto il nome del
+                -- prodotto: "rinvigorente mensile", "stop in fioritura", ecc.
+                note            TEXT    DEFAULT '',
+                -- Posizione della riga nell'elenco quando una pianta ha
+                -- più schedule per lo stesso prodotto (es. l'oleandro ha
+                -- Bio·Bloom + Top·Max + Alg·A·Mic). Senza questa colonna
+                -- l'ordine delle righe nelle SELECT non è garantito.
+                sort_order      INTEGER DEFAULT 0,
+                created         TEXT    DEFAULT (datetime('now','localtime')),
+                FOREIGN KEY (plant_id) REFERENCES custom_plants(id) ON DELETE CASCADE
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS plant_treatments (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                plant_id        INTEGER NOT NULL,
+                -- Chiave del prodotto in TR_PRODUCTS del frontend.
+                -- Valori validi attuali: neem, rame, zolfo, sapone, obianco.
+                prod            TEXT    NOT NULL,
+                months          TEXT    NOT NULL,
+                interval_days   INTEGER NOT NULL,
+                start_date      TEXT,
+                dose            TEXT    DEFAULT '',
+                note            TEXT    DEFAULT '',
+                sort_order      INTEGER DEFAULT 0,
+                created         TEXT    DEFAULT (datetime('now','localtime')),
+                FOREIGN KEY (plant_id) REFERENCES custom_plants(id) ON DELETE CASCADE
+            )
+        """)
+        # Indici su plant_id: il pattern di accesso dominante è "dammi tutti
+        # gli schedule della pianta X" (chiamato per ogni pianta al boot
+        # dell'app, dentro il GET /api/plants). Senza indice ogni query
+        # farebbe una scansione completa della tabella; con l'indice è una
+        # lookup diretta. Idempotenti come tutte le DDL qui sopra.
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_biobizz_plant ON plant_biobizz(plant_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_treatments_plant ON plant_treatments(plant_id)")
 
         conn.commit()
     print(f"✅ Database pronto: {DB_FILE}")
@@ -536,12 +638,45 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"items": items})
             return
 
-        # GET /api/plants — restituisce le piante personalizzate (custom)
-        # Le 26 native restano hard-coded nel frontend; qui ci sono solo le aggiunte
+        # GET /api/plants/<plant_id>/biobizz e /treatments — elenco
+        # schedule di una specifica pianta. In genere il frontend non
+        # chiama questi endpoint perché /api/plants già annida gli
+        # schedule nelle chiavi bb_schedules e tr_schedules di ogni
+        # pianta, ma li espongo per casi avanzati: refresh mirato dopo
+        # una modifica, debug dal browser, integrazioni esterne.
+        sched_match = self._match_schedule_route(path)
+        if sched_match is not None:
+            kind, plant_id, schedule_id = sched_match
+            # Per il GET supporto solo la forma "elenco" (4 segmenti),
+            # non il "singolo schedule" (5 segmenti). Recuperare un
+            # singolo schedule per id non ha grande utilità rispetto
+            # all'elenco e aggiungere il caso complicherebbe il codice
+            # senza vero beneficio.
+            if schedule_id is not None:
+                self.send_json({"error": "Endpoint non supportato per singolo schedule"}, 404)
+                return
+            with get_db() as conn:
+                if not self._check_plant_exists(conn, plant_id):
+                    self.send_json({"error": "Pianta non trovata"}, 404)
+                    return
+                items = self._load_schedules(conn, self._schedule_table_for(kind), plant_id)
+            self.send_json({"items": items})
+            return
+
+        # GET /api/plants — restituisce tutte le piante custom con
+        # i loro schedule BioBizz e trattamenti annidati nelle chiavi
+        # bb_schedules e tr_schedules. Faccio un'unica connessione e la
+        # passo a _plant_row_to_dict che si occupa di caricare gli
+        # schedule per ogni pianta. Il pattern è leggermente N+1 (una
+        # query per ogni pianta), ma con il numero di piante che ha un
+        # giardino domestico (decine, non migliaia) il costo è
+        # trascurabile e il codice resta semplice. Se in futuro il numero
+        # di piante crescesse molto, si potrebbe ottimizzare con due
+        # query batch e un raggruppamento in Python.
         if path == "/api/plants":
             with get_db() as conn:
                 rows = conn.execute("SELECT * FROM custom_plants ORDER BY name").fetchall()
-            items = [self._plant_row_to_dict(r) for r in rows]
+                items = [self._plant_row_to_dict(r, conn) for r in rows]
             self.send_json({"items": items})
             return
 
@@ -732,7 +867,16 @@ class Handler(BaseHTTPRequestHandler):
     # I campi numerici opzionali (Kc, p, profondità radici) restano None se vuoti
     # per indicare al frontend "usa il default del gruppo". Il frontend mappa
     # snake_case → camelCase nella sua funzione plantDbToJs equivalente.
-    def _plant_row_to_dict(self, row):
+    def _plant_row_to_dict(self, row, conn=None):
+        """
+        Converte una riga della tabella custom_plants nel dict che il
+        frontend si aspetta. Se viene passata una connessione `conn`,
+        carica anche gli schedule BioBizz e trattamenti come liste
+        annidate sotto le chiavi 'bb_schedules' e 'tr_schedules'.
+        Senza connessione, i due array vengono comunque inizializzati a
+        [] per uniformità — così il frontend può sempre fare
+        plant.bb_schedules.forEach(...) senza controlli difensivi.
+        """
         item = dict(row)
         # Le note mensili sono salvate come JSON serializzato. Le deserializzo
         # qui così il frontend riceve direttamente un oggetto. Se il JSON è
@@ -769,7 +913,165 @@ class Handler(BaseHTTPRequestHandler):
             'cur': parsed.get('cur', {}) or {},
             'bio': parsed.get('bio', {}) or {},
         }
+        # Schedule BioBizz e trattamenti: due liste annidate. Le carico solo
+        # se ho a disposizione una connessione, perché altrimenti ne dovrei
+        # aprire una nuova per ogni pianta nel GET /api/plants e farei N+1
+        # query (un classico anti-pattern). Inizializzo comunque a [] per
+        # uniformità di interfaccia nel frontend.
+        item['bb_schedules'] = []
+        item['tr_schedules'] = []
+        if conn is not None:
+            item['bb_schedules'] = self._load_schedules(conn, 'plant_biobizz', item['id'])
+            item['tr_schedules'] = self._load_schedules(conn, 'plant_treatments', item['id'])
         return item
+
+    def _load_schedules(self, conn, table, plant_id):
+        """
+        Carica gli schedule (BioBizz o trattamenti) per una pianta data,
+        ordinandoli per sort_order e poi per id. L'ordinamento secondario
+        per id è importante quando più schedule hanno sort_order=0
+        (default): senza il fallback su id, l'ordine restituito da SQLite
+        sarebbe non deterministico, e l'utente vedrebbe le righe
+        riordinarsi a ogni reload.
+        """
+        rows = conn.execute(
+            f"SELECT * FROM {table} WHERE plant_id = ? ORDER BY sort_order, id",
+            (plant_id,)
+        ).fetchall()
+        return [self._schedule_row_to_dict(r) for r in rows]
+
+    def _schedule_row_to_dict(self, row):
+        """
+        Converte una riga di plant_biobizz o plant_treatments nel dict
+        che il frontend consuma. Trasforma il CSV `months` in array di
+        interi perché il calendario JavaScript lavora più naturalmente
+        con array (per esempio `if (sched.months.includes(currentMonth))`),
+        e copre il caso CSV malformato restituendo array vuoto invece
+        di sollevare ValueError sulla parsing.
+        """
+        item = dict(row)
+        # Parsing robusto del CSV mesi: tollera spazi, valori vuoti,
+        # numeri fuori range (li scarta). Se la stringa è completamente
+        # invalida, ritorna [] invece di sollevare.
+        try:
+            item['months'] = [
+                int(s.strip()) for s in (row['months'] or '').split(',')
+                if s.strip() and 1 <= int(s.strip()) <= 12
+            ]
+        except (ValueError, TypeError):
+            item['months'] = []
+        return item
+
+    def _schedule_fields(self, data):
+        """
+        Estrae i campi di uno schedule dal payload JSON in arrivo dal
+        frontend. Specchio di _plant_fields ma per la struttura più
+        semplice di plant_biobizz/plant_treatments. La validazione
+        minima è prod non vuoto e interval_days numerico positivo —
+        senza questi due il record non ha senso.
+        """
+        prod = (data.get('prod') or '').strip()
+        if not prod:
+            raise ValueError("Il campo 'prod' è obbligatorio")
+        # Mesi: accetta sia array [3,4,5] sia stringa CSV "3,4,5",
+        # normalizza sempre a CSV per coerenza con custom_plants.fert_months.
+        months = data.get('months', '')
+        if isinstance(months, list):
+            cleaned = [int(m) for m in months if isinstance(m, (int, float)) and 1 <= int(m) <= 12]
+            months = ','.join(str(m) for m in cleaned)
+        elif isinstance(months, str):
+            # Tolgo spazi e valori non validi dalla stringa già fornita
+            try:
+                cleaned = [int(s.strip()) for s in months.split(',') if s.strip() and 1 <= int(s.strip()) <= 12]
+                months = ','.join(str(m) for m in cleaned)
+            except (ValueError, TypeError):
+                months = ''
+        else:
+            months = ''
+        if not months:
+            raise ValueError("Il campo 'months' deve contenere almeno un mese valido (1-12)")
+        # Intervallo: deve essere un intero positivo, altrimenti il
+        # generatore di eventi del calendario entrerebbe in loop infinito.
+        try:
+            interval_days = int(data.get('interval_days') or data.get('intervalDays') or 0)
+        except (TypeError, ValueError):
+            interval_days = 0
+        if interval_days <= 0:
+            raise ValueError("Il campo 'interval_days' deve essere un intero positivo")
+        # start_date: opzionale, accetto formato YYYY-MM-DD o None.
+        # Validazione lasca: non parso la data, mi fido del frontend che
+        # invia un date input HTML5 (formato già canonico).
+        start_date = data.get('start_date') or data.get('startDate') or None
+        if start_date is not None:
+            start_date = str(start_date).strip() or None
+        return {
+            'prod': prod,
+            'months': months,
+            'interval_days': interval_days,
+            'start_date': start_date,
+            'dose': str(data.get('dose', '')).strip(),
+            'note': str(data.get('note', '')).strip(),
+            'sort_order': int(data.get('sort_order') or data.get('sortOrder') or 0),
+        }
+
+    # ── Routing degli schedule annidati ───────────────────────────────
+    # Gli endpoint per gli schedule BioBizz e trattamenti seguono il pattern
+    # REST nidificato classico:
+    #   GET    /api/plants/<plant_id>/biobizz                 elenco
+    #   POST   /api/plants/<plant_id>/biobizz                 crea
+    #   PUT    /api/plants/<plant_id>/biobizz/<schedule_id>   modifica
+    #   DELETE /api/plants/<plant_id>/biobizz/<schedule_id>   cancella
+    # (e analogamente per /treatments). Questa forma di URL ha 4 o 5
+    # segmenti, mentre i metodi do_PUT/do_DELETE esistenti si aspettano
+    # esattamente 3 segmenti ("/api/{table}/{id}"). Per non rompere quel
+    # routing, intercetto gli URL nidificati con _match_schedule_route
+    # all'inizio dei quattro do_*, prima del flow esistente.
+    def _match_schedule_route(self, path):
+        """
+        Se `path` è un URL di schedule nidificato, ritorna una tupla
+        (kind, plant_id, schedule_id). `kind` è 'biobizz' o 'treatments'.
+        `schedule_id` è None per le operazioni di livello collezione (GET
+        elenco, POST nuovo) e un intero per le operazioni puntuali (PUT,
+        DELETE). Se l'URL non è uno schedule, ritorna None e il chiamante
+        prosegue con il routing normale.
+        """
+        parts = path.strip("/").split("/")
+        # Lunghezza valida: 4 (collezione) o 5 (singolo schedule)
+        if len(parts) not in (4, 5):
+            return None
+        # Forma attesa: api / plants / <plant_id> / <kind> [ / <schedule_id> ]
+        if parts[0] != "api" or parts[1] != "plants":
+            return None
+        if parts[3] not in ("biobizz", "treatments"):
+            return None
+        try:
+            plant_id = int(parts[2])
+        except ValueError:
+            return None
+        schedule_id = None
+        if len(parts) == 5:
+            try:
+                schedule_id = int(parts[4])
+            except ValueError:
+                return None
+        return (parts[3], plant_id, schedule_id)
+
+    def _schedule_table_for(self, kind):
+        """Mappa 'biobizz' → 'plant_biobizz' e 'treatments' → 'plant_treatments'."""
+        return 'plant_biobizz' if kind == 'biobizz' else 'plant_treatments'
+
+    def _check_plant_exists(self, conn, plant_id):
+        """
+        Helper usato dai POST/PUT/DELETE schedule: verifica che la pianta
+        esista prima di toccare la sua tabella figlia. Senza questo check,
+        un client potrebbe inserire schedule per piante inesistenti
+        (la FOREIGN KEY li rifiuterebbe ma con un errore meno parlante)
+        oppure fare modifiche a vuoto su righe che non gli appartengono.
+        """
+        row = conn.execute(
+            "SELECT 1 FROM custom_plants WHERE id = ?", (plant_id,)
+        ).fetchone()
+        return row is not None
 
     def _plant_fields(self, data):
         # Helper per parsare numeri opzionali: stringa vuota o None → None,
@@ -962,6 +1264,51 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"item": self._inv_row_to_dict(row)}, 201)
             return
 
+        # POST /api/plants/<plant_id>/biobizz e /treatments — crea un
+        # nuovo schedule per la pianta indicata. Il payload JSON deve
+        # contenere prod, months (array o CSV), interval_days, e
+        # opzionalmente start_date, dose, note, sort_order. La validazione
+        # vive in _schedule_fields che lancia ValueError sui campi non
+        # validi; qui catturo l'eccezione e rispondo 400 con il messaggio.
+        sched_match = self._match_schedule_route(path)
+        if sched_match is not None:
+            kind, plant_id, schedule_id = sched_match
+            # Il POST è sempre sulla collezione, mai su un singolo schedule
+            if schedule_id is not None:
+                self.send_json({"error": "POST non supportato su singolo schedule"}, 405)
+                return
+            data = self._read_json_body()
+            if data is None:
+                self.send_json({"error": "JSON non valido"}, 400)
+                return
+            try:
+                fields = self._schedule_fields(data)
+            except ValueError as e:
+                self.send_json({"error": str(e)}, 400)
+                return
+            table = self._schedule_table_for(kind)
+            with get_db() as conn:
+                if not self._check_plant_exists(conn, plant_id):
+                    self.send_json({"error": "Pianta non trovata"}, 404)
+                    return
+                # Inserisco includendo plant_id nei campi. Le colonne sono
+                # stesse per le due tabelle, quindi la stessa query con
+                # f-string del nome tabella va bene per entrambi.
+                fields_with_plant = {'plant_id': plant_id, **fields}
+                cols = ", ".join(fields_with_plant.keys())
+                placeholders = ", ".join(["?"] * len(fields_with_plant))
+                cur = conn.execute(
+                    f"INSERT INTO {table} ({cols}) VALUES ({placeholders})",
+                    list(fields_with_plant.values())
+                )
+                conn.commit()
+                new_id = cur.lastrowid
+                row = conn.execute(f"SELECT * FROM {table} WHERE id = ?", (new_id,)).fetchone()
+            kind_label = "BioBizz" if kind == "biobizz" else "trattamento"
+            print(f"  ➕ Nuovo schedule {kind_label}: id={new_id} — pianta {plant_id}, prod {fields['prod']}")
+            self.send_json({"item": self._schedule_row_to_dict(row)}, 201)
+            return
+
         # POST /api/plants — crea una nuova pianta custom.
         # L'id viene assegnato automaticamente da SQLite (>= 26 grazie al seed).
         if path == "/api/plants":
@@ -984,13 +1331,70 @@ class Handler(BaseHTTPRequestHandler):
                 conn.commit()
                 new_id = cur.lastrowid
                 row = conn.execute("SELECT * FROM custom_plants WHERE id = ?", (new_id,)).fetchone()
+                # Passo la connessione a _plant_row_to_dict così la risposta
+                # include bb_schedules e tr_schedules (entrambi vuoti per una
+                # pianta appena creata, ma la forma del payload resta coerente
+                # con quella del GET).
+                item = self._plant_row_to_dict(row, conn)
             print(f"  🌱 Nuova pianta custom: id={new_id} — {fields['name']}")
-            self.send_json({"item": self._plant_row_to_dict(row)}, 201)
+            self.send_json({"item": item}, 201)
             return
 
         self.send_json({"error": "Not found"}, 404)
 
     def do_PUT(self):
+        # Routing schedule prima di tutto: gli URL schedule hanno 5 segmenti
+        # ("/api/plants/<plant_id>/biobizz/<schedule_id>") che il routing
+        # classico sotto rifiuterebbe perché si aspetta esattamente 3
+        # segmenti. Intercetto qui sopra e gestisco se è il caso.
+        sched_match = self._match_schedule_route(self.path)
+        if sched_match is not None:
+            kind, plant_id, schedule_id = sched_match
+            # Il PUT richiede sempre uno schedule_id specifico
+            if schedule_id is None:
+                self.send_json({"error": "PUT richiede l'id dello schedule"}, 405)
+                return
+            data = self._read_json_body()
+            if data is None:
+                self.send_json({"error": "JSON non valido"}, 400)
+                return
+            try:
+                fields = self._schedule_fields(data)
+            except ValueError as e:
+                self.send_json({"error": str(e)}, 400)
+                return
+            table = self._schedule_table_for(kind)
+            with get_db() as conn:
+                # Verifico che lo schedule esista E appartenga alla pianta
+                # giusta. Senza il check di plant_id, un client potrebbe
+                # modificare lo schedule X passando un plant_id arbitrario
+                # nell'URL — il record verrebbe trovato per id ma l'URL
+                # nidificato perderebbe ogni semantica protettiva.
+                row = conn.execute(
+                    f"SELECT id FROM {table} WHERE id = ? AND plant_id = ?",
+                    (schedule_id, plant_id)
+                ).fetchone()
+                if not row:
+                    self.send_json({"error": "Schedule non trovato"}, 404)
+                    return
+                # UPDATE: aggiorno solo i campi modificabili (escludo plant_id
+                # che è la chiave del rapporto con la pianta, non è modificabile
+                # via questo endpoint — se uno volesse "spostare" lo schedule
+                # da una pianta a un'altra, è meglio cancellarlo e ricrearlo).
+                sets = ", ".join(f"{k}=?" for k in fields.keys())
+                conn.execute(
+                    f"UPDATE {table} SET {sets} WHERE id = ?",
+                    list(fields.values()) + [schedule_id]
+                )
+                conn.commit()
+                updated = conn.execute(
+                    f"SELECT * FROM {table} WHERE id = ?", (schedule_id,)
+                ).fetchone()
+            kind_label = "BioBizz" if kind == "biobizz" else "trattamento"
+            print(f"  ✏️  Schedule {kind_label} modificato: id={schedule_id}")
+            self.send_json({"item": self._schedule_row_to_dict(updated)})
+            return
+
         parts = self.path.strip("/").split("/")
         if len(parts) != 3 or parts[0] != "api":
             self.send_json({"error": "Not found"}, 404)
@@ -1052,13 +1456,13 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"item": self._inv_row_to_dict(updated)})
             return
 
-        # PUT /api/plants/:id — modifica una pianta custom esistente.
-        # Le 26 native (id 0-25) non sono modificabili: per design vivono
-        # nel codice statico. Tentativi di edit su id < 26 vengono respinti.
+        # PUT /api/plants/:id — modifica una pianta esistente.
+        # Storicamente qui c'era un controllo che rifiutava entry_id < 26
+        # con messaggio "Le piante predefinite non sono modificabili", retaggio
+        # del periodo in cui esistevano 26 piante native cablate nel codice.
+        # Adesso che tutte le piante vivono nel database e nessuna ha id < 26,
+        # quel controllo era diventato codice morto e l'ho rimosso.
         if table == "plants":
-            if entry_id < 26:
-                self.send_json({"error": "Le piante predefinite non sono modificabili"}, 403)
-                return
             with get_db() as conn:
                 row = conn.execute("SELECT * FROM custom_plants WHERE id = ?", (entry_id,)).fetchone()
                 if not row:
@@ -1079,13 +1483,46 @@ class Handler(BaseHTTPRequestHandler):
                 )
                 conn.commit()
                 updated_row = conn.execute("SELECT * FROM custom_plants WHERE id = ?", (entry_id,)).fetchone()
+                # Passo la connessione così la risposta include gli schedule
+                # esistenti della pianta. Gli schedule non vengono toccati da
+                # questo endpoint (vivono nelle loro tabelle figlie e si gestiscono
+                # con endpoint dedicati): qui ce li ritroviamo invariati.
+                item = self._plant_row_to_dict(updated_row, conn)
             print(f"  ✏️  Pianta custom modificata: id={entry_id} — {fields['name']}")
-            self.send_json({"item": self._plant_row_to_dict(updated_row)})
+            self.send_json({"item": item})
             return
 
         self.send_json({"error": "Not found"}, 404)
 
     def do_DELETE(self):
+        # Routing schedule prima di tutto, stesso pattern di do_PUT.
+        sched_match = self._match_schedule_route(self.path)
+        if sched_match is not None:
+            kind, plant_id, schedule_id = sched_match
+            if schedule_id is None:
+                self.send_json({"error": "DELETE richiede l'id dello schedule"}, 405)
+                return
+            table = self._schedule_table_for(kind)
+            with get_db() as conn:
+                # Verifico esistenza E appartenenza alla pianta indicata
+                # (stessa logica protettiva del PUT). Senza il check su
+                # plant_id un client malizioso potrebbe cancellare
+                # schedule che non sono "suoi" passando un plant_id
+                # qualsiasi nell'URL nidificato.
+                row = conn.execute(
+                    f"SELECT id FROM {table} WHERE id = ? AND plant_id = ?",
+                    (schedule_id, plant_id)
+                ).fetchone()
+                if not row:
+                    self.send_json({"error": "Schedule non trovato"}, 404)
+                    return
+                conn.execute(f"DELETE FROM {table} WHERE id = ?", (schedule_id,))
+                conn.commit()
+            kind_label = "BioBizz" if kind == "biobizz" else "trattamento"
+            print(f"  🗑️  Schedule {kind_label} eliminato: id={schedule_id}")
+            self.send_json({"deleted": schedule_id})
+            return
+
         parts = self.path.strip("/").split("/")
         if len(parts) != 3 or parts[0] != "api":
             self.send_json({"error": "Not found"}, 404)
@@ -1097,12 +1534,20 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"error": "ID non valido"}, 400)
             return
 
-        # Le piante custom hanno una logica DELETE speciale: verifica delle
-        # dipendenze (vasi e voci diario) prima di eliminare.
+        # Le piante hanno una logica DELETE speciale: verifica delle dipendenze
+        # (vasi e voci diario) prima di eliminare. Gli schedule nelle tabelle
+        # figlie plant_biobizz e plant_treatments NON sono dipendenze bloccanti:
+        # vivono in dipendenza esclusiva della pianta e vengono eliminati
+        # automaticamente in cascata grazie al FOREIGN KEY ON DELETE CASCADE
+        # delle due tabelle (che funziona solo perché get_db abilita
+        # PRAGMA foreign_keys).
+        #
+        # Storicamente qui c'era un controllo che rifiutava entry_id < 26
+        # con messaggio "Le piante predefinite non sono eliminabili", per
+        # proteggere le 26 piante native cablate nel codice. Adesso che tutte
+        # le piante vivono nel database e nessuna ha id < 26, quel controllo
+        # è codice morto e l'ho rimosso.
         if table == "plants":
-            if entry_id < 26:
-                self.send_json({"error": "Le piante predefinite non sono eliminabili"}, 403)
-                return
             with get_db() as conn:
                 row = conn.execute("SELECT * FROM custom_plants WHERE id = ?", (entry_id,)).fetchone()
                 if not row:

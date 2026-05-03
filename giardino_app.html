@@ -120,12 +120,17 @@
     <button id="pwa-install-btn" onclick="pwaInstall()" style="display:none;margin-top:6px;padding:6px 14px;font-size:11px;border:1px solid var(--accent);background:var(--accent-light);color:var(--accent);border-radius:20px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500">📲 Installa app</button>
   </div>
   <input type="text" placeholder="Cerca pianta o caratteristica..." oninput="sFilter(this.value)" />
-  <p class="count-label" id="s-count">20 piante</p>
-
-  <!-- Pannello piante personalizzate.
-       Se non ce ne sono, mostriamo solo un piccolo invito (vedi cpRenderPanel).
-       Se ce ne sono, una griglia con i pulsanti edit/delete su ogni card. -->
-  <div id="cp-panel" style="margin:0 0 18px 0"></div>
+  <!-- Riga del contatore + pulsante Aggiungi.
+       Il pulsante "Aggiungi pianta" vive qui, semanticamente accanto al
+       contatore "N piante" che ti dice quante piante hai: l'azione di
+       aggiungerne una nuova è esattamente quella che fa cambiare quel
+       numero, quindi i due elementi sono naturali compagni. Ho usato
+       flexbox per allinearli sulla stessa riga senza dover toccare la
+       classe count-label esistente. -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0">
+    <p class="count-label" id="s-count" style="margin:0">20 piante</p>
+    <button class="ctrl-btn" style="padding:4px 12px;font-size:12px" onclick="cpOpenAddForm()">➕ Aggiungi pianta</button>
+  </div>
 
   <div class="plant-grid" id="s-grid"></div>
 </div>
@@ -559,8 +564,8 @@
        CALCOLATORE FERTILIZZANTE
   ───────────────────────────────────────────────────────── -->
   <div class="app-header" style="margin-top:1.5rem">
-    <h1 style="font-size:clamp(18px,4vw,26px)">Calcolatore Fertilizzante 💚</h1>
-    <p>Quantità di concime in base alla dose del produttore e all'acqua usata</p>
+    <h1 style="color:white; font-size:clamp(18px,4vw,26px)">Calcolatore Fertilizzante 💚</h1>
+    <p style="color:white;">Quantità di concime in base alla dose del produttore e all'acqua usata</p>
   </div>
 
   <div class="calc-card">
@@ -639,8 +644,8 @@
        CALCOLATORE FERTIRRIGAZIONE
   ───────────────────────────────────────────────────────── -->
   <div class="app-header" style="margin-top:1.5rem">
-    <h1 style="font-size:clamp(18px,4vw,26px)">Fertirrigazione 🧪💧</h1>
-    <p>Prepara una soluzione unica ottimizzata per più piante</p>
+    <h1 style="color:white; font-size:clamp(18px,4vw,26px)">Fertirrigazione 🧪💧</h1>
+    <p style="color: white;">Prepara una soluzione unica ottimizzata per più piante</p>
   </div>
 
   <div class="calc-card">
@@ -738,8 +743,8 @@
 <!-- ── SECTION: PARAMETRI ──────────────────────────────────── -->
 <div id="sec-params" class="section">
   <div class="app-header">
-    <h1>Parametri ⚙️</h1>
-    <p>Regola i fattori di calcolo per il tuo microclima e le tue piante</p>
+    <h1 style="color: white;">Parametri ⚙️</h1>
+    <p style="color: white;">Regola i fattori di calcolo per il tuo microclima e le tue piante</p>
     <p class="d-mode-indicator" style="color: white;font-size:11px;margin-top:4px">⏳ Connessione al database...</p>
   </div>
 

@@ -125,8 +125,30 @@ function renderCards(list) {
   sFilteredPlants = list;
   const grid = document.getElementById('s-grid');
   document.getElementById('s-count').textContent = list.length + (list.length===1?' pianta':' piante');
+  // Ogni card è cliccabile e apre la scheda dettaglio (sOpenDetail). Sopra
+  // l'icona della pianta inserisco due pulsanti azione (modifica/rimuovi)
+  // posizionati in alto a destra con position:absolute. Il punto delicato
+  // qui è il propagation handling: senza event.stopPropagation() un click
+  // su un pulsante farebbe scattare ANCHE il click esterno della card
+  // (l'evento risale dal pulsante alla card per via dell'event bubbling),
+  // aprendo per sbaglio il dialog dei dettagli oltre all'azione richiesta.
+  // Lo stop sulla propagazione garantisce che ogni pulsante esegua solo
+  // la sua azione, mentre il resto della card continua ad aprire il
+  // dettaglio come prima.
   grid.innerHTML = list.map((p,i)=>`
-    <div class="plant-card" onclick="sOpenDetail(${i})">
+    <div class="plant-card" onclick="sOpenDetail(${i})" style="position:relative">
+      <div class="plant-card-actions" style="position:absolute;top:8px;right:8px;display:flex;gap:4px;z-index:2">
+        <button onclick="event.stopPropagation();cpOpenEditForm(${p.id})"
+                title="Modifica"
+                style="border:none;background:rgba(255,255,255,0.85);width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:background 0.15s">
+          ✏️
+        </button>
+        <button onclick="event.stopPropagation();cpDeletePlantById(${p.id})"
+                title="Rimuovi"
+                style="border:none;background:rgba(255,255,255,0.85);width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:background 0.15s">
+          🗑️
+        </button>
+      </div>
       <div class="card-header">
         <div class="plant-icon">${p.icon}</div>
         <div>
@@ -162,13 +184,16 @@ function sOpenDetail(idx) {
   // Content
   const body = document.getElementById('s-panel-body');
   body.innerHTML = sTabDefs.map((t,i)=>`<div class="tab-content${i===0?' active':''}" data-tab="${t.key}">${t.fields.map(f=>`<div class="detail-row"><span class="detail-label">${f.l}</span><span class="detail-value">${p[t.key][f.k]||'—'}</span></div>`).join('')}</div>`).join('');
-  // Visibilità del menù kebab: solo per le piante custom (oggi sono tutte).
-  // Il dropdown viene tenuto chiuso ogni volta che si apre una nuova scheda,
-  // così se l'utente lo aveva lasciato aperto in una visualizzazione
-  // precedente non si trova lo stato sporco.
+  // Visibilità del menù kebab: storicamente era condizionata al flag
+  // p.isCustom perché le 26 piante native non erano modificabili. Adesso
+  // che tutte le piante sono record del database e tutte sono modificabili
+  // allo stesso modo, il menu è sempre visibile. Il dropdown viene tenuto
+  // chiuso ogni volta che si apre una nuova scheda, così se l'utente
+  // l'aveva lasciato aperto in una visualizzazione precedente non si
+  // trova lo stato sporco.
   const menuWrap = document.getElementById('s-menu-wrap');
   if (menuWrap) {
-    menuWrap.style.display = p.isCustom ? 'block' : 'none';
+    menuWrap.style.display = 'block';
     document.getElementById('s-menu-dropdown').style.display = 'none';
   }
   document.getElementById('s-overlay').classList.add('open');
@@ -215,12 +240,16 @@ document.addEventListener('click', (event) => {
 });
 
 // "Modifica": chiudo la scheda dettaglio e apro il form di edit caricando
-// la pianta dal cache delle custom. Senza chiudere prima la scheda, il
-// nuovo overlay si sovrapporrebbe al vecchio creando una pila visivamente
-// confusa.
+// la pianta dal cache. Senza chiudere prima la scheda, il nuovo overlay
+// si sovrapporrebbe al vecchio creando una pila visivamente confusa.
+//
+// La guardia su sCurrentPlant.isCustom è stata rimossa: storicamente
+// proteggeva il sistema dal modificare le 26 piante "native" che vivevano
+// cablate nel codice e non erano editabili. Oggi tutte le piante vivono
+// nel database e sono editabili allo stesso modo.
 function sMenuEdit() {
-  if (!sCurrentPlant || !sCurrentPlant.isCustom) return;
-  const id = sCurrentPlant.customId;
+  if (!sCurrentPlant) return;
+  const id = sCurrentPlant.id;
   sCloseDetail();
   // Piccolo timeout per permettere alla transizione di chiusura della
   // scheda di partire prima che apriamo il form, così l'utente percepisce
@@ -260,7 +289,6 @@ async function sMenuDelete() {
     // re-inizializzo la sezione Schede così la card sparisce subito senza
     // che l'utente debba navigare avanti e indietro.
     if (typeof loadCustomPlants === 'function') await loadCustomPlants();
-    if (typeof cpRenderPanel === 'function') cpRenderPanel();
     if (typeof sInitSchede === 'function') sInitSchede();
   } catch (e) {
     alert('Errore di rete: ' + e.message);
@@ -312,7 +340,7 @@ function cInitMensile() {
     const label=document.createElement('div');label.className='bar-plant-label';
     // Per le custom aggiungo un piccolo indicatore visivo sottile accanto al nome.
     // Lo rendo discreto (font piccolo, colore tenue) per non distrarre dalla griglia.
-    label.innerHTML = `${p.icon} ${cpEscape(p.name)}${p.isCustom ? ' <span style="font-size:0.7em;color:#9a8a30;font-weight:600">●</span>' : ''}`;
+    label.innerHTML = `${p.icon} ${cpEscape(p.name)}`;
     row.appendChild(label);
     const bars=document.createElement('div');bars.className='bar-months';
     p.months.forEach((s,mi)=>{const bar=document.createElement('div');bar.className='bar-month '+cSC(s);bar.title=cMonths[mi]+': '+cSL(s);bars.appendChild(bar)});
@@ -327,7 +355,7 @@ function cInitMensile() {
     const body=document.createElement('div');body.className='month-body';
     const active=cPlants.filter(p=>p.months[mi]>0);
     if(!active.length){body.innerHTML='<div class="empty-month">Riposo per tutte le piante</div>';}
-    else{active.forEach(p=>{const s=p.months[mi];const row=document.createElement('div');row.className='plant-row';row.innerHTML=`<span class="plant-icon-sm">${p.icon}</span><span class="plant-name-sm">${cpEscape(p.name)}${p.isCustom?' <span style="font-size:0.75em;color:#9a8a30">●</span>':''}</span><span class="status-badge badge-${cSC(s)}">${cSL(s)}</span>`;body.appendChild(row)});}
+    else{active.forEach(p=>{const s=p.months[mi];const row=document.createElement('div');row.className='plant-row';row.innerHTML=`<span class="plant-icon-sm">${p.icon}</span><span class="plant-name-sm">${cpEscape(p.name)}</span><span class="status-badge badge-${cSC(s)}">${cSL(s)}</span>`;body.appendChild(row)});}
     card.appendChild(body);grid.appendChild(card);
   });
 }
@@ -340,17 +368,14 @@ function cOpenMonthDetail(mi) {
     let out=`<div class="detail-section-title">${label}</div>`;
     list.forEach(p=>{
       const note=p.notes[mi+1]||'';
-      // Per le piante custom: aggiungo il badge "personalizzata" accanto al nome
-      // e, in fondo alla riga, un piccolo pulsante di modifica che apre il form.
-      // Uso event.stopPropagation perché la riga potrebbe avere altri handler
-      // legati alla card e non vogliamo che il click sul pulsante li scateni.
-      const customBadge = p.isCustom
-        ? ' <span style="font-size:0.7em;color:#9a8a30;font-weight:600;background:#fff8e0;padding:1px 6px;border-radius:8px;border:1px solid #d4c060">personalizzata</span>'
-        : '';
-      const editBtn = (p.isCustom && p.customId)
-        ? `<button onclick="event.stopPropagation();cCloseOverlay();cpOpenEditForm(${p.customId})" style="margin-top:6px;padding:4px 10px;font-size:0.85em;border:1px solid #b0a070;background:#fff8e0;border-radius:6px;cursor:pointer;color:#5a4a10">✏️ Modifica</button>`
-        : '';
-      out+=`<div class="plant-detail-row ${status}"><div class="pdr-icon">${p.icon}</div><div class="pdr-content"><div class="pdr-name">${cpEscape(p.name)}${customBadge}</div>${p.latin?`<div class="pdr-latin">${cpEscape(p.latin)}</div>`:''}<div class="pdr-info"><strong>Concime:</strong> ${cpEscape(p.concime)}<br><strong>Frequenza:</strong> ${cpEscape(p.freq)}${note?'<br>'+cpEscape(note):''}</div>${editBtn}</div><span class="pdr-badge ${status}">${cSL({active:1,reduce:2,special:3,stop:0}[status])}</span></div>`;
+      // Pulsante modifica in fondo alla riga: apre il form di edit della
+      // pianta. Adesso che tutte le piante sono editabili allo stesso modo
+      // (la distinzione native/custom è stata abolita), il pulsante è
+      // sempre presente. Uso event.stopPropagation perché la riga ha
+      // altri handler legati alla card e non vogliamo scatenarli quando
+      // il click è destinato al pulsante.
+      const editBtn = `<button onclick="event.stopPropagation();cCloseOverlay();cpOpenEditForm(${p.id})" style="margin-top:6px;padding:4px 10px;font-size:0.85em;border:1px solid #b0a070;background:#fff8e0;border-radius:6px;cursor:pointer;color:#5a4a10">✏️ Modifica</button>`;
+      out+=`<div class="plant-detail-row ${status}"><div class="pdr-icon">${p.icon}</div><div class="pdr-content"><div class="pdr-name">${cpEscape(p.name)}</div>${p.latin?`<div class="pdr-latin">${cpEscape(p.latin)}</div>`:''}<div class="pdr-info"><strong>Concime:</strong> ${cpEscape(p.concime)}<br><strong>Frequenza:</strong> ${cpEscape(p.freq)}${note?'<br>'+cpEscape(note):''}</div>${editBtn}</div><span class="pdr-badge ${status}">${cSL({active:1,reduce:2,special:3,stop:0}[status])}</span></div>`;
     });
     return out;
   }
@@ -606,10 +631,7 @@ function gInitGiorni() {
   const wl=document.getElementById('wa-legend');
   waPlants.forEach(p=>{
     const item=document.createElement('div');item.className='wa-legend-item';item.id='wl-'+p.id;
-    // Stesso pattern visuale della sezione Mensile: piccolo pallino dorato
-    // accanto al nome per le piante custom. Discrete ma riconoscibile.
-    const customBadge = p.isCustom ? ' <span style="font-size:0.7em;color:#9a8a30;font-weight:600">●</span>' : '';
-    item.innerHTML='<div class="wa-legend-dot"></div>'+p.icon+' '+p.name+customBadge;
+    item.innerHTML='<div class="wa-legend-dot"></div>'+p.icon+' '+p.name;
     item.onclick=()=>{if(waHiddenPlants.has(p.id))waHiddenPlants.delete(p.id);else waHiddenPlants.add(p.id);item.classList.toggle('hidden-plant');gRenderCalendar();};
     wl.appendChild(item);
   });
@@ -1126,10 +1148,9 @@ function dPopulatePlantDropdowns() {
   // altre sezioni (Mensile, Annaffiature, Vasi). Il valore dell'option
   // resta il nome puro, perché il backend del diario filtra/cerca per nome.
   const plantOptions = sPlants.map(p => {
-    const badge = p.isCustom ? ' ●' : '';
     // Escape minimo del nome per attribute value: solo virgolette doppie
     const nameAttr = p.name.replace(/"/g, '&quot;');
-    return `<option value="${nameAttr}">${p.name}${badge}</option>`;
+    return `<option value="${nameAttr}">${p.name}</option>`;
   }).join('');
 
   // Selettore per inserire nuova voce: opzione vuota di default, poi le piante
@@ -2488,7 +2509,7 @@ async function invInit() {
   // l'id reale garantisce coerenza in ogni situazione e con qualsiasi ordine.
   const sel = document.getElementById('inv-plant-type');
   sel.innerHTML = '<option value="">— Seleziona —</option>' + sPlants.map(p =>
-    `<option value="${p.id}">${p.icon} ${p.name}${p.isCustom ? ' ●' : ''}</option>`
+    `<option value="${p.id}">${p.icon} ${p.name}</option>`
   ).join('');
   // Populate fertilizer grid
   invRenderFertGrid();
@@ -4500,12 +4521,15 @@ const CUSTOM_GROUP_TAG = {
 // quindi va bene se alcune sezioni o sotto-campi sono vuoti: la scheda
 // mostrerà semplicemente un trattino al loro posto, senza sollevare errori.
 function buildCustomSPlant(row) {
-  // Tag derivato dal gruppo di simulazione. Aggiungo anche "Personalizzata"
-  // come secondo tag così le custom restano visivamente distinguibili anche
-  // a colpo d'occhio nella griglia, senza badge separati.
+  // Tag derivato dal gruppo di simulazione. Storicamente qui aggiungevamo
+  // anche un secondo tag "Personalizzata" per distinguere le piante custom
+  // dalle 26 native, ma adesso che tutte le piante sono custom quel tag
+  // diventava una scritta ridondante presente su ogni card senza dare
+  // informazione, quindi l'ho rimosso. Resta solo il tag di gruppo
+  // (Albero, Succulenta, eccetera) che è genuinamente informativo.
   const groupInfo = CUSTOM_GROUP_TAG[row.sim_group] || { label: 'Pianta', tc: 'pgr' };
-  const tags = [groupInfo.label, 'Personalizzata'];
-  const tc   = [groupInfo.tc, 'pgr'];
+  const tags = [groupInfo.label];
+  const tc   = [groupInfo.tc];
 
   // Le cinque sezioni della scheda. Le leggo da row.card_data, che il backend
   // garantisce essere sempre presente con tutte e cinque le chiavi (anche se
@@ -4591,21 +4615,100 @@ function buildCustomGPlant(row) {
   };
 }
 
-// Costruisce un record minimale per bbPlants e trPlants. Le piante custom
-// non generano automaticamente eventi BioBizz o trattamenti preventivi
-// (per quello servirebbe un livello di dettaglio che il form non chiede),
-// ma il record deve esistere comunque per consistenza degli id nelle
-// strutture parallele.
-function buildCustomMinimalPlant(row) {
+// Costruisce un record per bbPlants leggendo gli schedule BioBizz dalla
+// nuova chiave annidata row.bb_schedules che il backend allega a ogni
+// pianta. Il backend invia gli schedule come array di oggetti con campi
+//   { prod, months, interval_days, start_date, dose, note, sort_order }
+// dove `months` è già un array di interi 1-12 (parsato dal CSV) e
+// `start_date` è una stringa ISO "YYYY-MM-DD" o null.
+//
+// Il loop che genera gli eventi del calendario in gRenderCalendar() si
+// aspetta invece schedule con la forma più semplice
+//   { prod, months, interval, start }
+// dove `interval` è in giorni (lo stesso valore di interval_days, solo
+// rinominato per coerenza storica con le strutture native), e `start` è
+// un vero oggetto Date.
+//
+// Quindi qui faccio l'adattamento riga per riga: rinomino interval_days
+// in interval, parso la stringa ISO in oggetto Date con il helper
+// _parseISO che gestisce anche il caso start_date null restituendo
+// l'inizio dell'anno corrente come fallback ragionevole.
+function buildCustomBbPlant(row) {
   return {
     id: row.id,
     name: row.name,
     latin: row.latin || '',
     icon: row.icon || '🌱',
     color: CUSTOM_GROUP_COLORS[row.sim_group] || '#5a7a4a',
-    schedules: [],   // Vuoto: nessun evento generato automaticamente
+    schedules: (row.bb_schedules || []).map(s => ({
+      prod: s.prod,
+      months: s.months || [],
+      interval: s.interval_days,
+      start: _parseISO(s.start_date),
+      // I campi dose/note/sort_order non sono usati dai loop di rendering
+      // del calendario ma li conservo nel record per usi futuri (tooltip,
+      // tabella di dettaglio, esportazioni).
+      dose: s.dose || '',
+      note: s.note || '',
+    })),
     isCustom: true,
   };
+}
+
+// Costruisce un record per trPlants leggendo gli schedule trattamenti
+// dalla chiave annidata row.tr_schedules. La logica è identica a
+// buildCustomBbPlant — l'unica differenza è la sorgente dei dati. Le
+// tengo separate invece di unificarle in una funzione parametrizzata
+// (es. `buildCustomScheduledPlant(row, 'bb')`) per due ragioni:
+// (a) la simmetria con backend e database, dove biobizz e trattamenti
+// sono entità distinte; (b) in futuro se le due strutture divergono
+// (campi specifici per i trattamenti come target_pest), le modifiche
+// restano locali senza dover toccare la firma di una funzione condivisa.
+function buildCustomTrPlant(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    latin: row.latin || '',
+    icon: row.icon || '🌱',
+    color: CUSTOM_GROUP_COLORS[row.sim_group] || '#5a7a4a',
+    schedules: (row.tr_schedules || []).map(s => ({
+      prod: s.prod,
+      months: s.months || [],
+      interval: s.interval_days,
+      start: _parseISO(s.start_date),
+      dose: s.dose || '',
+      note: s.note || '',
+    })),
+    isCustom: true,
+  };
+}
+
+// Helper di conversione da stringa ISO "YYYY-MM-DD" a oggetto Date.
+// Gestisce robustamente i tre casi pratici:
+// 1) Stringa valida "2026-04-10" → oggetto Date corrispondente
+// 2) null o undefined → 1° gennaio dell'anno corrente come fallback
+//    (così il generatore di eventi non esplode con NaN — capita per
+//    schedule storici creati senza data di ancoraggio)
+// 3) Stringa malformata → stesso fallback dell'anno corrente, con
+//    un warning su console che aiuta il debug se mai succedesse
+//
+// Uso il costruttore Date(year, monthIndex, day) invece di passare la
+// stringa direttamente a `new Date(s)` perché quest'ultimo interpreta
+// la stringa come UTC e in fusi orari diversi dall'UTC restituisce il
+// giorno sbagliato (es. "2026-04-10" diventa il 9 aprile alle 22:00 in
+// Italia in ora legale). Il costruttore con argomenti separati invece
+// crea sempre la data nel fuso orario locale, che è quello che vuoi
+// per un calendario di giardinaggio.
+function _parseISO(isoStr) {
+  if (!isoStr) {
+    return new Date(new Date().getFullYear(), 0, 1);
+  }
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(isoStr).trim());
+  if (!m) {
+    console.warn('Data di schedule non valida, fallback a inizio anno:', isoStr);
+    return new Date(new Date().getFullYear(), 0, 1);
+  }
+  return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
 }
 
 // Costruisce l'entry SIM_PLANT_PARAMS per il simulatore FAO-56.
@@ -4930,28 +5033,49 @@ async function loadCustomPlants() {
     return;
   }
 
-  // STEP 1: Rimuovi tutti i record custom precedenti (id >= 26).
-  // Questo permette di chiamare la funzione più volte senza duplicare.
-  // Le 7 strutture array filtrano per il flag isCustom (più robusto del
-  // controllo per id che alcune strutture come cPlants non espongono).
-  // SIM_PLANT_PARAMS è un oggetto e cancelliamo le chiavi custom per id.
-  sPlants   = sPlants.filter(p   => !p.isCustom);
-  gPlants   = gPlants.filter(p   => !p.isCustom);
-  bbPlants  = bbPlants.filter(p  => !p.isCustom);
-  trPlants  = trPlants.filter(p  => !p.isCustom);
-  cPlants   = cPlants.filter(p   => !p.isCustom);
-  waPlants  = waPlants.filter(p  => !p.isCustom);
-  FI_PLANTS = FI_PLANTS.filter(p => !p.isCustom);
-  Object.keys(SIM_PLANT_PARAMS).forEach(k => {
-    if (parseInt(k) >= 26) delete SIM_PLANT_PARAMS[k];
-  });
+  // STEP 1: Svuota le strutture in memoria prima di rifusare i dati nuovi.
+  // Storicamente queste strutture erano popolate sia da 26 piante "native"
+  // (dichiarate cablate nel codice JavaScript) sia dalle piante custom
+  // che l'utente aveva aggiunto via form. Il refresh doveva quindi
+  // essere selettivo: rimuovere solo le custom (filtrando per il flag
+  // isCustom) e lasciare intatte le native, perché altrimenti dopo il
+  // refresh le 26 piante predefinite sarebbero scomparse.
+  //
+  // Adesso che tutte le piante vivono nel database e nessuna è cablata
+  // nel codice, le strutture si svuotano completamente prima del refusione
+  // dei dati appena caricati. Il flag isCustom è stato rimosso dalle
+  // builder e questa logica selettiva non serve più.
+  //
+  // Uso `arr.length = 0` invece di `arr = []` per preservare l'identità
+  // dell'array. Le strutture sPlants, gPlants e simili sono dichiarate
+  // come `let` ma altre parti del codice potrebbero aver salvato
+  // riferimenti a quegli array (per esempio sFilteredPlants = sPlants
+  // alla riga 122), e la sostituzione totale invaliderebbe quei
+  // riferimenti. Lo svuotamento sul posto invece preserva tutto.
+  sPlants.length   = 0;
+  gPlants.length   = 0;
+  bbPlants.length  = 0;
+  trPlants.length  = 0;
+  cPlants.length   = 0;
+  waPlants.length  = 0;
+  FI_PLANTS.length = 0;
+  // SIM_PLANT_PARAMS è un oggetto, non un array. Lo svuoto cancellando
+  // tutte le chiavi. Storicamente cancellavamo solo quelle con id >= 26
+  // per preservare le 26 native. Adesso le cancello tutte.
+  Object.keys(SIM_PLANT_PARAMS).forEach(k => delete SIM_PLANT_PARAMS[k]);
 
   // STEP 2: Per ogni pianta custom, crea gli 8 record e fondili nelle strutture.
   items.forEach(row => {
     sPlants.push(buildCustomSPlant(row));
     gPlants.push(buildCustomGPlant(row));
-    bbPlants.push(buildCustomMinimalPlant(row));
-    trPlants.push(buildCustomMinimalPlant(row));
+    // bbPlants e trPlants ora hanno builder separati che leggono i nuovi
+    // campi annidati row.bb_schedules e row.tr_schedules forniti dal
+    // backend. Prima del refactor a tabelle figlie usavamo una singola
+    // buildCustomMinimalPlant che ritornava sempre schedules vuoti,
+    // perché gli schedule non avevano un posto dove vivere nel database.
+    // Adesso popolano correttamente i calendari BioBizz e trattamenti.
+    bbPlants.push(buildCustomBbPlant(row));
+    trPlants.push(buildCustomTrPlant(row));
     cPlants.push(buildCustomCPlant(row));
     waPlants.push(buildCustomWaPlant(row));
     FI_PLANTS.push(buildCustomFIPlant(row));
@@ -5080,61 +5204,14 @@ const CP_CARD_FIELDS = {
   ],
 };
 
-// ── Rendering del pannello "Le mie piante personalizzate" ───────────
-// Disegna il contenuto di #cp-panel in cima alla sezione Schede.
-// Se non ci sono piante custom, mostra solo un piccolo invito.
-// Se ce ne sono, mostra una griglia con card cliccabili per modificarle.
-function cpRenderPanel() {
-  const panel = document.getElementById('cp-panel');
-  if (!panel) return;
-  const items = customPlantsCache || [];
-
-  if (!items.length) {
-    // Stato vuoto: questo è ora il punto di partenza obbligato dell'app,
-    // perché senza piante predefinite la sezione Schede è completamente
-    // vuota fino a che l'utente non ne aggiunge la prima. Vale quindi la
-    // pena dare al messaggio una presenza più rassicurante e didascalica
-    // rispetto al vecchio invito sottile, spiegando in due righe cosa
-    // succede e perché. Il bottone "Aggiungi" resta il fulcro visivo,
-    // centrato e con un po' più di peso tipografico.
-    panel.innerHTML = `
-      <div style="text-align:center;padding:32px 16px;border:1px dashed #ccc;border-radius:12px;background:#fafaf6">
-        <div style="font-size:42px;line-height:1;margin-bottom:8px">🌱</div>
-        <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px">Il tuo giardino è vuoto</div>
-        <div style="font-size:12px;color:var(--muted);max-width:420px;margin:0 auto 14px;line-height:1.5">
-          Comincia aggiungendo la prima pianta. Ti basta un nome — tutto il resto
-          (concimazione, substrato, esposizione, cure, BioBizz) è opzionale e
-          lo puoi compilare poco alla volta col passare del tempo.
-        </div>
-        <button class="ctrl-btn" style="padding:8px 18px;font-size:13px" onclick="cpOpenAddForm()">➕ Aggiungi la prima pianta</button>
-      </div>`;
-    return;
-  }
-
-  // Stato popolato: griglia di card per ogni pianta custom + pulsante aggiungi.
-  // Le card hanno lo stesso look delle native ma con un piccolo badge "personalizzata"
-  // sull'icona e un pulsante di edit sempre visibile.
-  let html = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div style="font-size:13px;font-weight:600;color:var(--accent)">🌱 Le mie piante (${items.length})</div>
-      <button class="ctrl-btn" style="padding:4px 12px;font-size:12px" onclick="cpOpenAddForm()">➕ Aggiungi</button>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">`;
-
-  items.forEach(p => {
-    const groupLabel = {succulenta:'Succ.',orchidea:'Orc.',tropicale:'Trop.',agrume:'Agr.',mediterranea:'Med.',bonsai:'Bon.',arbusto:'Arb.',albero:'Alb.',aromatica:'Arom.',fiorita:'Fior.'}[p.sim_group] || p.sim_group;
-    html += `
-      <div style="position:relative;padding:10px 8px 8px;background:white;border:1px solid #e0e0d8;border-radius:8px;cursor:pointer;text-align:center" onclick="cpOpenEditForm(${p.id})">
-        <div style="position:absolute;top:4px;right:6px;font-size:9px;background:var(--accent);color:white;padding:1px 6px;border-radius:8px">custom</div>
-        <div style="font-size:28px;line-height:1">${p.icon || '🌱'}</div>
-        <div style="font-size:12px;font-weight:600;margin-top:4px;color:var(--text)">${cpEscape(p.name)}</div>
-        ${p.latin ? `<div style="font-size:10px;font-style:italic;color:var(--muted)">${cpEscape(p.latin)}</div>` : ''}
-        <div style="font-size:9px;color:var(--muted);margin-top:2px">${groupLabel}</div>
-      </div>`;
-  });
-  html += `</div>`;
-  panel.innerHTML = html;
-}
+// ── Pannello "Le mie piante personalizzate" — RIMOSSO ───────────────
+// Il pannello cpRenderPanel viveva qui e disegnava una griglia separata
+// di piante con un pulsante "Aggiungi" e card cliccabili per la modifica.
+// È stato rimosso quando la griglia principale della sezione Schede ha
+// ricevuto i pulsanti modifica (✏️) e rimuovi (🗑️) direttamente sulle
+// card, rendendo il pannello una duplicazione visiva e funzionale.
+// Il pulsante "Aggiungi pianta" che era nell'header del pannello è stato
+// spostato accanto al contatore "N piante" della sezione Schede.
 
 // Helper per l'escape HTML. Necessario perché usiamo innerHTML con dati
 // dell'utente (nome, latino) che potrebbero contenere caratteri speciali.
@@ -5591,7 +5668,6 @@ async function cpSavePlant() {
     // Ricarica le piante custom: la fusione è idempotente, quindi questo
     // aggiorna sia la cache che le 5 strutture native in memoria.
     await loadCustomPlants();
-    cpRenderPanel();
 
     // Re-inizializza la sezione Schede se è quella attiva, così l'utente
     // vede subito il nuovo stato senza dover cambiare sezione e tornare.
@@ -5612,17 +5688,36 @@ async function cpSavePlant() {
 // Se la pianta è in uso da vasi o voci diario, il backend risponde 409
 // con la lista dei blocchi. Mostriamo all'utente un messaggio chiaro
 // con suggerimento esplicito su cosa fare prima di poter eliminare.
-async function cpDeletePlant() {
-  if (!cpEditingId) return;
-  const plant = customPlantsCache.find(p => p.id === cpEditingId);
-  if (!plant) return;
+// Cancellazione di una pianta. La logica di base accetta un plantId esplicito
+// in modo che possa essere chiamata sia dal pulsante "Elimina" interno al form
+// di modifica (caso storico, dove l'id si leggeva implicitamente da cpEditingId)
+// sia dal pulsante 🗑️ sulla card della griglia (nuovo, dove l'id viene passato
+// come argomento). I due wrapper sotto adattano l'una all'altra.
+//
+// La funzione gestisce tre esiti possibili dell'API:
+//   1) successo → toast verde, ricarica le piante dal backend, chiude eventuali
+//      overlay aperti
+//   2) 409 Conflict → la pianta è ancora in uso (vasi nell'inventario o voci
+//      nel diario): mostra un alert dettagliato che spiega cosa la sta usando
+//      e cosa fare per sbloccarla, senza cancellare nulla
+//   3) altri errori → toast rosso con il messaggio del backend
+async function _cpDeletePlantCore(plantId) {
+  const plant = customPlantsCache.find(p => p.id === plantId);
+  if (!plant) {
+    cpToast('Pianta non trovata', 'error');
+    return;
+  }
 
+  // Conferma esplicita prima di procedere. Il messaggio è esattamente quello
+  // che mostrava il dialog modale precedente — non lo cambio per non rompere
+  // il modello mentale dell'utente, ma adesso vive in un solo posto invece
+  // che essere duplicato tra form e griglia.
   if (!confirm(`Eliminare definitivamente la pianta "${plant.name}"?\n\nQuesta operazione non può essere annullata.`)) {
     return;
   }
 
   try {
-    const res = await apiFetch(`/api/plants/${cpEditingId}`, {method: 'DELETE'});
+    const res = await apiFetch(`/api/plants/${plantId}`, {method: 'DELETE'});
 
     if (res.status === 409) {
       // Eliminazione bloccata: ci sono dipendenze. Mostro lista dettagliata.
@@ -5652,18 +5747,45 @@ async function cpDeletePlant() {
 
     cpToast(`🗑️ ${plant.name} eliminata`, 'success');
 
-    // Ricarica e chiudi
+    // Dopo cancellazione: ricarico tutte le strutture dal backend per
+    // riflettere lo stato corrente. Faccio anche la chiusura degli overlay
+    // del form e del dettaglio scheda nel caso fossero aperti — è difensivo
+    // ma costa poco e copre tutti i flussi possibili. Idem per il toggle
+    // di cpEditingId: lo azzero se corrisponde alla pianta cancellata,
+    // così il prossimo cpOpenEditForm parte da uno stato pulito.
     await loadCustomPlants();
-    cpRenderPanel();
     if (typeof sInitSchede === 'function') {
       sInitSchede();
     }
-    document.getElementById('cp-overlay').classList.remove('open');
+    const cpOverlay = document.getElementById('cp-overlay');
+    if (cpOverlay) {
+      cpOverlay.classList.remove('open');
+    }
+    const sOverlay = document.getElementById('s-overlay');
+    if (sOverlay && sOverlay.classList.contains('open') && sCurrentPlant && sCurrentPlant.id === plantId) {
+      sOverlay.classList.remove('open');
+      sCurrentPlant = null;
+    }
     document.body.style.overflow = '';
-    cpEditingId = null;
+    if (cpEditingId === plantId) {
+      cpEditingId = null;
+    }
   } catch (e) {
     cpToast('Errore di rete: ' + e.message, 'error');
   }
+}
+
+// Wrapper retrocompatibile per il pulsante "Elimina" dentro il form di modifica.
+// Il form usa cpEditingId come id implicito della pianta in lavorazione.
+async function cpDeletePlant() {
+  if (!cpEditingId) return;
+  await _cpDeletePlantCore(cpEditingId);
+}
+
+// Wrapper per il pulsante 🗑️ della card della griglia. Riceve l'id
+// esplicitamente come argomento perché la card non ha contesto implicito.
+async function cpDeletePlantById(plantId) {
+  await _cpDeletePlantCore(plantId);
 }
 
 // ── Sistema toast (notifiche temporanee) ────────────────────────────
@@ -6837,14 +6959,11 @@ function pwaInstall() {
 // Mostriamo subito la sezione Schede con le 26 native (UI immediata).
 // In parallelo carichiamo le piante custom dal database: quando arrivano,
 // vengono fuse nelle strutture e le sezioni vengono invalidate per essere
-// re-inizializzate alla prossima visita. Subito dopo il caricamento, anche
-// il pannello "Le mie piante" viene renderizzato così l'utente lo vede
-// popolato fin dalla prima visualizzazione.
+// re-inizializzate alla prossima visita. Il caricamento iniziale ridisegna
+// anche la sezione Schede così l'utente vede subito la sua griglia di piante.
 showSection('schede');
 loadCustomPlants().then(() => {
-  cpRenderPanel();
-  // Re-inizializzo la sezione Schede se è quella attiva, perché potrebbero
-  // esserci piante custom da mostrare insieme alle native
+  // Re-inizializzo la sezione Schede per mostrare le piante caricate
   if (typeof sInitSchede === 'function') sInitSchede();
 });
 
