@@ -10,10 +10,13 @@
 // la rimozione delle 26 piante native introdotta in v3, la pulizia
 // delle ultime strutture native + dropdown del diario popolati a runtime
 // introdotta in v4, l'introduzione del sistema di immagini stagionali
-// per lo sfondo della sezione Schede e per la splash screen v5, oppure
+// per lo sfondo della sezione Schede e per la splash screen v5,
 // l'estensione delle splash a quattro varianti stagionali invece di una
-// sola statica, introdotta in v6 — oltre alla rimozione del vecchio
-// file the_pot_spring_bg.png ormai non più referenziato).
+// sola statica introdotta in v6, oppure il fix critico del fetch handler
+// per filtrare le richieste con schemi non supportati come
+// chrome-extension:// — bug che faceva andare in errore tutto il fetch
+// handler e bloccava il caricamento delle immagini stagionali — che è
+// l'oggetto di questa v7).
 //
 // Le immagini stagionali in /static/images/ NON sono in PRECACHE_URLS:
 // sarebbero 27 MB di download al primo install per asset di cui solo
@@ -22,7 +25,7 @@
 // primo accesso, così la stagione corrente diventa disponibile offline
 // dopo il primo utilizzo, e le altre stagioni si aggiungeranno alla
 // cache man mano che arriveranno i loro mesi nel calendario.
-const CACHE_NAME = 'giardino-v6';
+const CACHE_NAME = 'giardino-v7';
 
 // File da precaricare nella cache.
 // L'inserimento di /static/css/giardino.css, /static/js/splash.js e
@@ -100,6 +103,37 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
+  // ── PRIMA DIFESA: filtra gli schemi non supportati ──────────────
+  // L'API standard Cache.put() rifiuta esplicitamente le richieste
+  // con schema diverso da http/https sollevando un'eccezione. Questo
+  // è un problema concreto perché il browser (specialmente Edge e
+  // Chrome con estensioni installate) genera molte richieste con
+  // schema chrome-extension://, edge-extension://, moz-extension://,
+  // about:, blob:, data:. Tutte queste richieste vengono intercettate
+  // dal nostro fetch handler e, se proviamo a metterle in cache,
+  // sollevano un TypeError che propaga lungo la catena di Promise
+  // fino a far rifiutare l'event.respondWith(). Quando il fetch
+  // handler rifiuta, il browser segna TUTTE le richieste correnti
+  // come ERR_FAILED, anche quelle legittime alle nostre immagini —
+  // sintomo classico è "le immagini non si caricano e in console
+  // vedo errori di tipo Failed to convert value to Response".
+  //
+  // La difesa è semplice: se lo schema non è http o https, lasciamo
+  // che il browser gestisca la richiesta direttamente senza il nostro
+  // intervento, restituendo prematuramente dal listener. event.respondWith()
+  // non viene chiamato e quindi il browser fa il default routing.
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    return;
+  }
+
+  // ── SECONDA DIFESA: ignora i metodi non-GET ─────────────────────
+  // Cache.put() supporta solo richieste GET. POST, PUT, DELETE ecc.
+  // (le richieste verso /api/ che modificano dati) non andrebbero
+  // mai cachate, quindi le lasciamo passare al network direttamente.
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
   // API: sempre network, non cachare
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
@@ -112,14 +146,29 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  // Helper: scrive in cache in modo robusto. Avvolge cache.put in un
+  // try/catch (anzi, in un .catch sulla Promise) così qualunque errore
+  // imprevisto non fa fallire il fetch handler. Esempi di errori che
+  // potrebbero capitare anche dopo il filtro schemi: quota di storage
+  // esaurita, file troppo grande per la cache, request non clonabile.
+  // La funzione è "fire and forget": non aspettiamo che la cache
+  // venga aggiornata prima di rispondere all'utente, perché la
+  // risposta vera la abbiamo già in mano.
+  function safeCachePut(request, response) {
+    caches.open(CACHE_NAME)
+      .then(cache => cache.put(request, response))
+      .catch(err => console.warn('Cache put failed (non-fatale):', err.message));
+  }
+
   // Font Google: cache-first (raramente cambiano)
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
     event.respondWith(
       caches.match(event.request).then(cached => {
         if (cached) return cached;
         return fetch(event.request).then(response => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          if (response.ok) {
+            safeCachePut(event.request, response.clone());
+          }
           return response;
         });
       })
@@ -131,10 +180,11 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        // Aggiorna la cache con la versione nuova
+        // Aggiorna la cache con la versione nuova solo se la risposta
+        // è OK (status 200-299). Risposte d'errore (404, 500) non
+        // vanno cachate perché bloccherebbero il prossimo accesso.
         if (response.ok) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          safeCachePut(event.request, response.clone());
         }
         return response;
       })
