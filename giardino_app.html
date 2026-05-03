@@ -1,27 +1,23 @@
 <!DOCTYPE html>
 <html lang="it">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#5a7a4a">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Giardino">
-  <meta name="description" content="Dashboard gestione giardino — piante, irrigazione, sensori meteo">
-  <title>Il mio Giardino 🌿</title>
-  <link rel="manifest" href="/manifest.json">
-  <link rel="icon" href="/icons/icon-192x192.png" type="image/png">
-  <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
-  <link
-    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/giardino.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#5a7a4a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Giardino">
+<meta name="description" content="Dashboard gestione giardino — piante, irrigazione, sensori meteo">
+<title>Il mio Giardino 🌿</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icons/icon-192x192.png" type="image/png">
+<link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/giardino.css">
 </head>
-
 <body>
 
-  <!-- ── SPLASH SCREEN ────────────────────────────────────────────────
+<!-- ── SPLASH SCREEN ────────────────────────────────────────────────
      Schermata di apertura con il branding "The Pot". Visibile per
      2.5 secondi al primo caricamento dell'app, poi sfuma con
      transizione fade-out di 500ms. Il dismissal automatico parte
@@ -29,7 +25,7 @@
      lente l'utente vede comunque la schermata per il tempo previsto
      senza che svanisca prima che sia pronta a essere mostrata.
      L'utente può anche tappare/cliccare per chiudere prima. -->
-  <div id="splash-screen" onclick="dismissSplash()" style="
+<div id="splash-screen" onclick="dismissSplash()" style="
   position:fixed; inset:0; z-index:99999;
   background-image: url('/static/the_pot_spring_bg.png');
   background-size: cover;
@@ -43,7 +39,7 @@
   justify-content: center;
   padding-bottom: 30px;
 ">
-    <div style="
+  <div style="
     color: rgba(255,255,255,0.7);
     font-size: 11px;
     font-family: 'DM Sans', sans-serif;
@@ -51,1817 +47,1675 @@
     text-transform: uppercase;
     text-shadow: 0 1px 4px rgba(0,0,0,0.6);
   ">tap per continuare</div>
+</div>
+
+<script src="/static/js/splash.js"></script>
+
+<!-- Barra offline -->
+<div id="offline-bar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#c04040;color:#fff;padding:6px 16px;font-size:12px;font-weight:500;align-items:center;justify-content:center;gap:6px;font-family:'DM Sans',sans-serif">
+  <span>📡 Offline — i dati meteo e le modifiche non saranno sincronizzate</span>
+</div>
+
+<!-- ── SECTION: SCHEDE ─────────────────────────────────────────────── -->
+<div id="sec-schede" class="section">
+  <div class="app-header">
+    <h1 style="color: white;">Le mie piante 🌿</h1>
+    <p>Concimazione · Substrato · Esposizione · Cure · Terreno vivo</p>
+    <button id="pwa-install-btn" onclick="pwaInstall()" style="display:none;margin-top:6px;padding:6px 14px;font-size:11px;border:1px solid var(--accent);background:var(--accent-light);color:var(--accent);border-radius:20px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500">📲 Installa app</button>
   </div>
+  <input type="text" placeholder="Cerca pianta o caratteristica..." oninput="sFilter(this.value)" />
+  <p class="count-label" id="s-count">20 piante</p>
 
-  <script src="/static/js/splash.js"></script>
-
-  <!-- Barra offline -->
-  <div id="offline-bar"
-    style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#c04040;color:#fff;padding:6px 16px;font-size:12px;font-weight:500;align-items:center;justify-content:center;gap:6px;font-family:'DM Sans',sans-serif">
-    <span>📡 Offline — i dati meteo e le modifiche non saranno sincronizzate</span>
-  </div>
-
-  <!-- ── SECTION: SCHEDE ─────────────────────────────────────────────── -->
-  <div id="sec-schede" class="section">
-    <div class="app-header">
-      <h1 style="color: white;">Le mie piante 🌿</h1>
-      <p>Concimazione · Substrato · Esposizione · Cure · Terreno vivo</p>
-      <button id="pwa-install-btn" onclick="pwaInstall()"
-        style="display:none;margin-top:6px;padding:6px 14px;font-size:11px;border:1px solid var(--accent);background:var(--accent-light);color:var(--accent);border-radius:20px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500">📲
-        Installa app</button>
-    </div>
-    <input type="text" placeholder="Cerca pianta o caratteristica..." oninput="sFilter(this.value)" />
-    <p class="count-label" id="s-count">20 piante</p>
-
-    <!-- Pannello piante personalizzate.
+  <!-- Pannello piante personalizzate.
        Se non ce ne sono, mostriamo solo un piccolo invito (vedi cpRenderPanel).
        Se ce ne sono, una griglia con i pulsanti edit/delete su ogni card. -->
-    <div id="cp-panel" style="margin:0 0 18px 0"></div>
+  <div id="cp-panel" style="margin:0 0 18px 0"></div>
 
-    <div class="plant-grid" id="s-grid"></div>
-  </div>
-  <div class="overlay" id="s-overlay" onclick="if(event.target===this)sCloseDetail()">
-    <div class="panel" style="max-width:560px">
-      <div class="panel-header">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div class="plant-icon" id="s-panel-icon"></div>
-          <div>
-            <div class="panel-title" id="s-panel-title"></div>
-            <div class="panel-subtitle" id="s-panel-latin"></div>
+  <div class="plant-grid" id="s-grid"></div>
+</div>
+<div class="overlay" id="s-overlay" onclick="if(event.target===this)sCloseDetail()">
+  <div class="panel" style="max-width:560px">
+    <div class="panel-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="plant-icon" id="s-panel-icon"></div>
+        <div>
+          <div class="panel-title" id="s-panel-title"></div>
+          <div class="panel-subtitle" id="s-panel-latin"></div>
+        </div>
+      </div>
+      <!-- Cluster di pulsanti in alto a destra. Il menù kebab è visibile
+           solo per le piante custom (oggi sono tutte custom, ma il flag
+           isCustom della pianta resta il discriminante "ufficiale"); la
+           visibilità viene impostata da sOpenDetail al momento dell'apertura.
+           Il dropdown è positioned:absolute rispetto al wrapper relativo,
+           così appare ancorato sotto al pulsante senza spostare il layout
+           del resto della scheda quando si apre. -->
+      <div style="display:flex;align-items:center;gap:4px">
+        <div id="s-menu-wrap" style="position:relative;display:none">
+          <button id="s-menu-btn" class="close-btn" onclick="sToggleMenu(event)" aria-label="Azioni pianta" style="font-size:18px">⋮</button>
+          <div id="s-menu-dropdown" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:white;border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.12);min-width:140px;z-index:10;overflow:hidden">
+            <button onclick="sMenuEdit()" style="display:block;width:100%;text-align:left;padding:10px 14px;border:0;background:transparent;cursor:pointer;font-family:inherit;font-size:13px;color:var(--text)">✏️ Modifica</button>
+            <button onclick="sMenuDelete()" style="display:block;width:100%;text-align:left;padding:10px 14px;border:0;border-top:1px solid var(--border);background:transparent;cursor:pointer;font-family:inherit;font-size:13px;color:#c04040">🗑️ Elimina</button>
           </div>
         </div>
         <button class="close-btn" onclick="sCloseDetail()">✕</button>
       </div>
-      <div id="s-panel-tags" style="padding:6px 20px 0;display:flex;flex-wrap:wrap;gap:4px"></div>
-      <div style="padding:8px 20px 4px">
-        <div class="detail-tabs" id="s-panel-tabs"></div>
+    </div>
+    <div id="s-panel-tags" style="padding:6px 20px 0;display:flex;flex-wrap:wrap;gap:4px"></div>
+    <div style="padding:8px 20px 4px">
+      <div class="detail-tabs" id="s-panel-tabs"></div>
+    </div>
+    <div class="panel-body" id="s-panel-body"></div>
+  </div>
+</div>
+
+<!-- ── SECTION: CALENDARIO MENSILE ────────────────────────────────── -->
+<div id="sec-mensile" class="section">
+  <div class="app-header">
+    <h1>Calendario 2026 📅</h1>
+    <p>Panoramica mensile · clicca un mese per i dettagli</p>
+  </div>
+  <div class="legend-row">
+    <div class="legend-chip"><div class="legend-dot" style="background:var(--accent)"></div>Attiva</div>
+    <div class="legend-chip"><div class="legend-dot" style="background:#b8a86a"></div>Ridotta</div>
+    <div class="legend-chip"><div class="legend-dot" style="background:var(--warn)"></div>Attenzione</div>
+    <div class="legend-chip"><div class="legend-dot" style="background:#ccc"></div>Riposo</div>
+  </div>
+  <div class="year-bar-section">
+    <div class="year-bar-title">Panoramica annuale</div>
+    <div class="bar-month-labels" id="c-bar-labels"></div>
+    <div id="c-year-bars"></div>
+  </div>
+  <div class="months-grid" id="c-months-grid"></div>
+</div>
+<div class="overlay" id="c-overlay" onclick="cCloseDetail(event)">
+  <div class="panel">
+    <div class="panel-header">
+      <div><div class="panel-title" id="c-panel-title"></div></div>
+      <button class="close-btn" onclick="cCloseOverlay()">✕</button>
+    </div>
+    <div class="panel-body" id="c-panel-body"></div>
+  </div>
+</div>
+
+<!-- ── SECTION: CALENDARIO GIORNI ─────────────────────────────────── -->
+<div id="sec-giorni" class="section">
+  <div class="app-header">
+    <h1>Calendario 📆</h1>
+    <p>Fertilizzazioni · BioBizz · Fertilizzazioni · BioBizz · Trattamenti · Annaffiature · spunta ✓</p>
+  </div>
+  <!-- Filtro tipo visualizzazione -->
+  <div style="display:flex;gap:6px;justify-content:center;max-width:900px;margin:0 auto .8rem;flex-wrap:wrap">
+    <button class="ctrl-btn" id="gf-all"    onclick="gSetFilter('all')"    style="flex:1;max-width:160px">🌱 Tutti</button>
+    <button class="ctrl-btn" id="gf-fert"   onclick="gSetFilter('fert')"   style="flex:1;max-width:160px">📆 Solo fertilizzazioni</button>
+    <button class="ctrl-btn" id="gf-biobizz" onclick="gSetFilter('biobizz')" style="flex:1;max-width:160px">💚 Solo BioBizz</button>
+    <button class="ctrl-btn" id="gf-tratt"   onclick="gSetFilter('tratt')"   style="flex:1;max-width:160px">🛡️ Trattamenti</button>
+    <button class="ctrl-btn" id="gf-acqua"   onclick="gSetFilter('acqua')"   style="flex:1;max-width:160px">💧 Annaffiature</button>
+  </div>
+  <!-- Legenda piante (fertilizzazioni) -->
+  <div id="g-legend-wrap">
+    <div style="font-size:10px;color:var(--muted);text-align:center;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">Fertilizzazioni · piante</div>
+    <div class="g-legend" id="g-legend"></div>
+  </div>
+  <!-- Legenda prodotti BioBizz -->
+  <div id="bb-legend-wrap">
+    <div style="font-size:10px;color:var(--muted);text-align:center;margin:6px 0 4px;text-transform:uppercase;letter-spacing:.4px">BioBizz · prodotti</div>
+    <div class="bb-prod-legend" id="bb-prod-legend"></div>
+  </div>
+  <!-- Legenda trattamenti preventivi -->
+  <div id="tr-legend-wrap">
+    <div style="font-size:10px;color:var(--muted);text-align:center;margin:6px 0 4px;text-transform:uppercase;letter-spacing:.4px">Trattamenti · prodotti</div>
+    <div class="tr-prod-legend" id="tr-prod-legend"></div>
+  </div>
+  <!-- Legenda annaffiature -->
+  <div id="wa-legend-wrap">
+    <div style="font-size:10px;color:var(--muted);text-align:center;margin:6px 0 4px;text-transform:uppercase;letter-spacing:.4px">Annaffiature · piante</div>
+    <div class="wa-legend" id="wa-legend"></div>
+  </div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn" onclick="gChangeMonth(-1)">← Prec.</button>
+    <div class="ctrl-title" id="g-nav-title"></div>
+    <div style="display:flex;gap:6px">
+      <button class="ctrl-btn primary" onclick="gGoToday()">Oggi</button>
+      <button class="ctrl-btn" onclick="gChangeMonth(1)">Succ. →</button>
+    </div>
+  </div>
+  <div class="stats-bar" id="g-stats"></div>
+  <div class="calendar-wrap">
+    <div class="dow-header">
+      <div class="dow-cell">Dom</div><div class="dow-cell">Lun</div><div class="dow-cell">Mar</div>
+      <div class="dow-cell">Mer</div><div class="dow-cell">Gio</div><div class="dow-cell">Ven</div><div class="dow-cell">Sab</div>
+    </div>
+    <div class="days-grid" id="g-days-grid"></div>
+  </div>
+</div>
+<div class="overlay" id="g-overlay" onclick="gCloseOverlay(event)">
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title" id="g-panel-title"></div>
+        <div class="panel-subtitle" id="g-panel-subtitle"></div>
       </div>
-      <div class="panel-body" id="s-panel-body"></div>
+      <button class="close-btn" onclick="gClosePanel()">✕</button>
+    </div>
+    <div class="panel-body" id="g-panel-body"></div>
+  </div>
+</div>
+
+<!-- ── SECTION: DIARIO ────────────────────────────────────────────── -->
+<div id="sec-diario" class="section">
+  <div class="app-header">
+    <h1>Diario del giardino 📓</h1>
+    <p>Tieni traccia di tutte le operazioni sulle tue piante</p>
+    <p id="d-mode-indicator" style="font-size:11px;margin-top:4px">⏳ Connessione al database...</p>
+  </div>
+
+  <!-- Form nuova voce -->
+  <div class="diary-form">
+    <div class="diary-form-title">Aggiungi operazione</div>
+    <div class="form-row">
+      <div class="form-field" style="max-width:160px">
+        <label>Data</label>
+        <input type="date" id="d-date" />
+      </div>
+      <div class="form-field">
+        <label>Pianta</label>
+        <select id="d-plant">
+          <option value="">— Seleziona —</option>
+          <option>Sanseviera</option><option>Orchidea</option><option>Ficus Benjamina</option>
+          <option>Ficus Elastica</option><option>Oleandro</option><option>Glicine Bonsai</option>
+          <option>Limone</option><option>Moneta Cinese</option><option>Vinca</option>
+          <option>Mimosa</option><option>Melograno</option><option>Stella di Natale</option>
+          <option>Aloe Vera</option><option>Liquidambar</option><option>Ippocastano</option>
+          <option>Betulla</option><option>Acero Campestre</option><option>Pitosforo</option>
+          <option>Spino di Giuda</option><option>Gelso Bonsai</option>
+          <option>Tradescantia</option><option>Rosmarino</option><option>Salvia</option>
+          <option>Paulownia</option><option>Crassula Ovata</option><option>Carmona Bonsai</option>
+          <option>Tutte le piante</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Operazione</label>
+        <select id="d-op">
+          <option value="concimazione">💚 Concimazione</option>
+          <option value="annaffiatura">💧 Annaffiatura</option>
+          <option value="potatura">✂️ Potatura</option>
+          <option value="rinvaso">🪴 Rinvaso / Substrato</option>
+          <option value="trattamento">🧪 Trattamento parassiti</option>
+          <option value="osservazione">🔍 Osservazione</option>
+          <option value="altro">📝 Altro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label>Note</label>
+        <textarea id="d-note" placeholder="Es: Concime BioBizz Bio Grow a ½ dose, terreno leggermente umido. Foglie lucide e sane."></textarea>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:4px">
+      <button class="save-btn" onclick="dSaveEntry()">Salva voce</button>
     </div>
   </div>
 
-  <!-- ── SECTION: CALENDARIO MENSILE ────────────────────────────────── -->
-  <div id="sec-mensile" class="section">
-    <div class="app-header">
-      <h1>Calendario 2026 📅</h1>
-      <p>Panoramica mensile · clicca un mese per i dettagli</p>
-    </div>
-    <div class="legend-row">
-      <div class="legend-chip">
-        <div class="legend-dot" style="background:var(--accent)"></div>Attiva
-      </div>
-      <div class="legend-chip">
-        <div class="legend-dot" style="background:#b8a86a"></div>Ridotta
-      </div>
-      <div class="legend-chip">
-        <div class="legend-dot" style="background:var(--warn)"></div>Attenzione
-      </div>
-      <div class="legend-chip">
-        <div class="legend-dot" style="background:#ccc"></div>Riposo
-      </div>
-    </div>
-    <div class="year-bar-section">
-      <div class="year-bar-title">Panoramica annuale</div>
-      <div class="bar-month-labels" id="c-bar-labels"></div>
-      <div id="c-year-bars"></div>
-    </div>
-    <div class="months-grid" id="c-months-grid"></div>
+  <!-- Filtri -->
+  <div class="diary-filters">
+    <select id="d-filter-plant" onchange="dRender()">
+      <option value="">Tutte le piante</option>
+      <option>Sanseviera</option><option>Orchidea</option><option>Ficus Benjamina</option>
+      <option>Ficus Elastica</option><option>Oleandro</option><option>Glicine Bonsai</option>
+      <option>Limone</option><option>Moneta Cinese</option><option>Vinca</option>
+      <option>Mimosa</option><option>Melograno</option><option>Stella di Natale</option>
+      <option>Aloe Vera</option><option>Liquidambar</option><option>Ippocastano</option>
+      <option>Betulla</option><option>Acero Campestre</option><option>Pitosforo</option>
+      <option>Spino di Giuda</option><option>Gelso Bonsai</option>
+      <option>Tradescantia</option><option>Rosmarino</option><option>Salvia</option>
+      <option>Paulownia</option><option>Crassula Ovata</option><option>Carmona Bonsai</option><option>Tutte le piante</option>
+    </select>
+    <select id="d-filter-op" onchange="dRender()">
+      <option value="">Tutte le operazioni</option>
+      <option value="concimazione">💚 Concimazione</option>
+      <option value="annaffiatura">💧 Annaffiatura</option>
+      <option value="potatura">✂️ Potatura</option>
+      <option value="rinvaso">🪴 Rinvaso</option>
+      <option value="trattamento">🧪 Trattamento</option>
+      <option value="osservazione">🔍 Osservazione</option>
+      <option value="altro">📝 Altro</option>
+    </select>
+    <span class="diary-count" id="d-count"></span>
   </div>
-  <div class="overlay" id="c-overlay" onclick="cCloseDetail(event)">
-    <div class="panel">
+
+  <!-- Lista voci -->
+  <div class="diary-list" id="d-list"></div>
+
+  <!-- Edit overlay -->
+  <div class="overlay" id="d-edit-overlay" onclick="if(event.target===this)dCloseEdit()">
+    <div class="panel" style="max-width:460px">
       <div class="panel-header">
-        <div>
-          <div class="panel-title" id="c-panel-title"></div>
-        </div>
-        <button class="close-btn" onclick="cCloseOverlay()">✕</button>
+        <div class="panel-title">Modifica voce</div>
+        <button class="close-btn" onclick="dCloseEdit()">✕</button>
       </div>
-      <div class="panel-body" id="c-panel-body"></div>
-    </div>
-  </div>
-
-  <!-- ── SECTION: CALENDARIO GIORNI ─────────────────────────────────── -->
-  <div id="sec-giorni" class="section">
-    <div class="app-header">
-      <h1>Calendario 📆</h1>
-      <p>Fertilizzazioni · BioBizz · Fertilizzazioni · BioBizz · Trattamenti · Annaffiature · spunta ✓</p>
-    </div>
-    <!-- Filtro tipo visualizzazione -->
-    <div style="display:flex;gap:6px;justify-content:center;max-width:900px;margin:0 auto .8rem;flex-wrap:wrap">
-      <button class="ctrl-btn" id="gf-all" onclick="gSetFilter('all')" style="flex:1;max-width:160px">🌱 Tutti</button>
-      <button class="ctrl-btn" id="gf-fert" onclick="gSetFilter('fert')" style="flex:1;max-width:160px">📆 Solo
-        fertilizzazioni</button>
-      <button class="ctrl-btn" id="gf-biobizz" onclick="gSetFilter('biobizz')" style="flex:1;max-width:160px">💚 Solo
-        BioBizz</button>
-      <button class="ctrl-btn" id="gf-tratt" onclick="gSetFilter('tratt')" style="flex:1;max-width:160px">🛡️
-        Trattamenti</button>
-      <button class="ctrl-btn" id="gf-acqua" onclick="gSetFilter('acqua')" style="flex:1;max-width:160px">💧
-        Annaffiature</button>
-    </div>
-    <!-- Legenda piante (fertilizzazioni) -->
-    <div id="g-legend-wrap">
-      <div
-        style="font-size:10px;color:var(--muted);text-align:center;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">
-        Fertilizzazioni · piante</div>
-      <div class="g-legend" id="g-legend"></div>
-    </div>
-    <!-- Legenda prodotti BioBizz -->
-    <div id="bb-legend-wrap">
-      <div
-        style="font-size:10px;color:var(--muted);text-align:center;margin:6px 0 4px;text-transform:uppercase;letter-spacing:.4px">
-        BioBizz · prodotti</div>
-      <div class="bb-prod-legend" id="bb-prod-legend"></div>
-    </div>
-    <!-- Legenda trattamenti preventivi -->
-    <div id="tr-legend-wrap">
-      <div
-        style="font-size:10px;color:var(--muted);text-align:center;margin:6px 0 4px;text-transform:uppercase;letter-spacing:.4px">
-        Trattamenti · prodotti</div>
-      <div class="tr-prod-legend" id="tr-prod-legend"></div>
-    </div>
-    <!-- Legenda annaffiature -->
-    <div id="wa-legend-wrap">
-      <div
-        style="font-size:10px;color:var(--muted);text-align:center;margin:6px 0 4px;text-transform:uppercase;letter-spacing:.4px">
-        Annaffiature · piante</div>
-      <div class="wa-legend" id="wa-legend"></div>
-    </div>
-    <div class="ctrl-row">
-      <button class="ctrl-btn" onclick="gChangeMonth(-1)">← Prec.</button>
-      <div class="ctrl-title" id="g-nav-title"></div>
-      <div style="display:flex;gap:6px">
-        <button class="ctrl-btn primary" onclick="gGoToday()">Oggi</button>
-        <button class="ctrl-btn" onclick="gChangeMonth(1)">Succ. →</button>
-      </div>
-    </div>
-    <div class="stats-bar" id="g-stats"></div>
-    <div class="calendar-wrap">
-      <div class="dow-header">
-        <div class="dow-cell">Dom</div>
-        <div class="dow-cell">Lun</div>
-        <div class="dow-cell">Mar</div>
-        <div class="dow-cell">Mer</div>
-        <div class="dow-cell">Gio</div>
-        <div class="dow-cell">Ven</div>
-        <div class="dow-cell">Sab</div>
-      </div>
-      <div class="days-grid" id="g-days-grid"></div>
-    </div>
-  </div>
-  <div class="overlay" id="g-overlay" onclick="gCloseOverlay(event)">
-    <div class="panel">
-      <div class="panel-header">
-        <div>
-          <div class="panel-title" id="g-panel-title"></div>
-          <div class="panel-subtitle" id="g-panel-subtitle"></div>
-        </div>
-        <button class="close-btn" onclick="gClosePanel()">✕</button>
-      </div>
-      <div class="panel-body" id="g-panel-body"></div>
-    </div>
-  </div>
-
-  <!-- ── SECTION: DIARIO ────────────────────────────────────────────── -->
-  <div id="sec-diario" class="section">
-    <div class="app-header">
-      <h1>Diario del giardino 📓</h1>
-      <p>Tieni traccia di tutte le operazioni sulle tue piante</p>
-      <p id="d-mode-indicator" style="font-size:11px;margin-top:4px">⏳ Connessione al database...</p>
-    </div>
-
-    <!-- Form nuova voce -->
-    <div class="diary-form">
-      <div class="diary-form-title">Aggiungi operazione</div>
-      <div class="form-row">
-        <div class="form-field" style="max-width:160px">
-          <label>Data</label>
-          <input type="date" id="d-date" />
-        </div>
-        <div class="form-field">
-          <label>Pianta</label>
-          <select id="d-plant">
-            <option value="">— Seleziona —</option>
-            <option>Sanseviera</option>
-            <option>Orchidea</option>
-            <option>Ficus Benjamina</option>
-            <option>Ficus Elastica</option>
-            <option>Oleandro</option>
-            <option>Glicine Bonsai</option>
-            <option>Limone</option>
-            <option>Moneta Cinese</option>
-            <option>Vinca</option>
-            <option>Mimosa</option>
-            <option>Melograno</option>
-            <option>Stella di Natale</option>
-            <option>Aloe Vera</option>
-            <option>Liquidambar</option>
-            <option>Ippocastano</option>
-            <option>Betulla</option>
-            <option>Acero Campestre</option>
-            <option>Pitosforo</option>
-            <option>Spino di Giuda</option>
-            <option>Gelso Bonsai</option>
-            <option>Tradescantia</option>
-            <option>Rosmarino</option>
-            <option>Salvia</option>
-            <option>Paulownia</option>
-            <option>Crassula Ovata</option>
-            <option>Carmona Bonsai</option>
-            <option>Tutte le piante</option>
-          </select>
-        </div>
-        <div class="form-field">
-          <label>Operazione</label>
-          <select id="d-op">
-            <option value="concimazione">💚 Concimazione</option>
-            <option value="annaffiatura">💧 Annaffiatura</option>
-            <option value="potatura">✂️ Potatura</option>
-            <option value="rinvaso">🪴 Rinvaso / Substrato</option>
-            <option value="trattamento">🧪 Trattamento parassiti</option>
-            <option value="osservazione">🔍 Osservazione</option>
-            <option value="altro">📝 Altro</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-field">
-          <label>Note</label>
-          <textarea id="d-note"
-            placeholder="Es: Concime BioBizz Bio Grow a ½ dose, terreno leggermente umido. Foglie lucide e sane."></textarea>
-        </div>
-      </div>
-      <div style="display:flex;justify-content:flex-end;margin-top:4px">
-        <button class="save-btn" onclick="dSaveEntry()">Salva voce</button>
-      </div>
-    </div>
-
-    <!-- Filtri -->
-    <div class="diary-filters">
-      <select id="d-filter-plant" onchange="dRender()">
-        <option value="">Tutte le piante</option>
-        <option>Sanseviera</option>
-        <option>Orchidea</option>
-        <option>Ficus Benjamina</option>
-        <option>Ficus Elastica</option>
-        <option>Oleandro</option>
-        <option>Glicine Bonsai</option>
-        <option>Limone</option>
-        <option>Moneta Cinese</option>
-        <option>Vinca</option>
-        <option>Mimosa</option>
-        <option>Melograno</option>
-        <option>Stella di Natale</option>
-        <option>Aloe Vera</option>
-        <option>Liquidambar</option>
-        <option>Ippocastano</option>
-        <option>Betulla</option>
-        <option>Acero Campestre</option>
-        <option>Pitosforo</option>
-        <option>Spino di Giuda</option>
-        <option>Gelso Bonsai</option>
-        <option>Tradescantia</option>
-        <option>Rosmarino</option>
-        <option>Salvia</option>
-        <option>Paulownia</option>
-        <option>Crassula Ovata</option>
-        <option>Carmona Bonsai</option>
-        <option>Tutte le piante</option>
-      </select>
-      <select id="d-filter-op" onchange="dRender()">
-        <option value="">Tutte le operazioni</option>
-        <option value="concimazione">💚 Concimazione</option>
-        <option value="annaffiatura">💧 Annaffiatura</option>
-        <option value="potatura">✂️ Potatura</option>
-        <option value="rinvaso">🪴 Rinvaso</option>
-        <option value="trattamento">🧪 Trattamento</option>
-        <option value="osservazione">🔍 Osservazione</option>
-        <option value="altro">📝 Altro</option>
-      </select>
-      <span class="diary-count" id="d-count"></span>
-    </div>
-
-    <!-- Lista voci -->
-    <div class="diary-list" id="d-list"></div>
-
-    <!-- Edit overlay -->
-    <div class="overlay" id="d-edit-overlay" onclick="if(event.target===this)dCloseEdit()">
-      <div class="panel" style="max-width:460px">
-        <div class="panel-header">
-          <div class="panel-title">Modifica voce</div>
-          <button class="close-btn" onclick="dCloseEdit()">✕</button>
-        </div>
-        <div class="panel-body">
-          <input type="hidden" id="de-id" />
-          <div class="form-row">
-            <div class="form-field" style="max-width:160px">
-              <label>Data</label>
-              <input type="date" id="de-date" />
-            </div>
-            <div class="form-field">
-              <label>Pianta</label>
-              <select id="de-plant">
-                <option value="">— Seleziona —</option>
-                <option>Sanseviera</option>
-                <option>Orchidea</option>
-                <option>Ficus Benjamina</option>
-                <option>Ficus Elastica</option>
-                <option>Oleandro</option>
-                <option>Glicine Bonsai</option>
-                <option>Limone</option>
-                <option>Moneta Cinese</option>
-                <option>Vinca</option>
-                <option>Mimosa</option>
-                <option>Melograno</option>
-                <option>Stella di Natale</option>
-                <option>Aloe Vera</option>
-                <option>Liquidambar</option>
-                <option>Ippocastano</option>
-                <option>Betulla</option>
-                <option>Acero Campestre</option>
-                <option>Pitosforo</option>
-                <option>Spino di Giuda</option>
-                <option>Gelso Bonsai</option>
-                <option>Tradescantia</option>
-                <option>Rosmarino</option>
-                <option>Salvia</option>
-                <option>Paulownia</option>
-                <option>Crassula Ovata</option>
-                <option>Carmona Bonsai</option>
-                <option>Tutte le piante</option>
-              </select>
-            </div>
+      <div class="panel-body">
+        <input type="hidden" id="de-id" />
+        <div class="form-row">
+          <div class="form-field" style="max-width:160px">
+            <label>Data</label>
+            <input type="date" id="de-date" />
           </div>
-          <div class="form-row">
-            <div class="form-field">
-              <label>Operazione</label>
-              <select id="de-op">
-                <option value="concimazione">💚 Concimazione</option>
-                <option value="annaffiatura">💧 Annaffiatura</option>
-                <option value="potatura">✂️ Potatura</option>
-                <option value="rinvaso">🪴 Rinvaso / Substrato</option>
-                <option value="trattamento">🧪 Trattamento parassiti</option>
-                <option value="osservazione">🔍 Osservazione</option>
-                <option value="altro">📝 Altro</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-field">
-              <label>Note</label>
-              <textarea id="de-note" rows="4" style="min-height:80px"></textarea>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
-            <button class="ctrl-btn" onclick="dCloseEdit()">Annulla</button>
-            <button class="save-btn" id="de-save-btn" onclick="dSaveEdit()">Salva modifiche</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── SECTION: CALCOLATORE ACQUA ─────────────────────────────── -->
-  <div id="sec-acqua" class="section">
-    <div class="app-header">
-      <h1>Calcolatore Acqua 💧</h1>
-      <p>Quantità d'acqua ottimale in base al vaso e al substrato</p>
-    </div>
-
-    <!-- Volume vaso -->
-    <div class="calc-card">
-      <div class="calc-card-title">📦 Volume del vaso</div>
-      <div class="vol-toggle">
-        <button class="vol-toggle-btn active" id="v-btn-dim" onclick="wToggleVol('dim')">Da dimensioni</button>
-        <button class="vol-toggle-btn" id="v-btn-lit" onclick="wToggleVol('lit')">Litri diretti</button>
-      </div>
-      <!-- Da dimensioni -->
-      <div id="v-dim">
-        <div class="calc-row">
-          <div class="calc-field">
-            <label>Forma</label>
-            <select id="w-shape" onchange="wCalcVol()">
-              <option value="cylinder">Cilindrico / Rotondo</option>
-              <option value="square">Quadrato / Rettangolare</option>
-              <option value="truncated">Troncoconico (più largo in alto)</option>
+          <div class="form-field">
+            <label>Pianta</label>
+            <select id="de-plant">
+              <option value="">— Seleziona —</option>
+              <option>Sanseviera</option><option>Orchidea</option><option>Ficus Benjamina</option>
+              <option>Ficus Elastica</option><option>Oleandro</option><option>Glicine Bonsai</option>
+              <option>Limone</option><option>Moneta Cinese</option><option>Vinca</option>
+              <option>Mimosa</option><option>Melograno</option><option>Stella di Natale</option>
+              <option>Aloe Vera</option><option>Liquidambar</option><option>Ippocastano</option>
+              <option>Betulla</option><option>Acero Campestre</option><option>Pitosforo</option>
+              <option>Spino di Giuda</option><option>Gelso Bonsai</option>
+              <option>Tradescantia</option><option>Rosmarino</option><option>Salvia</option>
+              <option>Paulownia</option><option>Crassula Ovata</option><option>Carmona Bonsai</option>
+              <option>Tutte le piante</option>
             </select>
           </div>
         </div>
-        <div class="calc-row" style="margin-top:8px" id="v-cylinder">
-          <div class="calc-field"><label>Diametro sup. (cm)</label><input type="number" id="w-diam-top" value="25"
-              min="1" oninput="wCalcVol()"></div>
-          <div class="calc-field" id="v-diam-bot-wrap" style="display:none"><label>Diametro inf. (cm)</label><input
-              type="number" id="w-diam-bot" value="18" min="1" oninput="wCalcVol()"></div>
-          <div class="calc-field"><label>Altezza (cm)</label><input type="number" id="w-height" value="22" min="1"
-              oninput="wCalcVol()"></div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Operazione</label>
+            <select id="de-op">
+              <option value="concimazione">💚 Concimazione</option>
+              <option value="annaffiatura">💧 Annaffiatura</option>
+              <option value="potatura">✂️ Potatura</option>
+              <option value="rinvaso">🪴 Rinvaso / Substrato</option>
+              <option value="trattamento">🧪 Trattamento parassiti</option>
+              <option value="osservazione">🔍 Osservazione</option>
+              <option value="altro">📝 Altro</option>
+            </select>
+          </div>
         </div>
-        <div class="calc-row" style="margin-top:8px;display:none" id="v-square">
-          <div class="calc-field"><label>Larghezza (cm)</label><input type="number" id="w-width" value="25" min="1"
-              oninput="wCalcVol()"></div>
-          <div class="calc-field"><label>Profondità (cm)</label><input type="number" id="w-depth" value="25" min="1"
-              oninput="wCalcVol()"></div>
-          <div class="calc-field"><label>Altezza (cm)</label><input type="number" id="w-height-sq" value="22" min="1"
-              oninput="wCalcVol()"></div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Note</label>
+            <textarea id="de-note" rows="4" style="min-height:80px"></textarea>
+          </div>
         </div>
-        <div style="margin-top:8px;font-size:12px;color:var(--muted)">Volume stimato: <strong id="w-vol-preview"
-            style="color:var(--accent)">—</strong></div>
-      </div>
-      <!-- Litri diretti -->
-      <div id="v-lit" style="display:none">
-        <div class="calc-field" style="max-width:180px">
-          <label>Volume in litri</label>
-          <input type="number" id="w-liters-direct" value="5" min="0.1" step="0.5" oninput="wCalcVol()">
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+          <button class="ctrl-btn" onclick="dCloseEdit()">Annulla</button>
+          <button class="save-btn" id="de-save-btn" onclick="dSaveEdit()">Salva modifiche</button>
         </div>
       </div>
     </div>
+  </div>
+</div>
 
-    <!-- Composizione substrato -->
-    <div class="calc-card">
-      <div class="calc-card-title">🪨 Composizione substrato</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Scegli un preset o regola gli slider manualmente
-      </div>
-      <div class="preset-row" id="w-presets"></div>
-      <div class="substrate-grid" id="w-substrate-grid"></div>
-      <div class="sub-total" id="w-sub-total">Totale: 0%</div>
+<!-- ── SECTION: CALCOLATORE ACQUA ─────────────────────────────── -->
+<div id="sec-acqua" class="section">
+  <div class="app-header">
+    <h1>Calcolatore Acqua 💧</h1>
+    <p>Quantità d'acqua ottimale in base al vaso e al substrato</p>
+  </div>
+
+  <!-- Volume vaso -->
+  <div class="calc-card">
+    <div class="calc-card-title">📦 Volume del vaso</div>
+    <div class="vol-toggle">
+      <button class="vol-toggle-btn active" id="v-btn-dim" onclick="wToggleVol('dim')">Da dimensioni</button>
+      <button class="vol-toggle-btn" id="v-btn-lit" onclick="wToggleVol('lit')">Litri diretti</button>
     </div>
-
-    <!-- Fattori aggiuntivi -->
-    <div class="calc-card">
-      <div class="calc-card-title">⚙️ Fattori aggiuntivi</div>
+    <!-- Da dimensioni -->
+    <div id="v-dim">
       <div class="calc-row">
         <div class="calc-field">
-          <label>Materiale vaso</label>
-          <select id="w-pot-mat">
-            <option value="1.0">Plastica / Ceramica smaltata</option>
-            <option value="0.88">Terracotta (assorbe acqua)</option>
-            <option value="0.82">Terracotta non smaltata spessa</option>
-            <option value="1.05">Vaso con sottovaso / senza drenaggio</option>
-          </select>
-        </div>
-        <div class="calc-field">
-          <label>Stagione / Temperatura</label>
-          <select id="w-season">
-            <option value="1.0">Estate (>25°C)</option>
-            <option value="0.75" selected>Primavera / Autunno</option>
-            <option value="0.45">Inverno (<15°C)< /option>
-          </select>
-        </div>
-        <div class="calc-field">
-          <label>Categoria pianta</label>
-          <select id="w-plant-cat">
-            <option value="0.55">Succulente / Cactus / Aloe</option>
-            <option value="0.75">Mediterranee (Oleandro, Limone…)</option>
-            <option value="0.85">Piante da fiore / Arbusti</option>
-            <option value="1.0" selected>Universale / Foglie verdi</option>
-            <option value="1.15">Tropicali / Alta umidità</option>
-            <option value="0.65">Bonsai</option>
+          <label>Forma</label>
+          <select id="w-shape" onchange="wCalcVol()">
+            <option value="cylinder">Cilindrico / Rotondo</option>
+            <option value="square">Quadrato / Rettangolare</option>
+            <option value="truncated">Troncoconico (più largo in alto)</option>
           </select>
         </div>
       </div>
-      <div class="calc-row" style="margin-top:8px">
-        <div class="calc-field">
-          <label>Esposizione / Ventilazione</label>
-          <select id="w-exposure" onchange="wCheckET0Override()">
-            <option value="0.85">Interno ombreggiato</option>
-            <option value="1.0" selected>Interno luminoso / Balcone</option>
-            <option value="1.2">Esterno soleggiato</option>
-            <option value="1.35">Esterno sole pieno + vento</option>
-          </select>
-        </div>
-        <div class="calc-field">
-          <label>Stadio della pianta</label>
-          <select id="w-stage">
-            <option value="0.7">Riposo / Inverno</option>
-            <option value="0.9">Crescita lenta</option>
-            <option value="1.0" selected>Crescita attiva</option>
-            <option value="1.15">Fioritura / Fruttificazione</option>
-          </select>
-        </div>
+      <div class="calc-row" style="margin-top:8px" id="v-cylinder">
+        <div class="calc-field"><label>Diametro sup. (cm)</label><input type="number" id="w-diam-top" value="25" min="1" oninput="wCalcVol()"></div>
+        <div class="calc-field" id="v-diam-bot-wrap" style="display:none"><label>Diametro inf. (cm)</label><input type="number" id="w-diam-bot" value="18" min="1" oninput="wCalcVol()"></div>
+        <div class="calc-field"><label>Altezza (cm)</label><input type="number" id="w-height" value="22" min="1" oninput="wCalcVol()"></div>
       </div>
+      <div class="calc-row" style="margin-top:8px;display:none" id="v-square">
+        <div class="calc-field"><label>Larghezza (cm)</label><input type="number" id="w-width" value="25" min="1" oninput="wCalcVol()"></div>
+        <div class="calc-field"><label>Profondità (cm)</label><input type="number" id="w-depth" value="25" min="1" oninput="wCalcVol()"></div>
+        <div class="calc-field"><label>Altezza (cm)</label><input type="number" id="w-height-sq" value="22" min="1" oninput="wCalcVol()"></div>
+      </div>
+      <div style="margin-top:8px;font-size:12px;color:var(--muted)">Volume stimato: <strong id="w-vol-preview" style="color:var(--accent)">—</strong></div>
+    </div>
+    <!-- Litri diretti -->
+    <div id="v-lit" style="display:none">
+      <div class="calc-field" style="max-width:180px">
+        <label>Volume in litri</label>
+        <input type="number" id="w-liters-direct" value="5" min="0.1" step="0.5" oninput="wCalcVol()">
+      </div>
+    </div>
+  </div>
 
-      <!-- Toggle ET₀ Live -->
-      <div id="w-et0-toggle"
-        style="margin-top:12px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:10px;cursor:pointer"
-        onclick="wToggleET0()">
-        <div
-          style="width:40px;height:22px;border-radius:11px;background:var(--border);position:relative;transition:background .2s;flex-shrink:0"
-          id="w-et0-switch">
-          <div
-            style="width:18px;height:18px;border-radius:9px;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)"
-            id="w-et0-knob"></div>
-        </div>
-        <div>
-          <div style="font-size:12px;font-weight:600;color:var(--text)">🌤️ Usa dati meteo live (ET₀)</div>
-          <div style="font-size:10px;color:var(--muted)">Sostituisce i fattori stagione ed esposizione con
-            l'evapotraspirazione reale dalla stazione Ecowitt</div>
-        </div>
-      </div>
+  <!-- Composizione substrato -->
+  <div class="calc-card">
+    <div class="calc-card-title">🪨 Composizione substrato</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Scegli un preset o regola gli slider manualmente</div>
+    <div class="preset-row" id="w-presets"></div>
+    <div class="substrate-grid" id="w-substrate-grid"></div>
+    <div class="sub-total" id="w-sub-total">Totale: 0%</div>
+  </div>
 
-      <!-- Pannello ET₀ (nascosto finché non attivato) -->
-      <div id="w-et0-panel"
-        style="display:none;margin-top:8px;padding:12px 14px;border-radius:10px;border:1px solid #b0c8e8;background:#edf5ff">
-        <div id="w-et0-loading" style="text-align:center;color:var(--muted);font-size:11px;padding:8px">⏳ Caricamento
-          dati meteo...</div>
-        <div id="w-et0-data" style="display:none">
-          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-            <div style="font-size:11px;color:#2a5a8a"><span style="font-weight:600">🌡️</span> <span
-                id="w-et0-temp">--</span>°C</div>
-            <div style="font-size:11px;color:#2a5a8a"><span style="font-weight:600">💧</span> <span
-                id="w-et0-hum">--</span>%</div>
-            <div style="font-size:11px;color:#2a5a8a"><span style="font-weight:600">☀️</span> <span
-                id="w-et0-solar">--</span> W/m²</div>
-            <div style="font-size:11px;color:#2a5a8a"><span style="font-weight:600">💨</span> <span
-                id="w-et0-wind">--</span> km/h</div>
-          </div>
-          <div style="display:flex;align-items:baseline;gap:8px">
-            <div style="font-size:10px;color:#2a5a8a;text-transform:uppercase;letter-spacing:.4px">ET₀ giornaliera</div>
-            <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:600;color:#2a5a8a"
-              id="w-et0-value">--</div>
-            <div style="font-size:11px;color:#5a7a9a">mm/giorno</div>
-            <div style="flex:1"></div>
-            <div style="font-size:11px;font-weight:600;color:#2d7a3a" id="w-et0-factor">Fattore: --</div>
-          </div>
-          <div style="font-size:10px;color:#5a7a9a;margin-top:4px" id="w-et0-desc"></div>
-        </div>
+  <!-- Fattori aggiuntivi -->
+  <div class="calc-card">
+    <div class="calc-card-title">⚙️ Fattori aggiuntivi</div>
+    <div class="calc-row">
+      <div class="calc-field">
+        <label>Materiale vaso</label>
+        <select id="w-pot-mat">
+          <option value="1.0">Plastica / Ceramica smaltata</option>
+          <option value="0.88">Terracotta (assorbe acqua)</option>
+          <option value="0.82">Terracotta non smaltata spessa</option>
+          <option value="1.05">Vaso con sottovaso / senza drenaggio</option>
+        </select>
       </div>
-
-      <button class="calc-btn" onclick="wCalculate()">Calcola acqua necessaria</button>
+      <div class="calc-field">
+        <label>Stagione / Temperatura</label>
+        <select id="w-season">
+          <option value="1.0">Estate (>25°C)</option>
+          <option value="0.75" selected>Primavera / Autunno</option>
+          <option value="0.45">Inverno (<15°C)</option>
+        </select>
+      </div>
+      <div class="calc-field">
+        <label>Categoria pianta</label>
+        <select id="w-plant-cat">
+          <option value="0.55">Succulente / Cactus / Aloe</option>
+          <option value="0.75">Mediterranee (Oleandro, Limone…)</option>
+          <option value="0.85">Piante da fiore / Arbusti</option>
+          <option value="1.0" selected>Universale / Foglie verdi</option>
+          <option value="1.15">Tropicali / Alta umidità</option>
+          <option value="0.65">Bonsai</option>
+        </select>
+      </div>
+    </div>
+    <div class="calc-row" style="margin-top:8px">
+      <div class="calc-field">
+        <label>Esposizione / Ventilazione</label>
+        <select id="w-exposure" onchange="wCheckET0Override()">
+          <option value="0.85">Interno ombreggiato</option>
+          <option value="1.0" selected>Interno luminoso / Balcone</option>
+          <option value="1.2">Esterno soleggiato</option>
+          <option value="1.35">Esterno sole pieno + vento</option>
+        </select>
+      </div>
+      <div class="calc-field">
+        <label>Stadio della pianta</label>
+        <select id="w-stage">
+          <option value="0.7">Riposo / Inverno</option>
+          <option value="0.9">Crescita lenta</option>
+          <option value="1.0" selected>Crescita attiva</option>
+          <option value="1.15">Fioritura / Fruttificazione</option>
+        </select>
+      </div>
     </div>
 
-    <!-- Risultato -->
-    <div class="result-card" id="w-result">
-      <div class="result-main">
-        <span class="result-qty" id="r-qty">—</span>
-        <span class="result-unit">ml</span>
+    <!-- Toggle ET₀ Live -->
+    <div id="w-et0-toggle" style="margin-top:12px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:10px;cursor:pointer" onclick="wToggleET0()">
+      <div style="width:40px;height:22px;border-radius:11px;background:var(--border);position:relative;transition:background .2s;flex-shrink:0" id="w-et0-switch">
+        <div style="width:18px;height:18px;border-radius:9px;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)" id="w-et0-knob"></div>
       </div>
-      <div class="result-label" id="r-label">per ogni annaffiatura</div>
-      <div class="result-grid">
-        <div class="result-item">
-          <div class="result-item-label">Volume vaso</div>
-          <div class="result-item-val" id="r-vol">—</div>
-        </div>
-        <div class="result-item">
-          <div class="result-item-label">Ritenzione substrato</div>
-          <div class="result-item-val" id="r-ret">—</div>
-        </div>
-        <div class="result-item">
-          <div class="result-item-label">Frequenza stimata</div>
-          <div class="result-item-val" id="r-freq">—</div>
-        </div>
-        <div class="result-item">
-          <div class="result-item-label">Capacità idrica</div>
-          <div class="result-item-val" id="r-cap">—</div>
-        </div>
-        <div class="result-item" id="r-et0-item" style="display:none;border-color:#b0c8e8">
-          <div class="result-item-label">ET₀ live</div>
-          <div class="result-item-val" id="r-et0">—</div>
-        </div>
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--text)">🌤️ Usa dati meteo live (ET₀)</div>
+        <div style="font-size:10px;color:var(--muted)">Sostituisce i fattori stagione ed esposizione con l'evapotraspirazione reale dalla stazione Ecowitt</div>
       </div>
-      <div class="result-tips" id="r-tips"></div>
     </div>
 
-    <!-- ─────────────────────────────────────────────────────────
+    <!-- Pannello ET₀ (nascosto finché non attivato) -->
+    <div id="w-et0-panel" style="display:none;margin-top:8px;padding:12px 14px;border-radius:10px;border:1px solid #b0c8e8;background:#edf5ff">
+      <div id="w-et0-loading" style="text-align:center;color:var(--muted);font-size:11px;padding:8px">⏳ Caricamento dati meteo...</div>
+      <div id="w-et0-data" style="display:none">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+          <div style="font-size:11px;color:#2a5a8a"><span style="font-weight:600">🌡️</span> <span id="w-et0-temp">--</span>°C</div>
+          <div style="font-size:11px;color:#2a5a8a"><span style="font-weight:600">💧</span> <span id="w-et0-hum">--</span>%</div>
+          <div style="font-size:11px;color:#2a5a8a"><span style="font-weight:600">☀️</span> <span id="w-et0-solar">--</span> W/m²</div>
+          <div style="font-size:11px;color:#2a5a8a"><span style="font-weight:600">💨</span> <span id="w-et0-wind">--</span> km/h</div>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <div style="font-size:10px;color:#2a5a8a;text-transform:uppercase;letter-spacing:.4px">ET₀ giornaliera</div>
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:600;color:#2a5a8a" id="w-et0-value">--</div>
+          <div style="font-size:11px;color:#5a7a9a">mm/giorno</div>
+          <div style="flex:1"></div>
+          <div style="font-size:11px;font-weight:600;color:#2d7a3a" id="w-et0-factor">Fattore: --</div>
+        </div>
+        <div style="font-size:10px;color:#5a7a9a;margin-top:4px" id="w-et0-desc"></div>
+      </div>
+    </div>
+
+    <button class="calc-btn" onclick="wCalculate()">Calcola acqua necessaria</button>
+  </div>
+
+  <!-- Risultato -->
+  <div class="result-card" id="w-result">
+    <div class="result-main">
+      <span class="result-qty" id="r-qty">—</span>
+      <span class="result-unit">ml</span>
+    </div>
+    <div class="result-label" id="r-label">per ogni annaffiatura</div>
+    <div class="result-grid">
+      <div class="result-item"><div class="result-item-label">Volume vaso</div><div class="result-item-val" id="r-vol">—</div></div>
+      <div class="result-item"><div class="result-item-label">Ritenzione substrato</div><div class="result-item-val" id="r-ret">—</div></div>
+      <div class="result-item"><div class="result-item-label">Frequenza stimata</div><div class="result-item-val" id="r-freq">—</div></div>
+      <div class="result-item"><div class="result-item-label">Capacità idrica</div><div class="result-item-val" id="r-cap">—</div></div>
+      <div class="result-item" id="r-et0-item" style="display:none;border-color:#b0c8e8"><div class="result-item-label">ET₀ live</div><div class="result-item-val" id="r-et0">—</div></div>
+    </div>
+    <div class="result-tips" id="r-tips"></div>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────────────
        CALCOLATORE FERTILIZZANTE
   ───────────────────────────────────────────────────────── -->
-    <div class="app-header" style="margin-top:1.5rem">
-      <h1 style="font-size:clamp(18px,4vw,26px)">Calcolatore Fertilizzante 💚</h1>
-      <p>Quantità di concime in base alla dose del produttore e all'acqua usata</p>
-    </div>
+  <div class="app-header" style="margin-top:1.5rem">
+    <h1 style="font-size:clamp(18px,4vw,26px)">Calcolatore Fertilizzante 💚</h1>
+    <p>Quantità di concime in base alla dose del produttore e all'acqua usata</p>
+  </div>
 
-    <div class="calc-card">
-      <div class="calc-card-title">📋 Dose consigliata dal produttore</div>
-      <div class="calc-row">
-        <div class="calc-field" style="flex:0 0 140px">
-          <label>Quantità</label>
-          <input type="number" id="f-dose" value="5" min="0" step="0.1" oninput="fCalculate()">
-        </div>
-        <div class="calc-field">
-          <label>Unità di misura</label>
-          <select id="f-unit" onchange="fCalculate()">
-            <option value="ml_l">ml per litro (ml/L)</option>
-            <option value="g_l">grammi per litro (g/L)</option>
-            <option value="ml_10l">ml per 10 litri (ml/10L)</option>
-            <option value="g_10l">grammi per 10 litri (g/10L)</option>
-            <option value="ml_100l">ml per 100 litri (ml/100L)</option>
-            <option value="g_100l">grammi per 100 litri (g/100L)</option>
-            <option value="pct">percentuale (%)</option>
-            <option value="tsp_l">cucchiaini per litro (≈5 ml)</option>
-            <option value="tbsp_l">cucchiai per litro (≈15 ml)</option>
-          </select>
-        </div>
+  <div class="calc-card">
+    <div class="calc-card-title">📋 Dose consigliata dal produttore</div>
+    <div class="calc-row">
+      <div class="calc-field" style="flex:0 0 140px">
+        <label>Quantità</label>
+        <input type="number" id="f-dose" value="5" min="0" step="0.1" oninput="fCalculate()">
       </div>
-    </div>
-
-    <div class="calc-card">
-      <div class="calc-card-title">💧 Acqua utilizzata</div>
-      <div class="calc-row">
-        <div class="calc-field" style="flex:0 0 140px">
-          <label>Litri di acqua</label>
-          <input type="number" id="f-water" value="1" min="0.05" step="0.1" oninput="fCalculate()">
-        </div>
-        <div class="calc-field">
-          <label>Scorciatoie</label>
-          <div style="display:flex;flex-wrap:wrap;gap:4px">
-            <button class="ctrl-btn" onclick="fSetWater(0.25)" style="padding:6px 10px;font-size:11px">250 ml</button>
-            <button class="ctrl-btn" onclick="fSetWater(0.5)" style="padding:6px 10px;font-size:11px">500 ml</button>
-            <button class="ctrl-btn" onclick="fSetWater(1)" style="padding:6px 10px;font-size:11px">1 L</button>
-            <button class="ctrl-btn" onclick="fSetWater(2)" style="padding:6px 10px;font-size:11px">2 L</button>
-            <button class="ctrl-btn" onclick="fSetWater(5)" style="padding:6px 10px;font-size:11px">5 L</button>
-            <button class="ctrl-btn" onclick="fUseWaterFromCalc()"
-              style="padding:6px 10px;font-size:11px;background:var(--accent-light);border-color:var(--accent);color:var(--accent)">↑
-              Dal calcolatore acqua</button>
-          </div>
-        </div>
+      <div class="calc-field">
+        <label>Unità di misura</label>
+        <select id="f-unit" onchange="fCalculate()">
+          <option value="ml_l">ml per litro (ml/L)</option>
+          <option value="g_l">grammi per litro (g/L)</option>
+          <option value="ml_10l">ml per 10 litri (ml/10L)</option>
+          <option value="g_10l">grammi per 10 litri (g/10L)</option>
+          <option value="ml_100l">ml per 100 litri (ml/100L)</option>
+          <option value="g_100l">grammi per 100 litri (g/100L)</option>
+          <option value="pct">percentuale (%)</option>
+          <option value="tsp_l">cucchiaini per litro (≈5 ml)</option>
+          <option value="tbsp_l">cucchiai per litro (≈15 ml)</option>
+        </select>
       </div>
-    </div>
-
-    <div class="calc-card">
-      <div class="calc-card-title">⚖️ Riduzione dose</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Molte piante richiedono dose ridotta rispetto a
-        quella del produttore (orchidee, succulente, piante delicate)</div>
-      <div class="vol-toggle">
-        <button class="vol-toggle-btn" id="f-dose-100" onclick="fSetDoseFactor(1)">Piena</button>
-        <button class="vol-toggle-btn active" id="f-dose-75" onclick="fSetDoseFactor(0.75)">¾ (75%)</button>
-        <button class="vol-toggle-btn" id="f-dose-50" onclick="fSetDoseFactor(0.5)">½ (50%)</button>
-        <button class="vol-toggle-btn" id="f-dose-25" onclick="fSetDoseFactor(0.25)">¼ (25%)</button>
-      </div>
-    </div>
-
-    <!-- Risultato fertilizzante -->
-    <div class="result-card" id="f-result" style="background:#eaf5ed;border-color:#b8d8c0">
-      <div class="result-main">
-        <span class="result-qty" id="fr-qty" style="color:#2d7a3a">—</span>
-        <span class="result-unit" id="fr-unit" style="color:#2d7a3a">ml</span>
-      </div>
-      <div class="result-label" id="fr-label" style="color:#2d6a3a">di concime da aggiungere</div>
-      <div class="result-grid">
-        <div class="result-item" style="border-color:#b8d8c0">
-          <div class="result-item-label">Dose produttore</div>
-          <div class="result-item-val" id="fr-prod">—</div>
-        </div>
-        <div class="result-item" style="border-color:#b8d8c0">
-          <div class="result-item-label">Dose applicata</div>
-          <div class="result-item-val" id="fr-applied">—</div>
-        </div>
-        <div class="result-item" style="border-color:#b8d8c0">
-          <div class="result-item-label">Acqua</div>
-          <div class="result-item-val" id="fr-water">—</div>
-        </div>
-        <div class="result-item" style="border-color:#b8d8c0">
-          <div class="result-item-label">Concentrazione finale</div>
-          <div class="result-item-val" id="fr-conc">—</div>
-        </div>
-      </div>
-      <div class="result-tips" id="fr-tips" style="color:#2d6a3a;border-top-color:#b8d8c0"></div>
-    </div>
-
-    <!-- ─────────────────────────────────────────────────────────
-       CALCOLATORE FERTIRRIGAZIONE
-  ───────────────────────────────────────────────────────── -->
-    <div class="app-header" style="margin-top:1.5rem">
-      <h1 style="font-size:clamp(18px,4vw,26px)">Fertirrigazione 🧪💧</h1>
-      <p>Prepara una soluzione unica ottimizzata per più piante</p>
-    </div>
-
-    <div class="calc-card">
-      <div class="calc-card-title">💚 Prodotto da utilizzare</div>
-      <div class="calc-row">
-        <div class="calc-field">
-          <label>Seleziona prodotto</label>
-          <select id="fi-product" onchange="fiUpdate()">
-            <option value="grow" data-dose="2" data-unit="ml/L">Bio·Grow (2 ml/L)</option>
-            <option value="bloom" data-dose="2" data-unit="ml/L">Bio·Bloom (2 ml/L)</option>
-            <option value="topmax" data-dose="1" data-unit="ml/L">Top·Max (1 ml/L)</option>
-            <option value="alg" data-dose="1" data-unit="ml/L">Alg·A·Mic (1 ml/L)</option>
-            <option value="fish" data-dose="2" data-unit="ml/L">Fish·Mix (2 ml/L)</option>
-            <option value="calmag" data-dose="1" data-unit="ml/L">CalMag (1 ml/L)</option>
-            <option value="root" data-dose="1" data-unit="ml/L">Root·Juice (1 ml/L)</option>
-            <option value="custom" data-dose="0" data-unit="ml/L">— Altro prodotto —</option>
-          </select>
-        </div>
-      </div>
-      <div id="fi-custom-dose" style="display:none;margin-top:8px">
-        <div class="calc-row">
-          <div class="calc-field" style="max-width:120px">
-            <label>Dose etichetta</label>
-            <input type="number" id="fi-custom-val" value="5" min="0" step="0.1" oninput="fiUpdate()">
-          </div>
-          <div class="calc-field" style="max-width:140px">
-            <label>Unità</label>
-            <select id="fi-custom-unit" onchange="fiUpdate()">
-              <option value="ml/L">ml/L</option>
-              <option value="g/L">g/L</option>
-            </select>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="calc-card">
-      <div class="calc-card-title">🌿 Piante da fertirrigare</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Seleziona le piante e regola la dose e l'acqua
-        per ciascuna</div>
-      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
-        <button class="ctrl-btn" onclick="fiSelectAll()" style="font-size:11px;padding:5px 10px">✅ Tutte</button>
-        <button class="ctrl-btn" onclick="fiSelectNone()" style="font-size:11px;padding:5px 10px">❌ Nessuna</button>
-        <button class="ctrl-btn" onclick="fiSelectIndoor()" style="font-size:11px;padding:5px 10px">🏠 Interne</button>
-        <button class="ctrl-btn" onclick="fiSelectOutdoor()" style="font-size:11px;padding:5px 10px">☀️ Esterne</button>
-      </div>
-      <div id="fi-plant-list" style="display:flex;flex-direction:column;gap:4px"></div>
-    </div>
-
-    <!-- Risultato fertirrigazione -->
-    <div class="result-card" id="fi-result" style="background:#edf5ff;border-color:#b0c8e8;display:none">
-      <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px">
-        <div>
-          <div style="font-size:10px;color:#2a5a8a;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Acqua
-            totale</div>
-          <div style="display:flex;align-items:baseline;gap:4px">
-            <span class="result-qty" id="fi-total-water" style="color:#2a5a8a;font-size:36px">—</span>
-            <span class="result-unit" style="color:#2a5a8a">L</span>
-          </div>
-        </div>
-        <div style="font-size:28px;color:#b0c8e8">+</div>
-        <div>
-          <div style="font-size:10px;color:#2d7a3a;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">
-            Fertilizzante</div>
-          <div style="display:flex;align-items:baseline;gap:4px">
-            <span class="result-qty" id="fi-total-fert" style="color:#2d7a3a;font-size:36px">—</span>
-            <span class="result-unit" id="fi-total-fert-unit" style="color:#2d7a3a">ml</span>
-          </div>
-        </div>
-      </div>
-      <div class="result-label" id="fi-summary" style="color:#2a5a8a">Prepara la soluzione nel contenitore</div>
-
-      <div class="result-grid" id="fi-stats" style="margin-top:10px"></div>
-
-      <div style="margin-top:12px;border-top:1px solid #b0c8e8;padding-top:10px">
-        <div style="font-size:11px;font-weight:600;color:#2a5a8a;margin-bottom:6px">📋 Distribuzione per pianta</div>
-        <div id="fi-breakdown" style="display:flex;flex-direction:column;gap:3px"></div>
-      </div>
-
-      <div class="result-tips" id="fi-tips" style="color:#2a5a8a;border-top-color:#b0c8e8;margin-top:10px"></div>
-    </div>
-
-    <!-- Risultato fertirrigazione da calendario (multi-prodotto) -->
-    <div class="result-card" id="fi-cal-result" style="background:#edf5ff;border-color:#b0c8e8;display:none">
-      <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:#2a5a8a;margin-bottom:4px"
-        id="fi-cal-title">Fertirrigazione del giorno</div>
-      <div style="font-size:11px;color:#5a7a9a;margin-bottom:12px" id="fi-cal-subtitle"></div>
-      <div id="fi-cal-groups"></div>
-      <div style="margin-top:12px;padding-top:10px;border-top:1px solid #b0c8e8">
-        <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
-          <div>
-            <div style="font-size:9px;color:#2a5a8a;text-transform:uppercase;letter-spacing:.4px">Acqua totale</div>
-            <span style="font-family:'Playfair Display',serif;font-size:28px;font-weight:600;color:#2a5a8a"
-              id="fi-cal-total-water">—</span> <span style="color:#2a5a8a;font-size:14px">L</span>
-          </div>
-          <div>
-            <div style="font-size:9px;color:#2a5a8a;text-transform:uppercase;letter-spacing:.4px">Vasi totali</div><span
-              style="font-family:'Playfair Display',serif;font-size:28px;font-weight:600;color:#2a5a8a"
-              id="fi-cal-total-pots">—</span>
-          </div>
-        </div>
-      </div>
-      <div class="result-tips" id="fi-cal-tips" style="color:#2a5a8a;border-top-color:#b0c8e8;margin-top:10px"></div>
     </div>
   </div>
 
-  <!-- ── SECTION: PARAMETRI ──────────────────────────────────── -->
-  <div id="sec-params" class="section">
-    <div class="app-header">
-      <h1>Parametri ⚙️</h1>
-      <p>Regola i fattori di calcolo per il tuo microclima e le tue piante</p>
+  <div class="calc-card">
+    <div class="calc-card-title">💧 Acqua utilizzata</div>
+    <div class="calc-row">
+      <div class="calc-field" style="flex:0 0 140px">
+        <label>Litri di acqua</label>
+        <input type="number" id="f-water" value="1" min="0.05" step="0.1" oninput="fCalculate()">
+      </div>
+      <div class="calc-field">
+        <label>Scorciatoie</label>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          <button class="ctrl-btn" onclick="fSetWater(0.25)" style="padding:6px 10px;font-size:11px">250 ml</button>
+          <button class="ctrl-btn" onclick="fSetWater(0.5)" style="padding:6px 10px;font-size:11px">500 ml</button>
+          <button class="ctrl-btn" onclick="fSetWater(1)" style="padding:6px 10px;font-size:11px">1 L</button>
+          <button class="ctrl-btn" onclick="fSetWater(2)" style="padding:6px 10px;font-size:11px">2 L</button>
+          <button class="ctrl-btn" onclick="fSetWater(5)" style="padding:6px 10px;font-size:11px">5 L</button>
+          <button class="ctrl-btn" onclick="fUseWaterFromCalc()" style="padding:6px 10px;font-size:11px;background:var(--accent-light);border-color:var(--accent);color:var(--accent)">↑ Dal calcolatore acqua</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="calc-card">
+    <div class="calc-card-title">⚖️ Riduzione dose</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Molte piante richiedono dose ridotta rispetto a quella del produttore (orchidee, succulente, piante delicate)</div>
+    <div class="vol-toggle">
+      <button class="vol-toggle-btn" id="f-dose-100" onclick="fSetDoseFactor(1)">Piena</button>
+      <button class="vol-toggle-btn active" id="f-dose-75" onclick="fSetDoseFactor(0.75)">¾ (75%)</button>
+      <button class="vol-toggle-btn" id="f-dose-50" onclick="fSetDoseFactor(0.5)">½ (50%)</button>
+      <button class="vol-toggle-btn" id="f-dose-25" onclick="fSetDoseFactor(0.25)">¼ (25%)</button>
+    </div>
+  </div>
+
+  <!-- Risultato fertilizzante -->
+  <div class="result-card" id="f-result" style="background:#eaf5ed;border-color:#b8d8c0">
+    <div class="result-main">
+      <span class="result-qty" id="fr-qty" style="color:#2d7a3a">—</span>
+      <span class="result-unit" id="fr-unit" style="color:#2d7a3a">ml</span>
+    </div>
+    <div class="result-label" id="fr-label" style="color:#2d6a3a">di concime da aggiungere</div>
+    <div class="result-grid">
+      <div class="result-item" style="border-color:#b8d8c0"><div class="result-item-label">Dose produttore</div><div class="result-item-val" id="fr-prod">—</div></div>
+      <div class="result-item" style="border-color:#b8d8c0"><div class="result-item-label">Dose applicata</div><div class="result-item-val" id="fr-applied">—</div></div>
+      <div class="result-item" style="border-color:#b8d8c0"><div class="result-item-label">Acqua</div><div class="result-item-val" id="fr-water">—</div></div>
+      <div class="result-item" style="border-color:#b8d8c0"><div class="result-item-label">Concentrazione finale</div><div class="result-item-val" id="fr-conc">—</div></div>
+    </div>
+    <div class="result-tips" id="fr-tips" style="color:#2d6a3a;border-top-color:#b8d8c0"></div>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────────────
+       CALCOLATORE FERTIRRIGAZIONE
+  ───────────────────────────────────────────────────────── -->
+  <div class="app-header" style="margin-top:1.5rem">
+    <h1 style="font-size:clamp(18px,4vw,26px)">Fertirrigazione 🧪💧</h1>
+    <p>Prepara una soluzione unica ottimizzata per più piante</p>
+  </div>
+
+  <div class="calc-card">
+    <div class="calc-card-title">💚 Prodotto da utilizzare</div>
+    <div class="calc-row">
+      <div class="calc-field">
+        <label>Seleziona prodotto</label>
+        <select id="fi-product" onchange="fiUpdate()">
+          <option value="grow"    data-dose="2"  data-unit="ml/L">Bio·Grow (2 ml/L)</option>
+          <option value="bloom"   data-dose="2"  data-unit="ml/L">Bio·Bloom (2 ml/L)</option>
+          <option value="topmax"  data-dose="1"  data-unit="ml/L">Top·Max (1 ml/L)</option>
+          <option value="alg"     data-dose="1"  data-unit="ml/L">Alg·A·Mic (1 ml/L)</option>
+          <option value="fish"    data-dose="2"  data-unit="ml/L">Fish·Mix (2 ml/L)</option>
+          <option value="calmag"  data-dose="1"  data-unit="ml/L">CalMag (1 ml/L)</option>
+          <option value="root"    data-dose="1"  data-unit="ml/L">Root·Juice (1 ml/L)</option>
+          <option value="custom"  data-dose="0"  data-unit="ml/L">— Altro prodotto —</option>
+        </select>
+      </div>
+    </div>
+    <div id="fi-custom-dose" style="display:none;margin-top:8px">
+      <div class="calc-row">
+        <div class="calc-field" style="max-width:120px">
+          <label>Dose etichetta</label>
+          <input type="number" id="fi-custom-val" value="5" min="0" step="0.1" oninput="fiUpdate()">
+        </div>
+        <div class="calc-field" style="max-width:140px">
+          <label>Unità</label>
+          <select id="fi-custom-unit" onchange="fiUpdate()">
+            <option value="ml/L">ml/L</option>
+            <option value="g/L">g/L</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="calc-card">
+    <div class="calc-card-title">🌿 Piante da fertirrigare</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Seleziona le piante e regola la dose e l'acqua per ciascuna</div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+      <button class="ctrl-btn" onclick="fiSelectAll()" style="font-size:11px;padding:5px 10px">✅ Tutte</button>
+      <button class="ctrl-btn" onclick="fiSelectNone()" style="font-size:11px;padding:5px 10px">❌ Nessuna</button>
+      <button class="ctrl-btn" onclick="fiSelectIndoor()" style="font-size:11px;padding:5px 10px">🏠 Interne</button>
+      <button class="ctrl-btn" onclick="fiSelectOutdoor()" style="font-size:11px;padding:5px 10px">☀️ Esterne</button>
+    </div>
+    <div id="fi-plant-list" style="display:flex;flex-direction:column;gap:4px"></div>
+  </div>
+
+  <!-- Risultato fertirrigazione -->
+  <div class="result-card" id="fi-result" style="background:#edf5ff;border-color:#b0c8e8;display:none">
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+      <div>
+        <div style="font-size:10px;color:#2a5a8a;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Acqua totale</div>
+        <div style="display:flex;align-items:baseline;gap:4px">
+          <span class="result-qty" id="fi-total-water" style="color:#2a5a8a;font-size:36px">—</span>
+          <span class="result-unit" style="color:#2a5a8a">L</span>
+        </div>
+      </div>
+      <div style="font-size:28px;color:#b0c8e8">+</div>
+      <div>
+        <div style="font-size:10px;color:#2d7a3a;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Fertilizzante</div>
+        <div style="display:flex;align-items:baseline;gap:4px">
+          <span class="result-qty" id="fi-total-fert" style="color:#2d7a3a;font-size:36px">—</span>
+          <span class="result-unit" id="fi-total-fert-unit" style="color:#2d7a3a">ml</span>
+        </div>
+      </div>
+    </div>
+    <div class="result-label" id="fi-summary" style="color:#2a5a8a">Prepara la soluzione nel contenitore</div>
+
+    <div class="result-grid" id="fi-stats" style="margin-top:10px"></div>
+
+    <div style="margin-top:12px;border-top:1px solid #b0c8e8;padding-top:10px">
+      <div style="font-size:11px;font-weight:600;color:#2a5a8a;margin-bottom:6px">📋 Distribuzione per pianta</div>
+      <div id="fi-breakdown" style="display:flex;flex-direction:column;gap:3px"></div>
     </div>
 
-    <!-- ── POSIZIONE GEOGRAFICA ──────────────────────────────────────── -->
-    <!-- Coordinate del giardino: usate dal forecast meteo Open-Meteo,
+    <div class="result-tips" id="fi-tips" style="color:#2a5a8a;border-top-color:#b0c8e8;margin-top:10px"></div>
+  </div>
+
+  <!-- Risultato fertirrigazione da calendario (multi-prodotto) -->
+  <div class="result-card" id="fi-cal-result" style="background:#edf5ff;border-color:#b0c8e8;display:none">
+    <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:#2a5a8a;margin-bottom:4px" id="fi-cal-title">Fertirrigazione del giorno</div>
+    <div style="font-size:11px;color:#5a7a9a;margin-bottom:12px" id="fi-cal-subtitle"></div>
+    <div id="fi-cal-groups"></div>
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid #b0c8e8">
+      <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+        <div><div style="font-size:9px;color:#2a5a8a;text-transform:uppercase;letter-spacing:.4px">Acqua totale</div><span style="font-family:'Playfair Display',serif;font-size:28px;font-weight:600;color:#2a5a8a" id="fi-cal-total-water">—</span> <span style="color:#2a5a8a;font-size:14px">L</span></div>
+        <div><div style="font-size:9px;color:#2a5a8a;text-transform:uppercase;letter-spacing:.4px">Vasi totali</div><span style="font-family:'Playfair Display',serif;font-size:28px;font-weight:600;color:#2a5a8a" id="fi-cal-total-pots">—</span></div>
+      </div>
+    </div>
+    <div class="result-tips" id="fi-cal-tips" style="color:#2a5a8a;border-top-color:#b0c8e8;margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- ── SECTION: PARAMETRI ──────────────────────────────────── -->
+<div id="sec-params" class="section">
+  <div class="app-header">
+    <h1>Parametri ⚙️</h1>
+    <p>Regola i fattori di calcolo per il tuo microclima e le tue piante</p>
+  </div>
+
+  <!-- ── POSIZIONE GEOGRAFICA ──────────────────────────────────────── -->
+  <!-- Coordinate del giardino: usate dal forecast meteo Open-Meteo,
        dai calcoli di evapotraspirazione, e in futuro per altri usi
        basati sulla posizione. Il pulsante "Usa posizione corrente"
        chiede al browser di rilevare automaticamente le coordinate
        tramite l'API geolocation, evitando all'utente di doverle
        cercare a mano su Google Maps. -->
-    <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
-      <div class="calc-card-title">📍 Posizione Giardino</div>
-      <div style="font-size:10px;color:var(--muted);margin-bottom:8px">
-        Coordinate usate per le previsioni meteo e i calcoli di evapotraspirazione.
-        Il nome è solo descrittivo (es. "Casa Milano").
+  <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
+    <div class="calc-card-title">📍 Posizione Giardino</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">
+      Coordinate usate per le previsioni meteo e i calcoli di evapotraspirazione.
+      Il nome è solo descrittivo (es. "Casa Milano").
+    </div>
+    <div class="calc-row">
+      <div class="calc-field" style="flex:1">
+        <label>Latitudine</label>
+        <input type="number" id="p-pos-lat" step="0.0001" min="-90" max="90" placeholder="45.4642">
+        <div class="param-hint">Gradi decimali, es. 45.4642 per Milano</div>
       </div>
-      <div class="calc-row">
-        <div class="calc-field" style="flex:1">
-          <label>Latitudine</label>
-          <input type="number" id="p-pos-lat" step="0.0001" min="-90" max="90" placeholder="45.4642">
-          <div class="param-hint">Gradi decimali, es. 45.4642 per Milano</div>
-        </div>
-        <div class="calc-field" style="flex:1">
-          <label>Longitudine</label>
-          <input type="number" id="p-pos-lng" step="0.0001" min="-180" max="180" placeholder="9.1900">
-          <div class="param-hint">Gradi decimali, es. 9.1900 per Milano</div>
-        </div>
-      </div>
-      <div class="calc-row">
-        <div class="calc-field" style="flex:1">
-          <label>Nome località</label>
-          <input type="text" id="p-pos-name" placeholder="Es. Casa Milano" maxlength="60">
-          <div class="param-hint">Etichetta descrittiva per riconoscere la posizione</div>
-        </div>
-      </div>
-      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
-        <button onclick="paramsUseGeoLocation()"
-          style="padding:6px 12px;font-size:12px;border:1px solid var(--border);background:var(--bg);border-radius:6px;cursor:pointer">
-          📡 Usa posizione corrente
-        </button>
-        <button onclick="paramsSaveConfig()"
-          style="padding:6px 12px;font-size:12px;border:1px solid #6a8a4a;background:#7a9a50;color:white;border-radius:6px;cursor:pointer">
-          💾 Salva configurazione
-        </button>
-        <span id="p-config-status" style="font-size:11px;color:var(--muted);align-self:center"></span>
+      <div class="calc-field" style="flex:1">
+        <label>Longitudine</label>
+        <input type="number" id="p-pos-lng" step="0.0001" min="-180" max="180" placeholder="9.1900">
+        <div class="param-hint">Gradi decimali, es. 9.1900 per Milano</div>
       </div>
     </div>
+    <div class="calc-row">
+      <div class="calc-field" style="flex:1">
+        <label>Nome località</label>
+        <input type="text" id="p-pos-name" placeholder="Es. Casa Milano" maxlength="60">
+        <div class="param-hint">Etichetta descrittiva per riconoscere la posizione</div>
+      </div>
+    </div>
+    <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="paramsUseGeoLocation()" style="padding:6px 12px;font-size:12px;border:1px solid var(--border);background:var(--bg);border-radius:6px;cursor:pointer">
+        📡 Usa posizione corrente
+      </button>
+      <button onclick="paramsSaveConfig()" style="padding:6px 12px;font-size:12px;border:1px solid #6a8a4a;background:#7a9a50;color:white;border-radius:6px;cursor:pointer">
+        💾 Salva configurazione
+      </button>
+      <span id="p-config-status" style="font-size:11px;color:var(--muted);align-self:center"></span>
+    </div>
+  </div>
 
-    <!-- ── ECOWITT API ────────────────────────────────────────────────── -->
-    <!-- Credenziali della stazione Ecowitt. Sono dati sensibili: i campi
+  <!-- ── ECOWITT API ────────────────────────────────────────────────── -->
+  <!-- Credenziali della stazione Ecowitt. Sono dati sensibili: i campi
        application_key e api_key sono di tipo password con un piccolo
        pulsante "occhio" per rivelarli quando l'utente vuole verificarli.
        Il MAC è meno sensibile (è solo un identificativo dell'hardware)
        quindi resta in chiaro. -->
-    <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
-      <div class="calc-card-title">🌤️ Ecowitt API</div>
-      <div style="font-size:10px;color:var(--muted);margin-bottom:8px">
-        Credenziali per leggere i dati della stazione meteo Ecowitt.
-        Le ottieni da <a href="https://www.ecowitt.net/user/index" target="_blank" style="color:#5a8090">ecowitt.net</a>
-        → API → Generate.
-        Senza queste chiavi le sezioni Acqua e Meteo funzionano solo con i dati pubblici.
-      </div>
-      <div class="calc-row">
-        <div class="calc-field" style="flex:1">
-          <label>Application Key</label>
-          <div style="display:flex;gap:4px">
-            <input type="password" id="p-ecowitt-app" placeholder="32 caratteri esadecimali" autocomplete="off"
-              style="flex:1">
-            <button type="button" onclick="paramsToggleSecret('p-ecowitt-app')" title="Mostra/nascondi"
-              style="padding:0 10px;border:1px solid var(--border);background:var(--bg);border-radius:6px;cursor:pointer;font-size:14px">👁</button>
-          </div>
-        </div>
-      </div>
-      <div class="calc-row">
-        <div class="calc-field" style="flex:1">
-          <label>API Key</label>
-          <div style="display:flex;gap:4px">
-            <input type="password" id="p-ecowitt-api" placeholder="32 caratteri esadecimali" autocomplete="off"
-              style="flex:1">
-            <button type="button" onclick="paramsToggleSecret('p-ecowitt-api')" title="Mostra/nascondi"
-              style="padding:0 10px;border:1px solid var(--border);background:var(--bg);border-radius:6px;cursor:pointer;font-size:14px">👁</button>
-          </div>
-        </div>
-      </div>
-      <div class="calc-row">
-        <div class="calc-field" style="flex:1">
-          <label>MAC stazione</label>
-          <input type="text" id="p-ecowitt-mac" placeholder="AA:BB:CC:DD:EE:FF" maxlength="17">
-          <div class="param-hint">Indirizzo MAC della stazione meteo (formato XX:XX:XX:XX:XX:XX)</div>
+  <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
+    <div class="calc-card-title">🌤️ Ecowitt API</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">
+      Credenziali per leggere i dati della stazione meteo Ecowitt.
+      Le ottieni da <a href="https://www.ecowitt.net/user/index" target="_blank" style="color:#5a8090">ecowitt.net</a> → API → Generate.
+      Senza queste chiavi le sezioni Acqua e Meteo funzionano solo con i dati pubblici.
+    </div>
+    <div class="calc-row">
+      <div class="calc-field" style="flex:1">
+        <label>Application Key</label>
+        <div style="display:flex;gap:4px">
+          <input type="password" id="p-ecowitt-app" placeholder="32 caratteri esadecimali" autocomplete="off" style="flex:1">
+          <button type="button" onclick="paramsToggleSecret('p-ecowitt-app')" title="Mostra/nascondi" style="padding:0 10px;border:1px solid var(--border);background:var(--bg);border-radius:6px;cursor:pointer;font-size:14px">👁</button>
         </div>
       </div>
     </div>
-
-    <!-- Calcolatore Acqua -->
-    <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
-      <div class="calc-card-title">💧 Calcolatore Acqua</div>
-      <div class="calc-row">
-        <div class="calc-field"><label>Fattore drenaggio</label><input type="number" id="p-drenaggio" step="0.05"
-            min="1" max="1.5">
-          <div class="param-hint">Extra acqua per garantire il drenaggio (1.0=nessuno, 1.2=+20%)</div>
-        </div>
-        <div class="calc-field"><label>Base frequenza (giorni)</label><input type="number" id="p-freq-base" step="1"
-            min="1" max="30">
-          <div class="param-hint">Intervallo base tra annaffiature, poi moltiplicato per i fattori</div>
+    <div class="calc-row">
+      <div class="calc-field" style="flex:1">
+        <label>API Key</label>
+        <div style="display:flex;gap:4px">
+          <input type="password" id="p-ecowitt-api" placeholder="32 caratteri esadecimali" autocomplete="off" style="flex:1">
+          <button type="button" onclick="paramsToggleSecret('p-ecowitt-api')" title="Mostra/nascondi" style="padding:0 10px;border:1px solid var(--border);background:var(--bg);border-radius:6px;cursor:pointer;font-size:14px">👁</button>
         </div>
       </div>
     </div>
-
-    <!-- ET₀ -->
-    <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
-      <div class="calc-card-title">🌤️ Evapotraspirazione (ET₀)</div>
-      <div class="calc-row">
-        <div class="calc-field"><label>ET₀ di riferimento (mm/g)</label><input type="number" id="p-et0-ref" step="0.1"
-            min="1" max="8">
-          <div class="param-hint">Giornata primaverile "media" (20°C, 60% umidità). 2.5-3.5 per Italia</div>
-        </div>
-        <div class="calc-field"><label>Conversione solare</label><input type="number" id="p-solar-conv" step="0.002"
-            min="0.02" max="0.06">
-          <div class="param-hint">W/m² istantanei → MJ/m²/giorno. Dipende dalla latitudine e ore di luce</div>
-        </div>
-      </div>
-      <div class="calc-row">
-        <div class="calc-field"><label>Fattore ET₀ minimo</label><input type="number" id="p-et0-min" step="0.05"
-            min="0.1" max="0.5">
-          <div class="param-hint">Limite inferiore (inverno/pioggia): non scende sotto questo valore</div>
-        </div>
-        <div class="calc-field"><label>Fattore ET₀ massimo</label><input type="number" id="p-et0-max" step="0.1"
-            min="1.5" max="4">
-          <div class="param-hint">Limite superiore (ondata calore): non sale sopra questo valore</div>
-        </div>
+    <div class="calc-row">
+      <div class="calc-field" style="flex:1">
+        <label>MAC stazione</label>
+        <input type="text" id="p-ecowitt-mac" placeholder="AA:BB:CC:DD:EE:FF" maxlength="17">
+        <div class="param-hint">Indirizzo MAC della stazione meteo (formato XX:XX:XX:XX:XX:XX)</div>
       </div>
     </div>
-
-    <!-- Fertirrigazione -->
-    <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
-      <div class="calc-card-title">🧪 Fertirrigazione</div>
-      <div class="calc-row">
-        <div class="calc-field"><label>Riduzione acqua (%)</label><input type="number" id="p-ferti-reduction" step="5"
-            min="30" max="100">
-          <div class="param-hint">% dell'acqua normale da usare in fertirrigazione (70%=meno acqua, più concentrato)
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Allerte Meteo -->
-    <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
-      <div class="calc-card-title">⚠️ Soglie Allerte Meteo</div>
-      <div class="calc-row">
-        <div class="calc-field"><label>Allerta gelo (°C)</label><input type="number" id="p-alert-frost" step="1"
-            min="-5" max="10">
-          <div class="param-hint">Sotto questa temperatura: notifica gelo</div>
-        </div>
-        <div class="calc-field"><label>Allerta caldo (°C)</label><input type="number" id="p-alert-heat" step="1"
-            min="25" max="45">
-          <div class="param-hint">Sopra questa temperatura: notifica caldo</div>
-        </div>
-      </div>
-      <div class="calc-row">
-        <div class="calc-field"><label>Allerta vento (km/h)</label><input type="number" id="p-alert-wind" step="5"
-            min="20" max="100">
-          <div class="param-hint">Sopra questa velocità: proteggi i vasi leggeri</div>
-        </div>
-        <div class="calc-field"><label>Umidità interna min (%)</label><input type="number" id="p-alert-hum-in" step="5"
-            min="20" max="60">
-          <div class="param-hint">Sotto questa: nebulizza orchidee e tropicali</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Irrigazione Smart -->
-    <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
-      <div class="calc-card-title">📅 Irrigazione Smart (Calendario)</div>
-      <div class="calc-row">
-        <div class="calc-field"><label>Pioggia "salta" (mm)</label><input type="number" id="p-rain-skip" step="1"
-            min="1" max="20">
-          <div class="param-hint">Pioggia giornaliera sopra cui suggerisce di saltare l'annaffiatura esterna</div>
-        </div>
-        <div class="calc-field"><label>Pioggia "sicuro" (mm)</label><input type="number" id="p-rain-sure" step="1"
-            min="5" max="50">
-          <div class="param-hint">Pioggia giornaliera sopra cui salta sicuramente</div>
-        </div>
-      </div>
-      <div class="calc-row">
-        <div class="calc-field"><label>ET₀ soglia "anticipa"</label><input type="number" id="p-et0-anticipa" step="0.1"
-            min="1.1" max="2.5">
-          <div class="param-hint">Fattore ET₀ sopra cui suggerisce di anticipare la prossima annaffiatura</div>
-        </div>
-        <div class="calc-field"><label>ET₀ soglia "ritarda"</label><input type="number" id="p-et0-ritarda" step="0.1"
-            min="0.1" max="0.8">
-          <div class="param-hint">Fattore ET₀ sotto cui suggerisce di ritardare</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Soglie Umidità Terreno -->
-    <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
-      <div class="calc-card-title">📡 Soglie Umidità Terreno (WH51/WH52)</div>
-      <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Percentuali di umidità per ogni categoria di
-        pianta. "Secco" = sotto cui annaffiare, "Umido" = sopra cui è troppo bagnato.</div>
-      <div id="p-soglie-grid" style="display:flex;flex-direction:column;gap:6px"></div>
-    </div>
-
-    <!-- Soglie EC (WH52) -->
-    <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
-      <div class="calc-card-title">⚡ Soglie EC Terreno (WH52) µS/cm</div>
-      <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Conducibilità = concentrazione sali nutrienti.
-        <b>Min</b>=sotto cui mancano nutrienti, <b>Target</b>=valore ottimale, <b>Max</b>=sopra cui rischio accumulo
-        tossico</div>
-      <div id="p-soglie-ec-grid" style="display:flex;flex-direction:column;gap:6px"></div>
-    </div>
-
-    <!-- Temperatura substrato (WH52) -->
-    <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
-      <div class="calc-card-title">🌡️ Temperatura Substrato (WH52)</div>
-      <div class="calc-row">
-        <div class="calc-field"><label>Temp radici minima (°C)</label><input type="number" id="p-temp-radici-min"
-            step="1" min="0" max="20">
-          <div class="param-hint">Sotto questa temperatura le radici non assorbono bene — blocca fertirrigazione</div>
-        </div>
-        <div class="calc-field"><label>Temp radici massima (°C)</label><input type="number" id="p-temp-radici-max"
-            step="1" min="25" max="40">
-          <div class="param-hint">Sopra questa temperatura rischio bruciature — pacciamatura consigliata</div>
-        </div>
-      </div>
-      <div class="calc-row">
-        <div class="calc-field"><label>Umidità min. per EC (%)</label><input type="number" id="p-ec-moisture-min"
-            step="5" min="10" max="50">
-          <div class="param-hint">Sotto questa umidità le letture EC sono inaffidabili (terreno troppo secco)</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Annaffiature predittive -->
-    <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
-      <div class="calc-card-title">🔮 Annaffiature predittive da simulazione</div>
-      <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Quando attivo, il calendario annaffiature usa il
-        simulatore FAO-56 per ogni vaso dell'inventario: calcola le date e le quantità esatte in base al meteo previsto,
-        umidità live dai sensori, e caratteristiche del vaso.</div>
-      <div
-        style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--bg);border:1px solid var(--border)">
-        <input type="checkbox" id="p-use-sim-sched" style="width:18px;height:18px">
-        <div>
-          <div style="font-size:12px;font-weight:500">Attiva annaffiature predittive</div>
-          <div class="param-hint">Sostituisce gli intervalli statici con le previsioni del simulatore (richiede vasi
-            nell'inventario)</div>
-        </div>
-      </div>
-    </div>
-
-    <div style="max-width:700px;margin:12px auto;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-      <button class="save-btn" onclick="paramsSave()" style="padding:10px 24px">💾 Salva parametri</button>
-      <button class="ctrl-btn" onclick="paramsReset()" style="padding:10px 16px;color:#b04040">🔄 Ripristina
-        default</button>
-    </div>
-    <div id="p-save-msg" style="text-align:center;font-size:12px;color:var(--accent);margin-top:6px;display:none">✅
-      Parametri salvati!</div>
   </div>
 
-  <!-- ── SECTION: METEO E SENSORI ────────────────────────────── -->
-  <div id="sec-meteo" class="section">
-    <div class="app-header">
-      <h1>Meteo e Sensori 🌤️</h1>
-      <p>Stazione Ecowitt · Umidità terreno · Allerte piante</p>
+  <!-- Calcolatore Acqua -->
+  <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
+    <div class="calc-card-title">💧 Calcolatore Acqua</div>
+    <div class="calc-row">
+      <div class="calc-field"><label>Fattore drenaggio</label><input type="number" id="p-drenaggio" step="0.05" min="1" max="1.5"><div class="param-hint">Extra acqua per garantire il drenaggio (1.0=nessuno, 1.2=+20%)</div></div>
+      <div class="calc-field"><label>Base frequenza (giorni)</label><input type="number" id="p-freq-base" step="1" min="1" max="30"><div class="param-hint">Intervallo base tra annaffiature, poi moltiplicato per i fattori</div></div>
     </div>
-    <div id="meteo-status" style="text-align:center;font-size:11px;margin-bottom:12px;color:var(--muted)"></div>
-
-    <!-- Widget meteo -->
-    <div id="meteo-weather"
-      style="max-width:900px;margin:0 auto 1rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">
-    </div>
-
-    <!-- Allerte piante -->
-    <div id="meteo-alerts" style="max-width:900px;margin:0 auto 1rem"></div>
-
-    <!-- Umidità terreno per pianta -->
-    <div style="max-width:900px;margin:0 auto .6rem">
-      <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:500;margin-bottom:8px">💧 Umidità
-        terreno in tempo reale</div>
-    </div>
-    <div id="meteo-soil"
-      style="max-width:900px;margin:0 auto 1rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px">
-    </div>
-
-    <!-- Grafici storici -->
-    <div style="max-width:900px;margin:0 auto .6rem">
-      <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:500;margin-bottom:4px">📊 Trend WH52 —
-        ultime 24 ore</div>
-      <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Grafici EC e temperatura radici per sensori
-        3-in-1</div>
-    </div>
-    <div id="meteo-history" style="max-width:900px;margin:0 auto"></div>
-
-    <!-- Previsioni 7 giorni -->
-    <div style="max-width:900px;margin:1.2rem auto .6rem">
-      <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:500;margin-bottom:4px">🔮 Previsioni 7
-        giorni</div>
-      <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Fonte: Open-Meteo (modelli ECMWF, DWD, NOAA)
-      </div>
-    </div>
-    <div id="meteo-forecast" style="max-width:900px;margin:0 auto 10px"></div>
-
-    <!-- Allerte predittive -->
-    <div id="meteo-forecast-alerts" style="max-width:900px;margin:0 auto 1rem"></div>
   </div>
 
-  <!-- ── SECTION: INVENTARIO VASI ────────────────────────────── -->
-  <div id="sec-vasi" class="section">
-    <div class="app-header">
-      <h1>I miei vasi 📦</h1>
-      <p>Inventario · Dimensioni · Concimi · Malattie</p>
+  <!-- ET₀ -->
+  <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
+    <div class="calc-card-title">🌤️ Evapotraspirazione (ET₀)</div>
+    <div class="calc-row">
+      <div class="calc-field"><label>ET₀ di riferimento (mm/g)</label><input type="number" id="p-et0-ref" step="0.1" min="1" max="8"><div class="param-hint">Giornata primaverile "media" (20°C, 60% umidità). 2.5-3.5 per Italia</div></div>
+      <div class="calc-field"><label>Conversione solare</label><input type="number" id="p-solar-conv" step="0.002" min="0.02" max="0.06"><div class="param-hint">W/m² istantanei → MJ/m²/giorno. Dipende dalla latitudine e ore di luce</div></div>
     </div>
-    <div class="inv-search">
-      <input type="text" id="inv-search" placeholder="Cerca pianta..." oninput="invRender()">
-      <select id="inv-filter-loc" onchange="invRender()">
-        <option value="">Tutte le posizioni</option>
-        <option value="indoor">🏠 Interno</option>
-        <option value="outdoor">☀️ Esterno</option>
-        <option value="balcone">🏗️ Balcone</option>
-      </select>
-      <span style="font-size:12px;color:var(--muted);padding:8px 0" id="inv-count"></span>
+    <div class="calc-row">
+      <div class="calc-field"><label>Fattore ET₀ minimo</label><input type="number" id="p-et0-min" step="0.05" min="0.1" max="0.5"><div class="param-hint">Limite inferiore (inverno/pioggia): non scende sotto questo valore</div></div>
+      <div class="calc-field"><label>Fattore ET₀ massimo</label><input type="number" id="p-et0-max" step="0.1" min="1.5" max="4"><div class="param-hint">Limite superiore (ondata calore): non sale sopra questo valore</div></div>
     </div>
-    <div class="inv-grid" id="inv-grid"></div>
   </div>
 
-  <!-- Overlay add/edit vaso -->
-  <div class="overlay" id="inv-overlay" onclick="if(event.target===this)invCloseForm()">
-    <div class="panel" style="max-width:540px">
-      <div class="panel-header">
-        <div class="panel-title" id="inv-form-title">Aggiungi vaso</div>
-        <button class="close-btn" onclick="invCloseForm()">✕</button>
+  <!-- Fertirrigazione -->
+  <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
+    <div class="calc-card-title">🧪 Fertirrigazione</div>
+    <div class="calc-row">
+      <div class="calc-field"><label>Riduzione acqua (%)</label><input type="number" id="p-ferti-reduction" step="5" min="30" max="100"><div class="param-hint">% dell'acqua normale da usare in fertirrigazione (70%=meno acqua, più concentrato)</div></div>
+    </div>
+  </div>
+
+  <!-- Allerte Meteo -->
+  <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
+    <div class="calc-card-title">⚠️ Soglie Allerte Meteo</div>
+    <div class="calc-row">
+      <div class="calc-field"><label>Allerta gelo (°C)</label><input type="number" id="p-alert-frost" step="1" min="-5" max="10"><div class="param-hint">Sotto questa temperatura: notifica gelo</div></div>
+      <div class="calc-field"><label>Allerta caldo (°C)</label><input type="number" id="p-alert-heat" step="1" min="25" max="45"><div class="param-hint">Sopra questa temperatura: notifica caldo</div></div>
+    </div>
+    <div class="calc-row">
+      <div class="calc-field"><label>Allerta vento (km/h)</label><input type="number" id="p-alert-wind" step="5" min="20" max="100"><div class="param-hint">Sopra questa velocità: proteggi i vasi leggeri</div></div>
+      <div class="calc-field"><label>Umidità interna min (%)</label><input type="number" id="p-alert-hum-in" step="5" min="20" max="60"><div class="param-hint">Sotto questa: nebulizza orchidee e tropicali</div></div>
+    </div>
+  </div>
+
+  <!-- Irrigazione Smart -->
+  <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
+    <div class="calc-card-title">📅 Irrigazione Smart (Calendario)</div>
+    <div class="calc-row">
+      <div class="calc-field"><label>Pioggia "salta" (mm)</label><input type="number" id="p-rain-skip" step="1" min="1" max="20"><div class="param-hint">Pioggia giornaliera sopra cui suggerisce di saltare l'annaffiatura esterna</div></div>
+      <div class="calc-field"><label>Pioggia "sicuro" (mm)</label><input type="number" id="p-rain-sure" step="1" min="5" max="50"><div class="param-hint">Pioggia giornaliera sopra cui salta sicuramente</div></div>
+    </div>
+    <div class="calc-row">
+      <div class="calc-field"><label>ET₀ soglia "anticipa"</label><input type="number" id="p-et0-anticipa" step="0.1" min="1.1" max="2.5"><div class="param-hint">Fattore ET₀ sopra cui suggerisce di anticipare la prossima annaffiatura</div></div>
+      <div class="calc-field"><label>ET₀ soglia "ritarda"</label><input type="number" id="p-et0-ritarda" step="0.1" min="0.1" max="0.8"><div class="param-hint">Fattore ET₀ sotto cui suggerisce di ritardare</div></div>
+    </div>
+  </div>
+
+  <!-- Soglie Umidità Terreno -->
+  <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
+    <div class="calc-card-title">📡 Soglie Umidità Terreno (WH51/WH52)</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Percentuali di umidità per ogni categoria di pianta. "Secco" = sotto cui annaffiare, "Umido" = sopra cui è troppo bagnato.</div>
+    <div id="p-soglie-grid" style="display:flex;flex-direction:column;gap:6px"></div>
+  </div>
+
+  <!-- Soglie EC (WH52) -->
+  <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
+    <div class="calc-card-title">⚡ Soglie EC Terreno (WH52) µS/cm</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Conducibilità = concentrazione sali nutrienti. <b>Min</b>=sotto cui mancano nutrienti, <b>Target</b>=valore ottimale, <b>Max</b>=sopra cui rischio accumulo tossico</div>
+    <div id="p-soglie-ec-grid" style="display:flex;flex-direction:column;gap:6px"></div>
+  </div>
+
+  <!-- Temperatura substrato (WH52) -->
+  <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
+    <div class="calc-card-title">🌡️ Temperatura Substrato (WH52)</div>
+    <div class="calc-row">
+      <div class="calc-field"><label>Temp radici minima (°C)</label><input type="number" id="p-temp-radici-min" step="1" min="0" max="20"><div class="param-hint">Sotto questa temperatura le radici non assorbono bene — blocca fertirrigazione</div></div>
+      <div class="calc-field"><label>Temp radici massima (°C)</label><input type="number" id="p-temp-radici-max" step="1" min="25" max="40"><div class="param-hint">Sopra questa temperatura rischio bruciature — pacciamatura consigliata</div></div>
+    </div>
+    <div class="calc-row">
+      <div class="calc-field"><label>Umidità min. per EC (%)</label><input type="number" id="p-ec-moisture-min" step="5" min="10" max="50"><div class="param-hint">Sotto questa umidità le letture EC sono inaffidabili (terreno troppo secco)</div></div>
+    </div>
+  </div>
+
+  <!-- Annaffiature predittive -->
+  <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
+    <div class="calc-card-title">🔮 Annaffiature predittive da simulazione</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Quando attivo, il calendario annaffiature usa il simulatore FAO-56 per ogni vaso dell'inventario: calcola le date e le quantità esatte in base al meteo previsto, umidità live dai sensori, e caratteristiche del vaso.</div>
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--bg);border:1px solid var(--border)">
+      <input type="checkbox" id="p-use-sim-sched" style="width:18px;height:18px">
+      <div>
+        <div style="font-size:12px;font-weight:500">Attiva annaffiature predittive</div>
+        <div class="param-hint">Sostituisce gli intervalli statici con le previsioni del simulatore (richiede vasi nell'inventario)</div>
       </div>
-      <div class="panel-body" id="inv-form-body">
-        <input type="hidden" id="inv-edit-id">
+    </div>
+  </div>
 
-        <div class="inv-form-card">
-          <div class="inv-form-card-title">🌿 Pianta</div>
-          <div class="form-row">
-            <div class="form-field">
-              <label>Tipo di pianta</label>
-              <select id="inv-plant-type"></select>
-            </div>
-            <div class="form-field" style="max-width:100px">
-              <label>Esemplari</label>
-              <input type="number" id="inv-qty" value="1" min="1" max="50">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-field">
-              <label>Soprannome (opzionale)</label>
-              <input type="text" id="inv-nickname" placeholder="Es: Ficus del salotto">
-            </div>
-            <div class="form-field">
-              <label>Posizione</label>
-              <select id="inv-location">
-                <option value="indoor">🏠 Interno</option>
-                <option value="outdoor">☀️ Esterno</option>
-                <option value="balcone">🏗️ Balcone</option>
-              </select>
-            </div>
-          </div>
-        </div>
+  <div style="max-width:700px;margin:12px auto;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+    <button class="save-btn" onclick="paramsSave()" style="padding:10px 24px">💾 Salva parametri</button>
+    <button class="ctrl-btn" onclick="paramsReset()" style="padding:10px 16px;color:#b04040">🔄 Ripristina default</button>
+  </div>
+  <div id="p-save-msg" style="text-align:center;font-size:12px;color:var(--accent);margin-top:6px;display:none">✅ Parametri salvati!</div>
+</div>
 
-        <div class="inv-form-card">
-          <div class="inv-form-card-title">📦 Vaso</div>
-          <div class="form-row">
-            <div class="form-field">
-              <label>Forma</label>
-              <select id="inv-pot-shape" onchange="invShapeChange()">
-                <option value="cylinder">Cilindrico / Rotondo</option>
-                <option value="square">Quadrato / Rettangolare</option>
-                <option value="truncated">Troncoconico</option>
-              </select>
-            </div>
-            <div class="form-field">
-              <label>Materiale</label>
-              <select id="inv-pot-mat">
-                <option value="plastica">Plastica</option>
-                <option value="terracotta">Terracotta</option>
-                <option value="ceramica">Ceramica smaltata</option>
-                <option value="bonsai">Vaso bonsai</option>
-              </select>
-            </div>
-          </div>
-          <!-- Campi cilindro -->
-          <div class="form-row" id="inv-dims-cyl">
-            <div class="form-field" style="max-width:100px">
-              <label>Ø sup. (cm)</label>
-              <input type="number" id="inv-pot-diam" value="25" min="1">
-            </div>
-            <div class="form-field" style="max-width:100px">
-              <label>Altezza (cm)</label>
-              <input type="number" id="inv-pot-h" value="22" min="1">
-            </div>
-            <div class="form-field" style="max-width:100px">
-              <label>Volume (L)</label>
-              <input type="number" id="inv-pot-vol" step="0.1" placeholder="auto">
-            </div>
-          </div>
-          <!-- Campi troncoconico -->
-          <div class="form-row" id="inv-dims-trunc" style="display:none">
-            <div class="form-field" style="max-width:100px">
-              <label>Ø sup. (cm)</label>
-              <input type="number" id="inv-pot-diam-top" value="25" min="1">
-            </div>
-            <div class="form-field" style="max-width:100px">
-              <label>Ø inf. (cm)</label>
-              <input type="number" id="inv-pot-diam-bot" value="18" min="1">
-            </div>
-            <div class="form-field" style="max-width:100px">
-              <label>Altezza (cm)</label>
-              <input type="number" id="inv-pot-h-trunc" value="22" min="1">
-            </div>
-            <div class="form-field" style="max-width:100px">
-              <label>Volume (L)</label>
-              <input type="number" id="inv-pot-vol-trunc" step="0.1" placeholder="auto">
-            </div>
-          </div>
-          <!-- Campi quadrato/rettangolare -->
-          <div class="form-row" id="inv-dims-sq" style="display:none">
-            <div class="form-field" style="max-width:100px">
-              <label>Larghezza (cm)</label>
-              <input type="number" id="inv-pot-w" value="25" min="1">
-            </div>
-            <div class="form-field" style="max-width:100px">
-              <label>Profondità (cm)</label>
-              <input type="number" id="inv-pot-d" value="25" min="1">
-            </div>
-            <div class="form-field" style="max-width:100px">
-              <label>Altezza (cm)</label>
-              <input type="number" id="inv-pot-h-sq" value="22" min="1">
-            </div>
-            <div class="form-field" style="max-width:100px">
-              <label>Volume (L)</label>
-              <input type="number" id="inv-pot-vol-sq" step="0.1" placeholder="auto">
-            </div>
-          </div>
-        </div>
+<!-- ── SECTION: METEO E SENSORI ────────────────────────────── -->
+<div id="sec-meteo" class="section">
+  <div class="app-header">
+    <h1>Meteo e Sensori 🌤️</h1>
+    <p>Stazione Ecowitt · Umidità terreno · Allerte piante</p>
+  </div>
+  <div id="meteo-status" style="text-align:center;font-size:11px;margin-bottom:12px;color:var(--muted)"></div>
 
-        <div class="inv-form-card">
-          <div class="inv-form-card-title">🪨 Substrato</div>
+  <!-- Widget meteo -->
+  <div id="meteo-weather" style="max-width:900px;margin:0 auto 1rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px"></div>
+
+  <!-- Allerte piante -->
+  <div id="meteo-alerts" style="max-width:900px;margin:0 auto 1rem"></div>
+
+  <!-- Umidità terreno per pianta -->
+  <div style="max-width:900px;margin:0 auto .6rem">
+    <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:500;margin-bottom:8px">💧 Umidità terreno in tempo reale</div>
+  </div>
+  <div id="meteo-soil" style="max-width:900px;margin:0 auto 1rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px"></div>
+
+  <!-- Grafici storici -->
+  <div style="max-width:900px;margin:0 auto .6rem">
+    <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:500;margin-bottom:4px">📊 Trend WH52 — ultime 24 ore</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Grafici EC e temperatura radici per sensori 3-in-1</div>
+  </div>
+  <div id="meteo-history" style="max-width:900px;margin:0 auto"></div>
+
+  <!-- Previsioni 7 giorni -->
+  <div style="max-width:900px;margin:1.2rem auto .6rem">
+    <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:500;margin-bottom:4px">🔮 Previsioni 7 giorni</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Fonte: Open-Meteo (modelli ECMWF, DWD, NOAA)</div>
+  </div>
+  <div id="meteo-forecast" style="max-width:900px;margin:0 auto 10px"></div>
+
+  <!-- Allerte predittive -->
+  <div id="meteo-forecast-alerts" style="max-width:900px;margin:0 auto 1rem"></div>
+</div>
+
+<!-- ── SECTION: INVENTARIO VASI ────────────────────────────── -->
+<div id="sec-vasi" class="section">
+  <div class="app-header">
+    <h1>I miei vasi 📦</h1>
+    <p>Inventario · Dimensioni · Concimi · Malattie</p>
+  </div>
+  <div class="inv-search">
+    <input type="text" id="inv-search" placeholder="Cerca pianta..." oninput="invRender()">
+    <select id="inv-filter-loc" onchange="invRender()">
+      <option value="">Tutte le posizioni</option>
+      <option value="indoor">🏠 Interno</option>
+      <option value="outdoor">☀️ Esterno</option>
+      <option value="balcone">🏗️ Balcone</option>
+    </select>
+    <span style="font-size:12px;color:var(--muted);padding:8px 0" id="inv-count"></span>
+  </div>
+  <div class="inv-grid" id="inv-grid"></div>
+</div>
+
+<!-- Overlay add/edit vaso -->
+<div class="overlay" id="inv-overlay" onclick="if(event.target===this)invCloseForm()">
+  <div class="panel" style="max-width:540px">
+    <div class="panel-header">
+      <div class="panel-title" id="inv-form-title">Aggiungi vaso</div>
+      <button class="close-btn" onclick="invCloseForm()">✕</button>
+    </div>
+    <div class="panel-body" id="inv-form-body">
+      <input type="hidden" id="inv-edit-id">
+
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">🌿 Pianta</div>
+        <div class="form-row">
           <div class="form-field">
-            <label>Tipo di substrato</label>
-            <select id="inv-substrate" onchange="invSubstrateChange()">
-              <option value="universale_mix">🌱 Universale (50% univ + 30% perlite + 20% pomice)</option>
-              <option value="succulente_mix">🌵 Succulente/Cactus</option>
-              <option value="orchidee_mix">🌸 Orchidee (corteccia)</option>
-              <option value="agrumi_mix">🍋 Agrumi</option>
-              <option value="bonsai_mix">💜 Bonsai (akadama)</option>
-              <option value="mediterranee_mix">🌿 Mediterranee (sabbioso)</option>
-              <option value="tropicali_mix">🌳 Tropicali</option>
-              <option value="acidofile_mix">🍂 Acidofile</option>
-              <option value="arbusti_mix">🌺 Arbusti da fiore</option>
-              <option value="custom">⚙️ Personalizzato</option>
+            <label>Tipo di pianta</label>
+            <select id="inv-plant-type"></select>
+          </div>
+          <div class="form-field" style="max-width:100px">
+            <label>Esemplari</label>
+            <input type="number" id="inv-qty" value="1" min="1" max="50">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Soprannome (opzionale)</label>
+            <input type="text" id="inv-nickname" placeholder="Es: Ficus del salotto">
+          </div>
+          <div class="form-field">
+            <label>Posizione</label>
+            <select id="inv-location">
+              <option value="indoor">🏠 Interno</option>
+              <option value="outdoor">☀️ Esterno</option>
+              <option value="balcone">🏗️ Balcone</option>
             </select>
           </div>
-          <div id="inv-sub-custom" style="display:none;margin-top:8px">
-            <div style="font-size:10px;color:var(--muted);margin-bottom:6px">Regola le percentuali di ogni componente
-              (totale deve essere 100%)</div>
-            <div id="inv-sub-sliders" style="display:flex;flex-direction:column;gap:4px"></div>
-            <div id="inv-sub-total" class="sub-total" style="margin-top:6px">Totale: 0%</div>
-          </div>
         </div>
+      </div>
 
-        <div class="inv-form-card">
-          <div class="inv-form-card-title">📡 Sensore terreno (WH51 / WH52)</div>
-          <div style="font-size:10px;color:var(--muted);margin-bottom:6px">Il <b>WH51</b> misura solo l'umidità. Il
-            <b>WH52</b> misura anche temperatura ed EC (conducibilità = concentrazione sali)</div>
-          <div class="form-row">
-            <div class="form-field" style="max-width:140px">
-              <label>Tipo sensore</label>
-              <select id="inv-sensor-type">
-                <option value="wh51">WH51 (umidità)</option>
-                <option value="wh52">WH52 (3-in-1)</option>
-              </select>
-            </div>
-            <div class="form-field" style="max-width:140px">
-              <label>Canale</label>
-              <select id="inv-wh51-ch">
-                <option value="">— Nessuno —</option>
-                <option value="1">Canale 1</option>
-                <option value="2">Canale 2</option>
-                <option value="3">Canale 3</option>
-                <option value="4">Canale 4</option>
-                <option value="5">Canale 5</option>
-                <option value="6">Canale 6</option>
-                <option value="7">Canale 7</option>
-                <option value="8">Canale 8</option>
-                <option value="9">Canale 9</option>
-                <option value="10">Canale 10</option>
-                <option value="11">Canale 11</option>
-                <option value="12">Canale 12</option>
-                <option value="13">Canale 13</option>
-                <option value="14">Canale 14</option>
-                <option value="15">Canale 15</option>
-                <option value="16">Canale 16</option>
-              </select>
-            </div>
-            <div class="form-field">
-              <label>Categoria soglie</label>
-              <select id="inv-wh51-cat">
-                <option value="universale">🌱 Universale</option>
-                <option value="succulente">🌵 Succulente / Cactus</option>
-                <option value="tropicali">🌳 Tropicali</option>
-                <option value="mediterranee">🌿 Mediterranee</option>
-                <option value="agrumi">🍋 Agrumi</option>
-                <option value="bonsai">💜 Bonsai</option>
-                <option value="orchidee">🌸 Orchidee</option>
-                <option value="aromatiche">🌿 Aromatiche</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div class="inv-form-card">
-          <div class="inv-form-card-title">💧 Monitoraggio idrico</div>
-          <div style="font-size:10px;color:var(--muted);margin-bottom:6px">Informazioni usate dal simulatore per stimare
-            l'umidità attuale quando il sensore non è disponibile, e per calibrare l'evaporazione</div>
-          <div class="form-row">
-            <div class="form-field" style="max-width:180px">
-              <label>Ultima annaffiatura</label>
-              <input type="date" id="inv-last-watered">
-              <div class="param-hint">Opzionale. Se vuoto viene usata l'ultima spunta del calendario per questa specie
-              </div>
-            </div>
-            <div class="form-field" style="padding-top:20px">
-              <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-                <input type="checkbox" id="inv-has-mulch" style="width:16px;height:16px">
-                <span>Pacciamatura superficiale</span>
-              </label>
-              <div class="param-hint">Riduce evaporazione del ~35% (corteccia, lapillo, argilla)</div>
-            </div>
-            <div class="form-field" style="padding-top:20px">
-              <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-                <input type="checkbox" id="inv-has-saucer" style="width:16px;height:16px">
-                <span>Sottovaso con riserva</span>
-              </label>
-              <div class="param-hint">Riduce perdite per drenaggio (trattiene ~30% dell'eccesso)</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="inv-form-card">
-          <div class="inv-form-card-title">💚 Concimi utilizzati</div>
-          <div style="font-size:10px;color:var(--muted);margin-bottom:6px">Seleziona i prodotti che usi per questa
-            pianta</div>
-          <div class="form-field" style="margin-bottom:6px">
-            <input type="text" id="inv-fert-search" placeholder="Cerca concime..." oninput="invFilterFerts()">
-          </div>
-          <div class="inv-fert-grid" id="inv-fert-grid"></div>
-        </div>
-
-        <div class="inv-form-card">
-          <div class="inv-form-card-title">🔬 Malattie / Parassiti</div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <select id="inv-disease-type"
-              style="flex:1;min-width:120px;border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:11px;font-family:'DM Sans',sans-serif">
-              <option value="">— Aggiungi —</option>
-              <option value="cocciniglia">Cocciniglia</option>
-              <option value="cocciniglia_cotonosa">Cocciniglia cotonosa</option>
-              <option value="ragnetto_rosso">Ragnetto rosso</option>
-              <option value="afidi">Afidi</option>
-              <option value="mosca_bianca">Mosca bianca</option>
-              <option value="oidio">Oidio (Mal bianco)</option>
-              <option value="marciume_radicale">Marciume radicale</option>
-              <option value="fumaggine">Fumaggine</option>
-              <option value="clorosi_ferrica">Clorosi ferrica</option>
-              <option value="minatore_fogliare">Minatore fogliare</option>
-              <option value="alternaria">Alternaria</option>
-              <option value="altro">Altro</option>
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">📦 Vaso</div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Forma</label>
+            <select id="inv-pot-shape" onchange="invShapeChange()">
+              <option value="cylinder">Cilindrico / Rotondo</option>
+              <option value="square">Quadrato / Rettangolare</option>
+              <option value="truncated">Troncoconico</option>
             </select>
-            <input type="text" id="inv-disease-note" placeholder="Note..."
-              style="flex:1;min-width:100px;border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:11px;font-family:'DM Sans',sans-serif">
-            <button class="ctrl-btn" onclick="invAddDisease()" style="padding:6px 12px;font-size:11px">+
-              Aggiungi</button>
           </div>
-          <div class="inv-disease-list" id="inv-disease-list"></div>
+          <div class="form-field">
+            <label>Materiale</label>
+            <select id="inv-pot-mat">
+              <option value="plastica">Plastica</option>
+              <option value="terracotta">Terracotta</option>
+              <option value="ceramica">Ceramica smaltata</option>
+              <option value="bonsai">Vaso bonsai</option>
+            </select>
+          </div>
         </div>
-
-        <div style="display:flex;gap:8px;justify-content:space-between;margin-top:12px;flex-wrap:wrap">
-          <button class="ctrl-btn" id="inv-del-btn" onclick="invDelete()" style="color:#b04040;display:none">Elimina
-            vaso</button>
-          <div style="display:flex;gap:8px;margin-left:auto">
-            <button class="ctrl-btn" onclick="invCloseForm()">Annulla</button>
-            <button class="save-btn" onclick="invSave()">Salva</button>
+        <!-- Campi cilindro -->
+        <div class="form-row" id="inv-dims-cyl">
+          <div class="form-field" style="max-width:100px">
+            <label>Ø sup. (cm)</label>
+            <input type="number" id="inv-pot-diam" value="25" min="1">
           </div>
+          <div class="form-field" style="max-width:100px">
+            <label>Altezza (cm)</label>
+            <input type="number" id="inv-pot-h" value="22" min="1">
+          </div>
+          <div class="form-field" style="max-width:100px">
+            <label>Volume (L)</label>
+            <input type="number" id="inv-pot-vol" step="0.1" placeholder="auto">
+          </div>
+        </div>
+        <!-- Campi troncoconico -->
+        <div class="form-row" id="inv-dims-trunc" style="display:none">
+          <div class="form-field" style="max-width:100px">
+            <label>Ø sup. (cm)</label>
+            <input type="number" id="inv-pot-diam-top" value="25" min="1">
+          </div>
+          <div class="form-field" style="max-width:100px">
+            <label>Ø inf. (cm)</label>
+            <input type="number" id="inv-pot-diam-bot" value="18" min="1">
+          </div>
+          <div class="form-field" style="max-width:100px">
+            <label>Altezza (cm)</label>
+            <input type="number" id="inv-pot-h-trunc" value="22" min="1">
+          </div>
+          <div class="form-field" style="max-width:100px">
+            <label>Volume (L)</label>
+            <input type="number" id="inv-pot-vol-trunc" step="0.1" placeholder="auto">
+          </div>
+        </div>
+        <!-- Campi quadrato/rettangolare -->
+        <div class="form-row" id="inv-dims-sq" style="display:none">
+          <div class="form-field" style="max-width:100px">
+            <label>Larghezza (cm)</label>
+            <input type="number" id="inv-pot-w" value="25" min="1">
+          </div>
+          <div class="form-field" style="max-width:100px">
+            <label>Profondità (cm)</label>
+            <input type="number" id="inv-pot-d" value="25" min="1">
+          </div>
+          <div class="form-field" style="max-width:100px">
+            <label>Altezza (cm)</label>
+            <input type="number" id="inv-pot-h-sq" value="22" min="1">
+          </div>
+          <div class="form-field" style="max-width:100px">
+            <label>Volume (L)</label>
+            <input type="number" id="inv-pot-vol-sq" step="0.1" placeholder="auto">
+          </div>
+        </div>
+      </div>
+
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">🪨 Substrato</div>
+        <div class="form-field">
+          <label>Tipo di substrato</label>
+          <select id="inv-substrate" onchange="invSubstrateChange()">
+            <option value="universale_mix">🌱 Universale (50% univ + 30% perlite + 20% pomice)</option>
+            <option value="succulente_mix">🌵 Succulente/Cactus</option>
+            <option value="orchidee_mix">🌸 Orchidee (corteccia)</option>
+            <option value="agrumi_mix">🍋 Agrumi</option>
+            <option value="bonsai_mix">💜 Bonsai (akadama)</option>
+            <option value="mediterranee_mix">🌿 Mediterranee (sabbioso)</option>
+            <option value="tropicali_mix">🌳 Tropicali</option>
+            <option value="acidofile_mix">🍂 Acidofile</option>
+            <option value="arbusti_mix">🌺 Arbusti da fiore</option>
+            <option value="custom">⚙️ Personalizzato</option>
+          </select>
+        </div>
+        <div id="inv-sub-custom" style="display:none;margin-top:8px">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:6px">Regola le percentuali di ogni componente (totale deve essere 100%)</div>
+          <div id="inv-sub-sliders" style="display:flex;flex-direction:column;gap:4px"></div>
+          <div id="inv-sub-total" class="sub-total" style="margin-top:6px">Totale: 0%</div>
+        </div>
+      </div>
+
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">📡 Sensore terreno (WH51 / WH52)</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:6px">Il <b>WH51</b> misura solo l'umidità. Il <b>WH52</b> misura anche temperatura ed EC (conducibilità = concentrazione sali)</div>
+        <div class="form-row">
+          <div class="form-field" style="max-width:140px">
+            <label>Tipo sensore</label>
+            <select id="inv-sensor-type">
+              <option value="wh51">WH51 (umidità)</option>
+              <option value="wh52">WH52 (3-in-1)</option>
+            </select>
+          </div>
+          <div class="form-field" style="max-width:140px">
+            <label>Canale</label>
+            <select id="inv-wh51-ch">
+              <option value="">— Nessuno —</option>
+              <option value="1">Canale 1</option>
+              <option value="2">Canale 2</option>
+              <option value="3">Canale 3</option>
+              <option value="4">Canale 4</option>
+              <option value="5">Canale 5</option>
+              <option value="6">Canale 6</option>
+              <option value="7">Canale 7</option>
+              <option value="8">Canale 8</option>
+              <option value="9">Canale 9</option>
+              <option value="10">Canale 10</option>
+              <option value="11">Canale 11</option>
+              <option value="12">Canale 12</option>
+              <option value="13">Canale 13</option>
+              <option value="14">Canale 14</option>
+              <option value="15">Canale 15</option>
+              <option value="16">Canale 16</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Categoria soglie</label>
+            <select id="inv-wh51-cat">
+              <option value="universale">🌱 Universale</option>
+              <option value="succulente">🌵 Succulente / Cactus</option>
+              <option value="tropicali">🌳 Tropicali</option>
+              <option value="mediterranee">🌿 Mediterranee</option>
+              <option value="agrumi">🍋 Agrumi</option>
+              <option value="bonsai">💜 Bonsai</option>
+              <option value="orchidee">🌸 Orchidee</option>
+              <option value="aromatiche">🌿 Aromatiche</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">💧 Monitoraggio idrico</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:6px">Informazioni usate dal simulatore per stimare l'umidità attuale quando il sensore non è disponibile, e per calibrare l'evaporazione</div>
+        <div class="form-row">
+          <div class="form-field" style="max-width:180px">
+            <label>Ultima annaffiatura</label>
+            <input type="date" id="inv-last-watered">
+            <div class="param-hint">Opzionale. Se vuoto viene usata l'ultima spunta del calendario per questa specie</div>
+          </div>
+          <div class="form-field" style="padding-top:20px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="inv-has-mulch" style="width:16px;height:16px">
+              <span>Pacciamatura superficiale</span>
+            </label>
+            <div class="param-hint">Riduce evaporazione del ~35% (corteccia, lapillo, argilla)</div>
+          </div>
+          <div class="form-field" style="padding-top:20px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="inv-has-saucer" style="width:16px;height:16px">
+              <span>Sottovaso con riserva</span>
+            </label>
+            <div class="param-hint">Riduce perdite per drenaggio (trattiene ~30% dell'eccesso)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">💚 Concimi utilizzati</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:6px">Seleziona i prodotti che usi per questa pianta</div>
+        <div class="form-field" style="margin-bottom:6px">
+          <input type="text" id="inv-fert-search" placeholder="Cerca concime..." oninput="invFilterFerts()">
+        </div>
+        <div class="inv-fert-grid" id="inv-fert-grid"></div>
+      </div>
+
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">🔬 Malattie / Parassiti</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <select id="inv-disease-type" style="flex:1;min-width:120px;border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:11px;font-family:'DM Sans',sans-serif">
+            <option value="">— Aggiungi —</option>
+            <option value="cocciniglia">Cocciniglia</option>
+            <option value="cocciniglia_cotonosa">Cocciniglia cotonosa</option>
+            <option value="ragnetto_rosso">Ragnetto rosso</option>
+            <option value="afidi">Afidi</option>
+            <option value="mosca_bianca">Mosca bianca</option>
+            <option value="oidio">Oidio (Mal bianco)</option>
+            <option value="marciume_radicale">Marciume radicale</option>
+            <option value="fumaggine">Fumaggine</option>
+            <option value="clorosi_ferrica">Clorosi ferrica</option>
+            <option value="minatore_fogliare">Minatore fogliare</option>
+            <option value="alternaria">Alternaria</option>
+            <option value="altro">Altro</option>
+          </select>
+          <input type="text" id="inv-disease-note" placeholder="Note..." style="flex:1;min-width:100px;border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:11px;font-family:'DM Sans',sans-serif">
+          <button class="ctrl-btn" onclick="invAddDisease()" style="padding:6px 12px;font-size:11px">+ Aggiungi</button>
+        </div>
+        <div class="inv-disease-list" id="inv-disease-list"></div>
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:space-between;margin-top:12px;flex-wrap:wrap">
+        <button class="ctrl-btn" id="inv-del-btn" onclick="invDelete()" style="color:#b04040;display:none">Elimina vaso</button>
+        <div style="display:flex;gap:8px;margin-left:auto">
+          <button class="ctrl-btn" onclick="invCloseForm()">Annulla</button>
+          <button class="save-btn" onclick="invSave()">Salva</button>
         </div>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- ── MODAL: FORM PIANTA PERSONALIZZATA ────────────────────────────
+<!-- ── MODAL: FORM PIANTA PERSONALIZZATA ────────────────────────────
      Form a tre livelli (base, avanzato, esperto) per aggiungere o
      modificare una pianta custom. Solo il livello base è espanso al
      primo apertura; gli altri due si aprono cliccando i loro header.
 -->
-  <div class="overlay" id="cp-overlay" onclick="if(event.target===this)cpCloseForm()">
-    <div class="panel" style="max-width:680px;max-height:92vh;overflow-y:auto">
-      <div class="panel-header">
-        <div style="flex:1;min-width:0">
-          <div class="panel-title" id="cp-form-title">🌱 Nuova pianta</div>
-          <div class="panel-subtitle" id="cp-form-sub">Compila i campi base, il resto è opzionale.</div>
-        </div>
-        <button class="close-btn" onclick="cpCloseForm()" style="flex-shrink:0">✕</button>
+<div class="overlay" id="cp-overlay" onclick="if(event.target===this)cpCloseForm()">
+  <div class="panel" style="max-width:680px;max-height:92vh;overflow-y:auto">
+    <div class="panel-header">
+      <div style="flex:1;min-width:0">
+        <div class="panel-title" id="cp-form-title">🌱 Nuova pianta</div>
+        <div class="panel-subtitle" id="cp-form-sub">Compila i campi base, il resto è opzionale.</div>
       </div>
-      <div class="panel-body">
+      <button class="close-btn" onclick="cpCloseForm()" style="flex-shrink:0">✕</button>
+    </div>
+    <div class="panel-body">
 
-        <!-- ── LIVELLO BASE — sempre visibile ────────────────────── -->
+      <!-- ── LIVELLO BASE — sempre visibile ────────────────────── -->
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">📝 Informazioni essenziali</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Cinque campi sufficienti per registrare una pianta funzionante. Tutto il resto è opzionale.</div>
+
+        <div class="form-row">
+          <div class="form-field" style="flex:2">
+            <label>Nome <span style="color:#c45a5a">*</span></label>
+            <input type="text" id="cp-name" placeholder="Es. Plumeria">
+          </div>
+          <div class="form-field" style="flex:2">
+            <label>Nome latino</label>
+            <input type="text" id="cp-latin" placeholder="Es. Plumeria rubra">
+          </div>
+          <div class="form-field" style="max-width:90px">
+            <label>Icona</label>
+            <input type="text" id="cp-icon" placeholder="🌱" maxlength="4" style="text-align:center;font-size:18px">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field" style="flex:1">
+            <label>Gruppo simulazione</label>
+            <select id="cp-sim-group">
+              <option value="succulenta">Succulenta</option>
+              <option value="orchidea">Orchidea</option>
+              <option value="tropicale">Tropicale</option>
+              <option value="agrume">Agrume</option>
+              <option value="mediterranea">Mediterranea</option>
+              <option value="bonsai">Bonsai</option>
+              <option value="arbusto" selected>Arbusto</option>
+              <option value="albero">Albero</option>
+              <option value="aromatica">Aromatica</option>
+              <option value="fiorita">Da fiore</option>
+            </select>
+            <div class="param-hint">Determina i Kc stagionali del simulatore FAO-56</div>
+          </div>
+          <div class="form-field" style="flex:1">
+            <label>Categoria sensore</label>
+            <select id="cp-sensor-cat">
+              <option value="succulente">Succulente</option>
+              <option value="tropicali">Tropicali</option>
+              <option value="mediterranee">Mediterranee</option>
+              <option value="agrumi">Agrumi</option>
+              <option value="bonsai">Bonsai</option>
+              <option value="orchidee">Orchidee</option>
+              <option value="aromatiche">Aromatiche</option>
+              <option value="universale" selected>Universale</option>
+            </select>
+            <div class="param-hint">Soglie umidità per badge calendario</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SCHEDA COLTURALE — collassabile ─────────────────────────
+           Questa è la scheda informativa che apparirà nel pannello dettaglio
+           della pianta, con i cinque tab Concimazione / Substrato /
+           Esposizione / Cure / BioBizz.
+
+           I campi sono organizzati esattamente come le sezioni del renderer
+           (sTabDefs in giardino.js): ogni sotto-blocco corrisponde a un tab
+           e ogni textarea corrisponde a una riga nella scheda. Tutti i
+           campi sono opzionali — il renderer mostra "—" per quelli vuoti —
+           così l'utente che vuole creare una pianta minima compila solo
+           quello che gli interessa.
+
+           Le cinque sezioni interne sono presentate come header che
+           introducono il loro gruppo di campi. Non sono collassabili
+           individualmente: il livello di collassabilità più alto è già
+           "Scheda colturale" tutta intera, e annidarne altri a doppio
+           livello renderebbe il form più ostico da navigare. -->
+      <div class="inv-form-card" style="cursor:pointer" onclick="cpToggleSection('advanced')">
+        <div class="inv-form-card-title" style="margin-bottom:0;display:flex;align-items:center;justify-content:space-between">
+          <span>📖 Scheda colturale</span>
+          <span id="cp-toggle-advanced" style="font-size:14px;color:var(--muted)">▼</span>
+        </div>
+      </div>
+      <div id="cp-section-advanced" style="display:none">
         <div class="inv-form-card">
-          <div class="inv-form-card-title">📝 Informazioni essenziali</div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Cinque campi sufficienti per registrare una
-            pianta funzionante. Tutto il resto è opzionale.</div>
-
-          <div class="form-row">
-            <div class="form-field" style="flex:2">
-              <label>Nome <span style="color:#c45a5a">*</span></label>
-              <input type="text" id="cp-name" placeholder="Es. Plumeria">
-            </div>
-            <div class="form-field" style="flex:2">
-              <label>Nome latino</label>
-              <input type="text" id="cp-latin" placeholder="Es. Plumeria rubra">
-            </div>
-            <div class="form-field" style="max-width:90px">
-              <label>Icona</label>
-              <input type="text" id="cp-icon" placeholder="🌱" maxlength="4" style="text-align:center;font-size:18px">
-            </div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:12px">
+            Tutti i campi sono opzionali. Quelli che lasci vuoti appariranno
+            come trattino <code>—</code> nella scheda della pianta. Compila
+            solo quello che ti serve.
           </div>
 
-          <div class="form-row">
-            <div class="form-field" style="flex:1">
-              <label>Gruppo simulazione</label>
-              <select id="cp-sim-group">
-                <option value="succulenta">Succulenta</option>
-                <option value="orchidea">Orchidea</option>
-                <option value="tropicale">Tropicale</option>
-                <option value="agrume">Agrume</option>
-                <option value="mediterranea">Mediterranea</option>
-                <option value="bonsai">Bonsai</option>
-                <option value="arbusto" selected>Arbusto</option>
-                <option value="albero">Albero</option>
-                <option value="aromatica">Aromatica</option>
-                <option value="fiorita">Da fiore</option>
-              </select>
-              <div class="param-hint">Determina i Kc stagionali del simulatore FAO-56</div>
-            </div>
-            <div class="form-field" style="flex:1">
-              <label>Categoria sensore</label>
-              <select id="cp-sensor-cat">
-                <option value="succulente">Succulente</option>
-                <option value="tropicali">Tropicali</option>
-                <option value="mediterranee">Mediterranee</option>
-                <option value="agrumi">Agrumi</option>
-                <option value="bonsai">Bonsai</option>
-                <option value="orchidee">Orchidee</option>
-                <option value="aromatiche">Aromatiche</option>
-                <option value="universale" selected>Universale</option>
-              </select>
-              <div class="param-hint">Soglie umidità per badge calendario</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ── LIVELLO AVANZATO — collassabile ─────────────────────── -->
-        <div class="inv-form-card" style="cursor:pointer" onclick="cpToggleSection('advanced')">
-          <div class="inv-form-card-title"
-            style="margin-bottom:0;display:flex;align-items:center;justify-content:space-between">
-            <span>📖 Scheda colturale e calendario</span>
-            <span id="cp-toggle-advanced" style="font-size:14px;color:var(--muted)">▼</span>
-          </div>
-        </div>
-        <div id="cp-section-advanced" style="display:none">
-          <div class="inv-form-card">
-            <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Contenuti che appariranno nella scheda
-              della pianta. Tutti i campi sono opzionali: i tab vuoti non verranno mostrati.</div>
+          <!-- ── Tab 1: Concimazione (sezione "con") ── -->
+          <div class="cp-card-section">
+            <div class="cp-card-section-title">💚 Concimazione</div>
             <div class="form-row">
-              <div class="form-field" style="flex:1"><label>Descrizione</label>
-                <textarea id="cp-description" rows="2"
-                  placeholder="Es. Pianta esotica con fiori a forma di uccello del paradiso."></textarea>
+              <div class="form-field" style="flex:1"><label>Periodo</label>
+                <input type="text" id="cp-con-periodo" placeholder="Es. Marzo – Luglio">
+              </div>
+              <div class="form-field" style="flex:1"><label>Frequenza</label>
+                <input type="text" id="cp-con-frequenza" placeholder="Es. Ogni 6-8 settimane">
               </div>
             </div>
             <div class="form-row">
-              <div class="form-field" style="flex:1"><label>Esposizione</label>
-                <textarea id="cp-exposure" rows="2"
-                  placeholder="Es. Luce intensa indiretta o sole diretto al mattino"></textarea>
-              </div>
-              <div class="form-field" style="flex:1"><label>Annaffiatura</label>
-                <textarea id="cp-watering" rows="2"
-                  placeholder="Es. Regolare in primavera-estate, ridotta in inverno"></textarea>
+              <div class="form-field" style="flex:1"><label>Concime</label>
+                <input type="text" id="cp-con-concime" placeholder="Es. Leggero, P-K prevalente; per piante mediterranee">
               </div>
             </div>
             <div class="form-row">
-              <div class="form-field" style="flex:1"><label>Substrato</label>
-                <textarea id="cp-substrate-text" rows="2"
-                  placeholder="Es. Universale ben drenato con perlite"></textarea>
+              <div class="form-field" style="flex:1"><label>Stop</label>
+                <textarea id="cp-con-stop" rows="2" placeholder="Es. Stop da agosto — non stimolare crescita tardiva"></textarea>
               </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field" style="flex:1"><label>Note</label>
+                <textarea id="cp-con-note" rows="2" placeholder="Es. Pianta frugale: in piena terra spesso non necessita di concimazione"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Tab 2: Substrato (sezione "sub") ── -->
+          <div class="cp-card-section">
+            <div class="cp-card-section-title">🪴 Substrato</div>
+            <div class="form-row">
+              <div class="form-field" style="flex:1"><label>Terreno</label>
+                <textarea id="cp-sub-terreno" rows="2" placeholder="Es. Terriccio universale ben drenante con 20% perlite"></textarea>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field" style="flex:1"><label>pH ideale</label>
+                <input type="text" id="cp-sub-ph" placeholder="Es. 6.0 – 7.0">
+              </div>
+              <div class="form-field" style="flex:1"><label>Vaso</label>
+                <input type="text" id="cp-sub-vaso" placeholder="Es. Terracotta con foro di drenaggio">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field" style="flex:1"><label>Rinvaso</label>
+                <input type="text" id="cp-sub-rinvaso" placeholder="Es. Ogni 2-3 anni in primavera">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field" style="flex:1"><label>Terreno vivo</label>
+                <textarea id="cp-sub-vivo" rows="2" placeholder="Es. Aggiungere 10-15% di humus di lombrico. Micorrize universali al rinvaso"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Tab 3: Esposizione (sezione "esp") ── -->
+          <div class="cp-card-section">
+            <div class="cp-card-section-title">☀️ Esposizione</div>
+            <div class="form-row">
+              <div class="form-field" style="flex:1"><label>Luce</label>
+                <textarea id="cp-esp-luce" rows="2" placeholder="Es. Luce indiretta brillante; tollera anche poca luce"></textarea>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field" style="flex:1"><label>Sole diretto</label>
+                <input type="text" id="cp-esp-sole" placeholder="Es. Evitare sole diretto estivo — brucia le foglie">
+              </div>
+            </div>
+            <div class="form-row">
               <div class="form-field" style="flex:1"><label>Temperatura</label>
-                <textarea id="cp-temperature" rows="2" placeholder="Es. 16-26°C, non sotto i 10°C"></textarea>
+                <input type="text" id="cp-esp-temperatura" placeholder="Es. 15–30°C; non sotto i 10°C">
+              </div>
+              <div class="form-field" style="flex:1"><label>Umidità</label>
+                <input type="text" id="cp-esp-umidita" placeholder="Es. Bassa; non nebulizzare">
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Tab 4: Cure (sezione "cur") ── -->
+          <div class="cp-card-section">
+            <div class="cp-card-section-title">💧 Cure</div>
+            <div class="form-row">
+              <div class="form-field" style="flex:1"><label>Annaffiatura</label>
+                <textarea id="cp-cur-acqua" rows="2" placeholder="Es. Solo quando il terreno è completamente asciutto"></textarea>
               </div>
             </div>
             <div class="form-row">
               <div class="form-field" style="flex:1"><label>Potatura</label>
-                <textarea id="cp-pruning" rows="2" placeholder="Es. Rimuovere foglie secche alla base"></textarea>
-              </div>
-              <div class="form-field" style="flex:1"><label>Parassiti tipici</label>
-                <textarea id="cp-pests" rows="2"
-                  placeholder="Es. Cocciniglia, ragnetto rosso in ambienti secchi"></textarea>
+                <textarea id="cp-cur-potatura" rows="2" placeholder="Es. Rimuovere foglie secche o danneggiate alla base"></textarea>
               </div>
             </div>
             <div class="form-row">
-              <div class="form-field" style="flex:1"><label>Note generali sulla concimazione</label>
-                <textarea id="cp-fertilization" rows="2" placeholder="Es. Sospendere durante la fioritura"></textarea>
+              <div class="form-field" style="flex:1"><label>Parassiti</label>
+                <input type="text" id="cp-cur-parassiti" placeholder="Es. Cocciniglia e ragnetto rosso; trattare con olio di neem">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field" style="flex:1"><label>Da sapere</label>
+                <textarea id="cp-cur-extra" rows="2" placeholder="Es. Quasi indistruttibile — il nemico principale è l'eccesso d'acqua"></textarea>
               </div>
             </div>
           </div>
 
-          <div class="inv-form-card">
-            <div class="inv-form-card-title">📅 Calendario fertilizzazione</div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Mesi in cui la pianta riceve concime,
-              frequenza e prodotto suggerito.</div>
+          <!-- ── Tab 5: BioBizz (sezione "bio") ── -->
+          <div class="cp-card-section">
+            <div class="cp-card-section-title">🌿 BioBizz</div>
             <div class="form-row">
-              <div class="form-field" style="flex:1">
-                <label>Mesi attivi</label>
-                <div id="cp-fert-months" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div>
-                <div class="param-hint">Clicca i mesi per attivarli/disattivarli</div>
+              <div class="form-field" style="flex:1"><label>Prodotti</label>
+                <input type="text" id="cp-bio-prodotti" placeholder="Es. Bio·Grow · Alg·A·Mic · Root·Juice">
               </div>
             </div>
             <div class="form-row">
-              <div class="form-field" style="max-width:160px">
-                <label>Intervallo (giorni)</label>
-                <input type="number" id="cp-fert-interval" min="3" max="90" value="21">
-                <div class="param-hint">Tra una concimazione e la successiva</div>
-              </div>
-              <div class="form-field" style="flex:1">
-                <label>Concime suggerito</label>
-                <input type="text" id="cp-fert-product" placeholder="Es. Concime liquido per piante fiorite">
+              <div class="form-field" style="flex:1"><label>Primavera</label>
+                <textarea id="cp-bio-primavera" rows="2" placeholder="Es. Bio·Grow a ¼ dose ogni 4-5 settimane"></textarea>
               </div>
             </div>
             <div class="form-row">
-              <div class="form-field" style="flex:1"><label>Note sul concime</label>
-                <input type="text" id="cp-fert-note" placeholder="Es. Mezza dose, ogni due settimane in piena estate">
+              <div class="form-field" style="flex:1"><label>Estate</label>
+                <textarea id="cp-bio-estate" rows="2" placeholder="Es. Bio·Grow a ¼ dose 1× al mese"></textarea>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field" style="flex:1"><label>Autunno/inverno</label>
+                <textarea id="cp-bio-autunno" rows="2" placeholder="Es. Stop totale da ottobre"></textarea>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field" style="flex:1"><label>Al rinvaso</label>
+                <textarea id="cp-bio-rinvaso" rows="2" placeholder="Es. Root·Juice diluito sulle radici al rinvaso"></textarea>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field" style="flex:1"><label>Note</label>
+                <textarea id="cp-bio-note" rows="2" placeholder="Es. Mai superare ¼ della dose consigliata"></textarea>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- ── LIVELLO CALENDARIO ANNUALE — collassabile ───────────── -->
-        <!-- Questa sezione popola la struttura cPlants e fa apparire la pianta
+        <div class="inv-form-card">
+          <div class="inv-form-card-title">📅 Calendario fertilizzazione</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Mesi in cui la pianta riceve concime, frequenza e prodotto suggerito.</div>
+          <div class="form-row">
+            <div class="form-field" style="flex:1">
+              <label>Mesi attivi</label>
+              <div id="cp-fert-months" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div>
+              <div class="param-hint">Clicca i mesi per attivarli/disattivarli</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field" style="max-width:160px">
+              <label>Intervallo (giorni)</label>
+              <input type="number" id="cp-fert-interval" min="3" max="90" value="21">
+              <div class="param-hint">Tra una concimazione e la successiva</div>
+            </div>
+            <div class="form-field" style="flex:1">
+              <label>Concime suggerito</label>
+              <input type="text" id="cp-fert-product" placeholder="Es. Concime liquido per piante fiorite">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field" style="flex:1"><label>Note sul concime</label>
+              <input type="text" id="cp-fert-note" placeholder="Es. Mezza dose, ogni due settimane in piena estate">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── LIVELLO CALENDARIO ANNUALE — collassabile ───────────── -->
+      <!-- Questa sezione popola la struttura cPlants e fa apparire la pianta
            nella sezione Mensile. Se l'utente non la tocca, la sezione Mensile
            dedurrà automaticamente gli stati dai mesi di concimazione del livello
            avanzato. Se invece vuole controllo fine, qui può specificare per
            ogni mese lo stato e una nota personalizzata. -->
-        <div class="inv-form-card" style="cursor:pointer" onclick="cpToggleSection('monthly')">
-          <div class="inv-form-card-title"
-            style="margin-bottom:0;display:flex;align-items:center;justify-content:space-between">
-            <span>📅 Calendario annuale (sezione Mensile)</span>
-            <span id="cp-toggle-monthly" style="font-size:14px;color:var(--muted)">▼</span>
-          </div>
+      <div class="inv-form-card" style="cursor:pointer" onclick="cpToggleSection('monthly')">
+        <div class="inv-form-card-title" style="margin-bottom:0;display:flex;align-items:center;justify-content:space-between">
+          <span>📅 Calendario annuale (sezione Mensile)</span>
+          <span id="cp-toggle-monthly" style="font-size:14px;color:var(--muted)">▼</span>
         </div>
-        <div id="cp-section-monthly" style="display:none">
-          <div class="inv-form-card">
-            <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">
-              Per ogni mese puoi indicare lo stato della pianta e una nota descrittiva.
-              <b>Se lasci tutto a "Auto", la sezione Mensile dedurrà gli stati dai mesi di concimazione</b>
-              indicati nel livello avanzato qui sopra.
-              <button type="button" onclick="cpDeduceFromFertMonths()"
-                style="margin-left:8px;padding:2px 8px;font-size:11px;border:1px solid #b0a070;background:#fff8e0;border-radius:6px;cursor:pointer">
-                ⚙️ Deduci da concimazione
-              </button>
-            </div>
-
-            <!-- Legenda degli stati: piccolo richiamo visuale di cosa significano -->
-            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;font-size:11px">
-              <span style="display:inline-flex;align-items:center;gap:4px"><span
-                  style="width:10px;height:10px;background:#d8d8d8;border-radius:50%;display:inline-block"></span>Auto/Riposo</span>
-              <span style="display:inline-flex;align-items:center;gap:4px"><span
-                  style="width:10px;height:10px;background:#7a9a50;border-radius:50%;display:inline-block"></span>Concimazione
-                attiva</span>
-              <span style="display:inline-flex;align-items:center;gap:4px"><span
-                  style="width:10px;height:10px;background:#c0a040;border-radius:50%;display:inline-block"></span>Dose
-                ridotta</span>
-              <span style="display:inline-flex;align-items:center;gap:4px"><span
-                  style="width:10px;height:10px;background:#c06040;border-radius:50%;display:inline-block"></span>Attenzione
-                speciale</span>
-            </div>
-
-            <!-- Griglia 12 mesi: ogni mese ha selettore stato + nota opzionale -->
-            <div id="cp-monthly-grid"></div>
-          </div>
-        </div>
-
-        <!-- ── LIVELLO ESPERTO — collassabile ──────────────────────── -->
-        <div class="inv-form-card" style="cursor:pointer" onclick="cpToggleSection('expert')">
-          <div class="inv-form-card-title"
-            style="margin-bottom:0;display:flex;align-items:center;justify-content:space-between">
-            <span>🔬 Parametri esperti FAO-56</span>
-            <span id="cp-toggle-expert" style="font-size:14px;color:var(--muted)">▼</span>
-          </div>
-        </div>
-        <div id="cp-section-expert" style="display:none">
-          <div class="inv-form-card">
-            <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Parametri tecnici della simulazione.
-              <b>Lascia vuoti i campi per usare i default del gruppo</b>: il simulatore userà i valori standard del
-              modello FAO-56.</div>
-
-            <div class="form-row">
-              <div class="form-field" style="max-width:180px">
-                <label>Profondità radici (cm)</label>
-                <input type="number" id="cp-root-depth" min="5" max="100" step="1" placeholder="default gruppo">
-                <div class="param-hint">Tipica per la specie</div>
-              </div>
-              <div class="form-field" style="max-width:160px">
-                <label>Coefficiente p</label>
-                <input type="number" id="cp-p-coef" min="0.1" max="0.8" step="0.05" placeholder="default gruppo">
-                <div class="param-hint">Tolleranza al deficit (0.3-0.7)</div>
-              </div>
-            </div>
-
-            <div style="font-size:11px;color:var(--muted);margin:12px 0 6px 0;font-weight:600">Coefficienti colturali Kc
-              per stadio vegetativo</div>
-            <div class="form-row">
-              <div class="form-field" style="max-width:130px">
-                <label>Iniziale</label>
-                <input type="number" id="cp-kc-initial" min="0.1" max="1.5" step="0.05" placeholder="auto">
-              </div>
-              <div class="form-field" style="max-width:130px">
-                <label>Sviluppo</label>
-                <input type="number" id="cp-kc-dev" min="0.1" max="1.5" step="0.05" placeholder="auto">
-              </div>
-              <div class="form-field" style="max-width:130px">
-                <label>Piena</label>
-                <input type="number" id="cp-kc-mid" min="0.1" max="1.5" step="0.05" placeholder="auto">
-              </div>
-              <div class="form-field" style="max-width:130px">
-                <label>Tarda</label>
-                <input type="number" id="cp-kc-late" min="0.1" max="1.5" step="0.05" placeholder="auto">
-              </div>
-              <div class="form-field" style="max-width:130px">
-                <label>Riposo</label>
-                <input type="number" id="cp-kc-dormant" min="0.1" max="1.5" step="0.05" placeholder="auto">
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ── PULSANTI AZIONE ──────────────────────────────────────── -->
-        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap">
-          <button class="ctrl-btn" id="cp-delete-btn" onclick="cpDeletePlant()"
-            style="display:none;background:#fdf0f0;border-color:#e8b8b8;color:#a04040">🗑️ Elimina</button>
-          <button class="ctrl-btn" onclick="cpCloseForm()">Annulla</button>
-          <button class="save-btn" onclick="cpSavePlant()">Salva</button>
-        </div>
-
       </div>
+      <div id="cp-section-monthly" style="display:none">
+        <div class="inv-form-card">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">
+            Per ogni mese puoi indicare lo stato della pianta e una nota descrittiva.
+            <b>Se lasci tutto a "Auto", la sezione Mensile dedurrà gli stati dai mesi di concimazione</b>
+            indicati nel livello avanzato qui sopra.
+            <button type="button" onclick="cpDeduceFromFertMonths()" style="margin-left:8px;padding:2px 8px;font-size:11px;border:1px solid #b0a070;background:#fff8e0;border-radius:6px;cursor:pointer">
+              ⚙️ Deduci da concimazione
+            </button>
+          </div>
+
+          <!-- Legenda degli stati: piccolo richiamo visuale di cosa significano -->
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;font-size:11px">
+            <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#d8d8d8;border-radius:50%;display:inline-block"></span>Auto/Riposo</span>
+            <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#7a9a50;border-radius:50%;display:inline-block"></span>Concimazione attiva</span>
+            <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#c0a040;border-radius:50%;display:inline-block"></span>Dose ridotta</span>
+            <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#c06040;border-radius:50%;display:inline-block"></span>Attenzione speciale</span>
+          </div>
+
+          <!-- Griglia 12 mesi: ogni mese ha selettore stato + nota opzionale -->
+          <div id="cp-monthly-grid"></div>
+        </div>
+      </div>
+
+      <!-- ── LIVELLO ESPERTO — collassabile ──────────────────────── -->
+      <div class="inv-form-card" style="cursor:pointer" onclick="cpToggleSection('expert')">
+        <div class="inv-form-card-title" style="margin-bottom:0;display:flex;align-items:center;justify-content:space-between">
+          <span>🔬 Parametri esperti FAO-56</span>
+          <span id="cp-toggle-expert" style="font-size:14px;color:var(--muted)">▼</span>
+        </div>
+      </div>
+      <div id="cp-section-expert" style="display:none">
+        <div class="inv-form-card">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Parametri tecnici della simulazione. <b>Lascia vuoti i campi per usare i default del gruppo</b>: il simulatore userà i valori standard del modello FAO-56.</div>
+
+          <div class="form-row">
+            <div class="form-field" style="max-width:180px">
+              <label>Profondità radici (cm)</label>
+              <input type="number" id="cp-root-depth" min="5" max="100" step="1" placeholder="default gruppo">
+              <div class="param-hint">Tipica per la specie</div>
+            </div>
+            <div class="form-field" style="max-width:160px">
+              <label>Coefficiente p</label>
+              <input type="number" id="cp-p-coef" min="0.1" max="0.8" step="0.05" placeholder="default gruppo">
+              <div class="param-hint">Tolleranza al deficit (0.3-0.7)</div>
+            </div>
+          </div>
+
+          <div style="font-size:11px;color:var(--muted);margin:12px 0 6px 0;font-weight:600">Coefficienti colturali Kc per stadio vegetativo</div>
+          <div class="form-row">
+            <div class="form-field" style="max-width:130px">
+              <label>Iniziale</label>
+              <input type="number" id="cp-kc-initial" min="0.1" max="1.5" step="0.05" placeholder="auto">
+            </div>
+            <div class="form-field" style="max-width:130px">
+              <label>Sviluppo</label>
+              <input type="number" id="cp-kc-dev" min="0.1" max="1.5" step="0.05" placeholder="auto">
+            </div>
+            <div class="form-field" style="max-width:130px">
+              <label>Piena</label>
+              <input type="number" id="cp-kc-mid" min="0.1" max="1.5" step="0.05" placeholder="auto">
+            </div>
+            <div class="form-field" style="max-width:130px">
+              <label>Tarda</label>
+              <input type="number" id="cp-kc-late" min="0.1" max="1.5" step="0.05" placeholder="auto">
+            </div>
+            <div class="form-field" style="max-width:130px">
+              <label>Riposo</label>
+              <input type="number" id="cp-kc-dormant" min="0.1" max="1.5" step="0.05" placeholder="auto">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PULSANTI AZIONE ──────────────────────────────────────── -->
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap">
+        <button class="ctrl-btn" id="cp-delete-btn" onclick="cpDeletePlant()" style="display:none;background:#fdf0f0;border-color:#e8b8b8;color:#a04040">🗑️ Elimina</button>
+        <button class="ctrl-btn" onclick="cpCloseForm()">Annulla</button>
+        <button class="save-btn" onclick="cpSavePlant()">Salva</button>
+      </div>
+
     </div>
   </div>
+</div>
 
-  <!-- ── MODAL: SIMULATORE BILANCIO IDRICO ─────────────────────────── -->
-  <div class="overlay" id="sim-overlay" onclick="if(event.target===this)simClose()">
-    <div class="panel" style="max-width:720px;max-height:92vh;overflow-y:auto">
-      <div class="panel-header">
-        <div style="flex:1;min-width:0">
-          <div class="panel-title">🔮 Simulazione bilancio idrico</div>
-          <div class="panel-subtitle" id="sim-subtitle">FAO-56 · TAW/RAW · ET₀ Penman-Monteith</div>
-        </div>
-        <button class="close-btn" onclick="simClose()" style="flex-shrink:0">✕</button>
+<!-- ── MODAL: SIMULATORE BILANCIO IDRICO ─────────────────────────── -->
+<div class="overlay" id="sim-overlay" onclick="if(event.target===this)simClose()">
+  <div class="panel" style="max-width:720px;max-height:92vh;overflow-y:auto">
+    <div class="panel-header">
+      <div style="flex:1;min-width:0">
+        <div class="panel-title">🔮 Simulazione bilancio idrico</div>
+        <div class="panel-subtitle" id="sim-subtitle">FAO-56 · TAW/RAW · ET₀ Penman-Monteith</div>
       </div>
-      <div style="padding:12px 16px">
+      <button class="close-btn" onclick="simClose()" style="flex-shrink:0">✕</button>
+    </div>
+    <div style="padding:12px 16px">
 
-        <div class="inv-form-card">
-          <div class="inv-form-card-title">🌱 Coltura e stadio</div>
-          <div class="form-row">
-            <div class="form-field" style="flex:1"><label>Stadio vegetativo</label>
-              <select id="sim-stage" onchange="simOnStageChange()">
-                <option value="initial">Iniziale / Ripresa</option>
-                <option value="dev">Sviluppo</option>
-                <option value="mid" selected>Piena vegetazione</option>
-                <option value="late">Tarda stagione</option>
-                <option value="dormant">Riposo invernale</option>
-              </select>
-            </div>
-            <div class="form-field" style="max-width:110px"><label>Kc</label>
-              <input type="number" id="sim-kc" step="0.05" min="0.1" max="1.5">
-              <div class="param-hint">Coefficiente colturale (0.3-1.1)</div>
-            </div>
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">🌱 Coltura e stadio</div>
+        <div class="form-row">
+          <div class="form-field" style="flex:1"><label>Stadio vegetativo</label>
+            <select id="sim-stage" onchange="simOnStageChange()">
+              <option value="initial">Iniziale / Ripresa</option>
+              <option value="dev">Sviluppo</option>
+              <option value="mid" selected>Piena vegetazione</option>
+              <option value="late">Tarda stagione</option>
+              <option value="dormant">Riposo invernale</option>
+            </select>
           </div>
-          <div class="form-row">
-            <div class="form-field" style="max-width:140px"><label>Profondità radicale (cm)</label>
-              <input type="number" id="sim-root" step="1" min="5" max="100">
-            </div>
-            <div class="form-field" style="max-width:140px"><label>Coefficiente p</label>
-              <input type="number" id="sim-p" step="0.05" min="0.2" max="0.7">
-              <div class="param-hint">% TAW estraibile senza stress (0.3=sensibile, 0.6=tollerante)</div>
-            </div>
-            <div class="form-field" style="max-width:120px"><label>Giorni simulazione</label>
-              <input type="number" id="sim-days" step="1" min="1" max="30" value="7">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-field" style="max-width:220px"><label>Umidità iniziale (% FC)</label>
-              <input type="number" id="sim-initial-moist" step="5" min="10" max="100" value="70">
-              <div class="param-hint">Ordine di priorità: sensore WH51/WH52 live, poi stima da ultima annaffiatura,
-                infine 65% generico</div>
-              <div id="sim-moist-source" style="font-size:10px;margin-top:3px;font-weight:500"></div>
-            </div>
-          </div>
-          <div id="sim-plant-info" style="font-size:10px;color:var(--muted);margin-top:6px"></div>
-        </div>
-
-        <div class="inv-form-card">
-          <div class="inv-form-card-title">🪴 Contenitore</div>
-          <div id="sim-pot-info" style="font-size:11px;color:var(--text);margin-bottom:6px"></div>
-          <div class="form-row">
-            <div class="form-field" style="max-width:130px"><label>Colore vaso</label>
-              <select id="sim-color">
-                <option value="chiaro">Chiaro</option>
-                <option value="scuro">Scuro</option>
-              </select>
-            </div>
-            <div class="form-field" style="padding-top:20px"><label
-                style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="sim-mulch">Pacciamatura
-                superficiale</label>
-              <div class="param-hint">Riduce evaporazione del substrato del ~35%</div>
-            </div>
-            <div class="form-field" style="padding-top:20px"><label
-                style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="sim-saucer">Sottovaso con
-                riserva</label>
-              <div class="param-hint">Riduce perdite per drenaggio</div>
-            </div>
+          <div class="form-field" style="max-width:110px"><label>Kc</label>
+            <input type="number" id="sim-kc" step="0.05" min="0.1" max="1.5">
+            <div class="param-hint">Coefficiente colturale (0.3-1.1)</div>
           </div>
         </div>
-
-        <div class="inv-form-card">
-          <div class="inv-form-card-title">🌤️ Scenario meteo</div>
-          <div id="sim-meteo-banner"
-            style="font-size:11px;padding:6px 10px;border-radius:6px;margin-bottom:8px;display:none"></div>
-          <div class="form-row">
-            <div class="form-field" style="flex:1"><label>Origine dati</label>
-              <select id="sim-meteo-mode" onchange="simToggleMeteoMode()">
-                <option value="live">Live + previsioni (Ecowitt + Open-Meteo)</option>
-                <option value="manual">Scenario manuale</option>
-              </select>
-            </div>
+        <div class="form-row">
+          <div class="form-field" style="max-width:140px"><label>Profondità radicale (cm)</label>
+            <input type="number" id="sim-root" step="1" min="5" max="100">
           </div>
-          <div id="sim-meteo-manual" style="display:none">
-            <div class="form-row">
-              <div class="form-field"><label>T min (°C)</label><input type="number" id="sim-tmin" value="15" step="1">
-              </div>
-              <div class="form-field"><label>T max (°C)</label><input type="number" id="sim-tmax" value="26" step="1">
-              </div>
-              <div class="form-field"><label>Umidità media (%)</label><input type="number" id="sim-hum" value="60"
-                  step="5"></div>
-            </div>
-            <div class="form-row">
-              <div class="form-field"><label>Vento (km/h)</label><input type="number" id="sim-wind" value="8" step="1">
-              </div>
-              <div class="form-field"><label>Radiazione (MJ/m²/g)</label><input type="number" id="sim-solar" value="18"
-                  step="1"></div>
-              <div class="form-field"><label>Pioggia (mm/g)</label><input type="number" id="sim-rain" value="0"
-                  step="1"></div>
-            </div>
+          <div class="form-field" style="max-width:140px"><label>Coefficiente p</label>
+            <input type="number" id="sim-p" step="0.05" min="0.2" max="0.7">
+            <div class="param-hint">% TAW estraibile senza stress (0.3=sensibile, 0.6=tollerante)</div>
+          </div>
+          <div class="form-field" style="max-width:120px"><label>Giorni simulazione</label>
+            <input type="number" id="sim-days" step="1" min="1" max="30" value="7">
           </div>
         </div>
-
-        <div class="inv-form-card">
-          <div class="inv-form-card-title">💧 Irrigazione automatica</div>
-          <div class="form-row">
-            <div class="form-field" style="padding-top:20px"><label
-                style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="sim-auto" checked>Attiva
-                irrigazione automatica</label>
-              <div class="param-hint">Irriga quando la depletion supera la soglia RAW</div>
-            </div>
-            <div class="form-field" style="max-width:110px"><label>Soglia RAW</label><input type="number"
-                id="sim-raw-factor" step="0.1" min="0.5" max="1.5" value="1.0">
-              <div class="param-hint">1.0=usa RAW intera, 0.8=più prudente</div>
-            </div>
-            <div class="form-field" style="max-width:110px"><label>Riempimento target</label><input type="number"
-                id="sim-target-fill" step="0.02" min="0.8" max="1.0" value="0.98">
-              <div class="param-hint">% capacità di campo da ripristinare</div>
-            </div>
+        <div class="form-row">
+          <div class="form-field" style="max-width:220px"><label>Umidità iniziale (% FC)</label>
+            <input type="number" id="sim-initial-moist" step="5" min="10" max="100" value="70">
+            <div class="param-hint">Ordine di priorità: sensore WH51/WH52 live, poi stima da ultima annaffiatura, infine 65% generico</div>
+            <div id="sim-moist-source" style="font-size:10px;margin-top:3px;font-weight:500"></div>
           </div>
         </div>
-
-        <div style="display:flex;gap:8px;justify-content:center;margin:12px 0;flex-wrap:wrap">
-          <button class="save-btn" style="padding:10px 24px" onclick="simRun()">▶️ Esegui simulazione</button>
-          <button class="ctrl-btn" style="padding:10px 16px;background:#edf5ff;border-color:#b0c8e8;color:#2a5a8a"
-            onclick="simSaveParams()">💾 Salva parametri per questo vaso</button>
-          <button class="ctrl-btn" style="padding:10px 16px;color:#b08030" onclick="simResetParams()">🔄 Ripristina
-            default</button>
-        </div>
-        <div id="sim-save-msg"
-          style="text-align:center;font-size:12px;color:var(--accent);margin-top:-4px;margin-bottom:8px;display:none">
-        </div>
-
-        <!-- Risultati -->
-        <div id="sim-results" style="display:none">
-          <div id="sim-summary"></div>
-          <div id="sim-chart"></div>
-          <div id="sim-timeline"></div>
-        </div>
-
+        <div id="sim-plant-info" style="font-size:10px;color:var(--muted);margin-top:6px"></div>
       </div>
+
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">🪴 Contenitore</div>
+        <div id="sim-pot-info" style="font-size:11px;color:var(--text);margin-bottom:6px"></div>
+        <div class="form-row">
+          <div class="form-field" style="max-width:130px"><label>Colore vaso</label>
+            <select id="sim-color"><option value="chiaro">Chiaro</option><option value="scuro">Scuro</option></select>
+          </div>
+          <div class="form-field" style="padding-top:20px"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="sim-mulch">Pacciamatura superficiale</label>
+            <div class="param-hint">Riduce evaporazione del substrato del ~35%</div>
+          </div>
+          <div class="form-field" style="padding-top:20px"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="sim-saucer">Sottovaso con riserva</label>
+            <div class="param-hint">Riduce perdite per drenaggio</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">🌤️ Scenario meteo</div>
+        <div id="sim-meteo-banner" style="font-size:11px;padding:6px 10px;border-radius:6px;margin-bottom:8px;display:none"></div>
+        <div class="form-row">
+          <div class="form-field" style="flex:1"><label>Origine dati</label>
+            <select id="sim-meteo-mode" onchange="simToggleMeteoMode()">
+              <option value="live">Live + previsioni (Ecowitt + Open-Meteo)</option>
+              <option value="manual">Scenario manuale</option>
+            </select>
+          </div>
+        </div>
+        <div id="sim-meteo-manual" style="display:none">
+          <div class="form-row">
+            <div class="form-field"><label>T min (°C)</label><input type="number" id="sim-tmin" value="15" step="1"></div>
+            <div class="form-field"><label>T max (°C)</label><input type="number" id="sim-tmax" value="26" step="1"></div>
+            <div class="form-field"><label>Umidità media (%)</label><input type="number" id="sim-hum" value="60" step="5"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-field"><label>Vento (km/h)</label><input type="number" id="sim-wind" value="8" step="1"></div>
+            <div class="form-field"><label>Radiazione (MJ/m²/g)</label><input type="number" id="sim-solar" value="18" step="1"></div>
+            <div class="form-field"><label>Pioggia (mm/g)</label><input type="number" id="sim-rain" value="0" step="1"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="inv-form-card">
+        <div class="inv-form-card-title">💧 Irrigazione automatica</div>
+        <div class="form-row">
+          <div class="form-field" style="padding-top:20px"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="sim-auto" checked>Attiva irrigazione automatica</label>
+            <div class="param-hint">Irriga quando la depletion supera la soglia RAW</div>
+          </div>
+          <div class="form-field" style="max-width:110px"><label>Soglia RAW</label><input type="number" id="sim-raw-factor" step="0.1" min="0.5" max="1.5" value="1.0">
+            <div class="param-hint">1.0=usa RAW intera, 0.8=più prudente</div>
+          </div>
+          <div class="form-field" style="max-width:110px"><label>Riempimento target</label><input type="number" id="sim-target-fill" step="0.02" min="0.8" max="1.0" value="0.98">
+            <div class="param-hint">% capacità di campo da ripristinare</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:center;margin:12px 0;flex-wrap:wrap">
+        <button class="save-btn" style="padding:10px 24px" onclick="simRun()">▶️ Esegui simulazione</button>
+        <button class="ctrl-btn" style="padding:10px 16px;background:#edf5ff;border-color:#b0c8e8;color:#2a5a8a" onclick="simSaveParams()">💾 Salva parametri per questo vaso</button>
+        <button class="ctrl-btn" style="padding:10px 16px;color:#b08030" onclick="simResetParams()">🔄 Ripristina default</button>
+      </div>
+      <div id="sim-save-msg" style="text-align:center;font-size:12px;color:var(--accent);margin-top:-4px;margin-bottom:8px;display:none"></div>
+
+      <!-- Risultati -->
+      <div id="sim-results" style="display:none">
+        <div id="sim-summary"></div>
+        <div id="sim-chart"></div>
+        <div id="sim-timeline"></div>
+      </div>
+
     </div>
   </div>
+</div>
 
-  <!-- ── BOTTOM NAV ─────────────────────────────────────────────────── -->
-  <nav class="app-nav">
-    <button class="nav-tab active" id="tab-schede" data-sec="schede" onclick="showSection('schede')">
-      <span class="nav-icon">🌿</span>Schede
-    </button>
-    <button class="nav-tab" id="tab-mensile" data-sec="mensile" onclick="showSection('mensile')">
-      <span class="nav-icon">📅</span>Mensile
-    </button>
-    <button class="nav-tab" id="tab-giorni" data-sec="giorni" onclick="showSection('giorni')">
-      <span class="nav-icon">📆</span>Giorni
-    </button>
-    <button class="nav-tab" id="tab-diario" data-sec="diario" onclick="showSection('diario')">
-      <span class="nav-icon">📓</span>Diario
-    </button>
-    <button class="nav-tab" id="tab-acqua" data-sec="acqua" onclick="showSection('acqua')">
-      <span class="nav-icon">💧</span>Acqua
-    </button>
-    <button class="nav-tab" id="tab-vasi" data-sec="vasi" onclick="showSection('vasi')">
-      <span class="nav-icon">📦</span>Vasi
-    </button>
-    <button class="nav-tab" id="tab-meteo" data-sec="meteo" onclick="showSection('meteo')">
-      <span class="nav-icon">🌤️</span>Meteo
-    </button>
-    <button class="nav-tab" id="tab-params" data-sec="params" onclick="showSection('params')">
-      <span class="nav-icon">⚙️</span>Parametri
-    </button>
-  </nav>
+<!-- ── BOTTOM NAV ─────────────────────────────────────────────────── -->
+<nav class="app-nav">
+  <button class="nav-tab active" id="tab-schede" data-sec="schede" onclick="showSection('schede')">
+    <span class="nav-icon">🌿</span>Schede
+  </button>
+  <button class="nav-tab" id="tab-mensile" data-sec="mensile" onclick="showSection('mensile')">
+    <span class="nav-icon">📅</span>Mensile
+  </button>
+  <button class="nav-tab" id="tab-giorni" data-sec="giorni" onclick="showSection('giorni')">
+    <span class="nav-icon">📆</span>Giorni
+  </button>
+  <button class="nav-tab" id="tab-diario" data-sec="diario" onclick="showSection('diario')">
+    <span class="nav-icon">📓</span>Diario
+  </button>
+  <button class="nav-tab" id="tab-acqua" data-sec="acqua" onclick="showSection('acqua')">
+    <span class="nav-icon">💧</span>Acqua
+  </button>
+  <button class="nav-tab" id="tab-vasi" data-sec="vasi" onclick="showSection('vasi')">
+    <span class="nav-icon">📦</span>Vasi
+  </button>
+  <button class="nav-tab" id="tab-meteo" data-sec="meteo" onclick="showSection('meteo')">
+    <span class="nav-icon">🌤️</span>Meteo
+  </button>
+  <button class="nav-tab" id="tab-params" data-sec="params" onclick="showSection('params')">
+    <span class="nav-icon">⚙️</span>Parametri
+  </button>
+</nav>
 
-  <script src="/static/js/giardino.js"></script>
+<script src="/static/js/giardino.js"></script>
 </body>
-
 </html>

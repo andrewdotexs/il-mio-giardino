@@ -221,15 +221,16 @@ def init_db():
                 icon            TEXT    DEFAULT '🌱',
                 sim_group       TEXT    DEFAULT 'arbusto',
                 sensor_cat      TEXT    DEFAULT 'universale',
-                -- Contenuti scheda colturale (tutti opzionali)
-                description     TEXT    DEFAULT '',
-                exposure        TEXT    DEFAULT '',
-                watering        TEXT    DEFAULT '',
-                substrate       TEXT    DEFAULT '',
-                temperature     TEXT    DEFAULT '',
-                fertilization   TEXT    DEFAULT '',
-                pruning         TEXT    DEFAULT '',
-                pests           TEXT    DEFAULT '',
+                -- Scheda colturale come JSON serializzato.
+                -- Struttura attesa: {con:{}, sub:{}, esp:{}, cur:{}, bio:{}}
+                -- dove ogni sezione contiene i sotto-campi descritti dalle
+                -- definizioni di sTabDefs nel frontend (periodo/frequenza/...
+                -- per con; terreno/ph/vaso/... per sub; ecc.).
+                -- Tutte le sezioni e i sotto-campi sono opzionali: il renderer
+                -- mostra "—" per i valori mancanti. Sostituisce le otto
+                -- colonne piatte legacy (description/exposure/watering/...) che
+                -- non si mappavano correttamente alle cinque sezioni native.
+                card_data       TEXT    DEFAULT '{}',
                 -- Parametri calendario fertilizzazione
                 fert_months     TEXT    DEFAULT '3,4,5,6,7,8,9,10',
                 fert_interval   INTEGER DEFAULT 21,
@@ -258,25 +259,39 @@ def init_db():
         # Migrazioni incrementali per database esistenti che potrebbero non
         # avere le ultime colonne. Idempotenti: ALTER TABLE viene eseguito
         # solo se la colonna manca davvero.
+        #
+        # Nota storica: le otto colonne legacy description/exposure/watering/
+        # substrate/temperature/fertilization/pruning/pests esistevano nelle
+        # versioni precedenti dello schema, ma sono state sostituite da
+        # card_data (un singolo TEXT con dentro un JSON delle cinque sezioni).
+        # SQLite non supporta DROP COLUMN in modo affidabile prima della 3.35,
+        # quindi se un DB esistente ha quelle colonne le lasciamo in giro:
+        # diventano "morte" perché il codice non le legge più, ma non danno
+        # fastidio. I nuovi DB nascono direttamente con lo schema pulito.
         cp_cols = [r[1] for r in conn.execute("PRAGMA table_info(custom_plants)").fetchall()]
         cp_migrations = [
             ('monthly_states', "ALTER TABLE custom_plants ADD COLUMN monthly_states TEXT DEFAULT ''"),
             ('monthly_notes',  "ALTER TABLE custom_plants ADD COLUMN monthly_notes TEXT DEFAULT '{}'"),
+            ('card_data',      "ALTER TABLE custom_plants ADD COLUMN card_data TEXT DEFAULT '{}'"),
         ]
         for col, sql in cp_migrations:
             if col not in cp_cols:
                 conn.execute(sql)
                 print(f"  🔄 Migrazione custom_plants: aggiunta colonna {col}")
-        # Seed iniziale dell'AUTOINCREMENT a 26 (id 0-25 sono le native).
-        # sqlite_sequence è la tabella interna di SQLite per AUTOINCREMENT;
-        # se la tabella custom_plants è appena stata creata, ci scriviamo 25
-        # così il prossimo INSERT genera id=26.
+        # Seed iniziale dell'AUTOINCREMENT della tabella custom_plants.
+        # Storicamente partiva da 26 perché c'erano 26 piante native con id
+        # 0-25 cablate nel frontend. Adesso che le native sono state rimosse
+        # e tutte le piante sono custom, potremmo iniziare da 1, ma manteniamo
+        # 26 per:
+        #   1) coerenza con eventuali database già popolati,
+        #   2) evitare collisioni con id che potrebbero comparire altrove
+        #      nel codice come default o come marcatori di "non personalizzata".
         already_seeded = conn.execute(
             "SELECT 1 FROM sqlite_sequence WHERE name='custom_plants'"
         ).fetchone()
         if not already_seeded:
             conn.execute("INSERT INTO sqlite_sequence (name, seq) VALUES ('custom_plants', 25)")
-            print("  🌱 Tabella custom_plants creata (ID custom partono da 26)")
+            print("  🌱 Tabella custom_plants creata (ID partono da 26)")
 
         conn.commit()
     print(f"✅ Database pronto: {DB_FILE}")
@@ -672,6 +687,30 @@ class Handler(BaseHTTPRequestHandler):
                 item['monthly_notes'] = {}
         else:
             item['monthly_notes'] = {}
+        # La scheda colturale è salvata come JSON in card_data. Stessa logica:
+        # la deserializzo qui per consegnare al frontend un oggetto già pronto
+        # da consumare. Se il JSON è malformato o assente (per es. un record
+        # creato in versioni precedenti dello schema), restituisco la struttura
+        # canonica con cinque sezioni vuote, così il renderer della scheda
+        # trova sempre le chiavi che si aspetta e non rischia di sollevare
+        # TypeError quando legge p.con.periodo eccetera.
+        if item.get('card_data'):
+            try:
+                parsed = json.loads(item['card_data'])
+            except (json.JSONDecodeError, TypeError):
+                parsed = {}
+        else:
+            parsed = {}
+        # Garantisco la presenza delle cinque chiavi standard. Se mancano (es.
+        # JSON parziale come '{"con":{"periodo":"..."}}'), le aggiungo come
+        # oggetti vuoti per uniformità.
+        item['card_data'] = {
+            'con': parsed.get('con', {}) or {},
+            'sub': parsed.get('sub', {}) or {},
+            'esp': parsed.get('esp', {}) or {},
+            'cur': parsed.get('cur', {}) or {},
+            'bio': parsed.get('bio', {}) or {},
+        }
         return item
 
     def _plant_fields(self, data):
@@ -719,20 +758,37 @@ class Handler(BaseHTTPRequestHandler):
         elif not isinstance(monthly_notes, str):
             monthly_notes = "{}"
 
+        # La scheda colturale arriva dal frontend come oggetto strutturato in
+        # cinque sezioni: cardData = {con:{}, sub:{}, esp:{}, cur:{}, bio:{}}.
+        # Ogni sezione è a sua volta un dizionario di sotto-campi testuali
+        # (es. con.periodo, con.frequenza, ecc.). La normalizzo qui per due
+        # scopi: (a) garantire che il JSON salvato a DB abbia sempre le cinque
+        # chiavi standard, anche quando il frontend manda un oggetto parziale;
+        # (b) ripulire eventuali sotto-campi vuoti per non occupare spazio in
+        # modo inutile e per produrre JSON più compatti e leggibili nel DB.
+        card_data_in = data.get("cardData", {})
+        if not isinstance(card_data_in, dict):
+            card_data_in = {}
+        card_normalized = {}
+        for section_key in ('con', 'sub', 'esp', 'cur', 'bio'):
+            section = card_data_in.get(section_key) or {}
+            if not isinstance(section, dict):
+                section = {}
+            # Tengo solo i sotto-campi non vuoti — i vuoti verranno comunque
+            # mostrati come "—" dal renderer leggendo card_data[sezione][campo]
+            # come undefined, quindi salvarli come stringa vuota è solo rumore.
+            cleaned = {k: str(v).strip() for k, v in section.items()
+                       if v is not None and str(v).strip()}
+            card_normalized[section_key] = cleaned
+        card_data_json = json.dumps(card_normalized, ensure_ascii=False)
+
         return {
             "name": data.get("name", "").strip(),
             "latin": data.get("latin", "").strip(),
             "icon": data.get("icon", "🌱"),
             "sim_group": data.get("simGroup", "arbusto"),
             "sensor_cat": data.get("sensorCat", "universale"),
-            "description": data.get("description", ""),
-            "exposure": data.get("exposure", ""),
-            "watering": data.get("watering", ""),
-            "substrate": data.get("substrate", ""),
-            "temperature": data.get("temperature", ""),
-            "fertilization": data.get("fertilization", ""),
-            "pruning": data.get("pruning", ""),
-            "pests": data.get("pests", ""),
+            "card_data": card_data_json,
             "fert_months": fert_months,
             "fert_interval": int(data.get("fertInterval", 21)),
             "fert_product": data.get("fertProduct", ""),
