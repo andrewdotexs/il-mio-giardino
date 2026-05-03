@@ -39,7 +39,7 @@ async function apiFetch(url, options = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   try {
-    const res = await fetch(url, {...options, signal: controller.signal});
+    const res = await fetch(url, { ...options, signal: controller.signal });
     return res;
   } finally {
     clearTimeout(timer);
@@ -49,30 +49,30 @@ async function apiFetch(url, options = {}) {
 // ══════════════════════════════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════════════════════════════
-const sectionInited = {schede:false, mensile:false, giorni:false, diario:false, acqua:false, vasi:false, meteo:false, params:false};
+const sectionInited = { schede: false, mensile: false, giorni: false, diario: false, acqua: false, vasi: false, meteo: false, params: false };
 
 function showSection(name) {
-  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-  document.getElementById('sec-'+name).classList.add('active');
-  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.toggle('active', t.dataset.sec===name));
-  window.scrollTo(0,0);
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-' + name).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.sec === name));
+  window.scrollTo(0, 0);
   if (!sectionInited[name]) {
-    if (name==='schede') sInitSchede();
-    else if (name==='mensile') cInitMensile();
-    else if (name==='giorni') gInitGiorni();
-    else if (name==='diario') dInitDiario();
-    else if (name==='acqua') wInitCalc();
-    else if (name==='vasi') invInit();
-    else if (name==='meteo') meteoInit();
-    else if (name==='params') paramsInit();
+    if (name === 'schede') sInitSchede();
+    else if (name === 'mensile') cInitMensile();
+    else if (name === 'giorni') gInitGiorni();
+    else if (name === 'diario') dInitDiario();
+    else if (name === 'acqua') wInitCalc();
+    else if (name === 'vasi') invInit();
+    else if (name === 'meteo') meteoInit();
+    else if (name === 'params') paramsInit();
     sectionInited[name] = true;
   }
-  if (name==='diario') dRender();
-  if (name==='meteo') meteoRefresh();
+  if (name === 'diario') dRender();
+  if (name === 'meteo') meteoRefresh();
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key==='Escape') { sCloseDetail(); cCloseOverlay(); gClosePanel(); invCloseForm(); simClose(); cpCloseForm(); }
+  if (e.key === 'Escape') { sCloseDetail(); cCloseOverlay(); gClosePanel(); invCloseForm(); simClose(); cpCloseForm(); }
 });
 
 // ══════════════════════════════════════════════════════════════════════
@@ -82,162 +82,214 @@ document.addEventListener('keydown', e => {
 // il sistema di piante custom le estende a runtime. La fusione avviene in
 // loadCustomPlants() che fa push dei record creati a partire dal database.
 let sPlants = [
-  { id:0, name:"Sanseviera", latin:"", icon:"🌿", isNew:false, tags:["Interno","Facile","Stop invernale"], tc:["pt","pg","pgr"],
-    con:{periodo:"Aprile – Settembre",frequenza:"1× al mese",concime:"Liquido succulente, ½ dose",stop:"Stop completo in autunno/inverno",note:"Non concimare mai su terreno secco. Soffre più di eccessi che di carenze."},
-    sub:{terreno:"Substrato per succulente e cactus, ben drenante",ph:"6.0 – 7.0",vaso:"Terracotta con foro di drenaggio, non troppo grande",rinvaso:"Ogni 2-3 anni o quando le radici escono dal vaso",vivo:"Aggiungere 10% di humus di lombrico al substrato. Micorrize universali in polvere al rinvaso. Dose contenuta — la sanseviera preferisce substrati poveri; eccedere con organico rischia il marciume."},
-    esp:{luce:"Luce indiretta brillante; tollera anche poca luce ma cresce più lentamente",sole:"Evitare sole diretto estivo — brucia le foglie",temperatura:"15–30°C; non sotto i 10°C",umidita:"Bassa; non nebulizzare"},
-    cur:{acqua:"Annaffiare poco e solo quando il terreno è completamente asciutto; in inverno 1× al mese",potatura:"Rimuovere foglie secche o danneggiate alla base",parassiti:"Cocciniglia e ragnetto rosso; trattare con olio di neem",extra:"Quasi indistruttibile — il nemico principale è l'eccesso d'acqua"},
-    bio:{prodotti:"Bio·Grow · Alg·A·Mic · Root·Juice",primavera:"Bio·Grow a ¼ dose ogni 4-5 settimane — inizia con cautela",estate:"Bio·Grow a ¼ dose 1× al mese. In alternativa Alg·A·Mic ogni 3 settimane (più delicato)",autunno:"Stop totale da ottobre. Nessun prodotto BioBizz in inverno",rinvaso:"Root·Juice diluito sulle radici al momento del rinvaso",note:"Pianta abituata a terreni poveri — meno è meglio. Mai superare ¼ della dose consigliata. L'Alg·A·Mic è preferibile al Bio·Grow se la pianta è in posizione di scarsa luce."}},
-  { id:1, name:"Orchidea", latin:"Phalaenopsis", icon:"🌸", isNew:false, tags:["Interno","Delicata","Stop fioritura"], tc:["pt","pc","pa"],
-    con:{periodo:"Primavera – Estate",frequenza:'Ogni 1-2 settimane ("weakly, weekly")',concime:"Liquido specifico orchidee, ¼ dose",stop:"Ridurre in autunno; stop durante fioritura",note:"Lavare il substrato ogni 4-6 annaffiature. Evitare lento rilascio sulle epifite."},
-    sub:{terreno:"Corteccia di pino o substrato specifico per orchidee — mai terriccio comune",ph:"5.5 – 6.5",vaso:"Vaso trasparente per monitorare le radici; ottimo drenaggio",rinvaso:"Ogni 2 anni o quando il substrato si decompone",vivo:"La corteccia in decomposizione ospita naturalmente batteri e funghi benefici. Al rinvaso aggiungere micorrize specifiche per orchidee. Evitare humus di lombrico: trattiene troppa umidità e soffoca le radici aeree."},
-    esp:{luce:"Luce intensa ma indiretta — vicino a finestra con tende",sole:"Sole diretto brucia le foglie; luce filtrante ideale",temperatura:"18–28°C; differenziale giorno/notte favorisce la fioritura",umidita:"Alta (50–70%); nebulizzare le radici aeree"},
-    cur:{acqua:"Immergere il vaso in acqua 15 min, poi scolare completamente; mai ristagni",potatura:"Tagliare lo stelo dopo la fioritura sopra un nodo per stimolare nuovi fiori",parassiti:"Cocciniglia e marciume radicale (da eccesso d'acqua)",extra:"Radici verdi = pianta idratata; radici grigio-argentate = vuole acqua"},
-    bio:{prodotti:"Alg·A·Mic · Root·Juice",primavera:"Alg·A·Mic ogni 2 settimane a ¼ dose — è il prodotto più delicato e sicuro per le radici epifite",estate:"Alg·A·Mic ogni 2 settimane. Stop durante la fioritura",autunno:"Alg·A·Mic 1× al mese a dose ridotta. Stop in inverno",rinvaso:"Root·Juice diluito nel vaso dopo il rinvaso — favorisce la ripresa radicale nella corteccia nuova",note:"Evita Bio·Grow e Bio·Bloom — troppo concentrati per le orchidee epifite. Anche l'Alg·A·Mic va sempre usato a ¼ della dose indicata in etichetta."}},
-  { id:2, name:"Ficus Benjamina", latin:"", icon:"🌳", isNew:false, tags:["Interno","Azoto","Ferro chelato"], tc:["pt","pb","pa"],
-    con:{periodo:"Marzo – Settembre",frequenza:"Ogni 2 settimane",concime:"Liquido azotato NPK 3-1-2, dose ridotta",stop:"Stop completo in autunno/inverno",note:"Clorosi ferrica frequente: integrare con ferro chelato se foglie nuove gialle con venature verdi."},
-    sub:{terreno:"Terriccio universale di qualità con perlite (20%) per drenaggio",ph:"6.0 – 7.0",vaso:"Vaso proporzionato alla chioma, con buon drenaggio",rinvaso:"Ogni 2 anni in primavera",vivo:"Aggiungere 15% di humus di lombrico e 10% di compost maturo. Micorrize universali al rinvaso. Uno strato di humus in superficie ogni primavera inocula nuovi batteri."},
-    esp:{luce:"Luce intensa indiretta; più luce = meno caduta foglie",sole:"Tolera qualche ora di sole mattutino; no sole diretto estivo",temperatura:"16–24°C; odia correnti d'aria e spostamenti — perde foglie",umidita:"Media; nebulizzare occasionalmente in inverno con riscaldamento acceso"},
-    cur:{acqua:"Regolare in estate, ridurre in inverno; terreno leggermente umido ma mai saturo",potatura:"Potatura formativa in primavera; elimina rami incrociati",parassiti:"Cocciniglia e ragnetto rosso; frequente in ambienti secchi",extra:"Non spostarlo — è molto sensibile ai cambi di posizione"},
-    bio:{prodotti:"Bio·Grow · Alg·A·Mic · Root·Juice · CalMag",primavera:"Bio·Grow a ½ dose ogni 2 settimane. Aggiungi Alg·A·Mic alternato ogni 2 settimane come rinvigorente",estate:"Bio·Grow a ½ dose ogni 2 settimane. Se compaiono foglie nuove gialle: CalMag 1× al mese",autunno:"Stop da ottobre. In settembre ultima dose di Alg·A·Mic per preparare la pianta al riposo",rinvaso:"Root·Juice sulle radici al rinvaso primaverile + Worm·Humus incorporato nel nuovo substrato",note:"Il CalMag è utile per prevenire la clorosi ferrica frequente in questa specie. Il Bio·Grow a dose piena rischia di bruciare le radici — usa sempre ½ dose."}},
-  { id:3, name:"Ficus Elastica", latin:"", icon:"🌱", isNew:false, tags:["Interno","Robusto","Azoto + K"], tc:["pt","pg","pb"],
-    con:{periodo:"Marzo – Settembre",frequenza:"Ogni 2 settimane",concime:"Liquido azotato con buona quota K",stop:"Stop completo in autunno/inverno",note:"Più robusto del Benjamina. Il potassio mantiene le foglie lucide e coriacee."},
-    sub:{terreno:"Terriccio universale ricco con buon drenaggio; aggiungere perlite o sabbia",ph:"6.0 – 7.0",vaso:"Vaso largo e stabile, proporzionato alla dimensione",rinvaso:"Ogni 2 anni; cresce velocemente",vivo:"15% humus di lombrico + 10% compost maturo nella miscela. Micorrize universali al rinvaso."},
-    esp:{luce:"Luce intensa indiretta; le varietà con foglie scure tollerano anche meno luce",sole:"Qualche ora di sole mattutino va bene; no sole diretto estivo",temperatura:"15–30°C; tollera meglio le variazioni rispetto al Benjamina",umidita:"Media; non necessita nebulizzazioni frequenti"},
-    cur:{acqua:"Annaffiare quando i primi 3-4 cm di terreno sono asciutti",potatura:"Potatura apicale per stimolare la ramificazione; lattice irritante — usare guanti",parassiti:"Cocciniglia e ragnetto; pulire le foglie periodicamente con panno umido",extra:"Pulire le foglie grandi con panno umido per ottimizzare la fotosintesi"},
-    bio:{prodotti:"Bio·Grow · Alg·A·Mic · Root·Juice",primavera:"Bio·Grow a ½ dose ogni 2 settimane",estate:"Bio·Grow a ½ dose ogni 2 settimane. Alg·A·Mic 1× al mese come rinvigorente fogliare",autunno:"Stop da ottobre. Ultima dose Alg·A·Mic in settembre",rinvaso:"Root·Juice sulle radici al rinvaso. Worm·Humus nel substrato",note:"Più robusto del Benjamina — tollera dosi leggermente più alte ma non superare ½ dose. L'Alg·A·Mic usato come spray fogliare (diluito) mantiene le foglie lucide e sane."}},
-  { id:4, name:"Oleandro", latin:"Nerium oleander", icon:"🌺", isNew:false, tags:["Esterno","P-K","Fioritura"], tc:["pg","pc","pa"],
-    con:{periodo:"Marzo – Settembre",frequenza:"Ogni 2 settimane",concime:"Fosforo e potassio prevalenti (5-10-10)",stop:"Stop da ottobre a febbraio",note:"In piena terra ottimo il granulare in primavera. Evitare azoto per non frenare la fioritura."},
-    sub:{terreno:"Terriccio universale ben drenante; tollera anche terreni poveri e sassosi",ph:"6.5 – 7.5; tollera leggera alcalinità",vaso:"Vaso grande (min 40 cm); non penalizzarlo con vasi piccoli",rinvaso:"Ogni 2 anni o quando le radici escono dal foro",vivo:"In piena terra: compost maturo in superficie ogni anno. In vaso: 15% humus di lombrico + micorrize universali al rinvaso."},
-    esp:{luce:"Pieno sole — più sole = più fiori",sole:"Ama il sole diretto per molte ore; posizione a sud ideale",temperatura:"Resistente fino a -5°C; in zone fredde proteggere in inverno",umidita:"Bassa; pianta mediterranea, tollera siccità"},
-    cur:{acqua:"Abbondante in estate; ridurre molto in inverno; tollera brevi siccità",potatura:"Potare subito dopo la fioritura per stimolare nuovi rami fiorali l'anno successivo",parassiti:"Cocciniglia e afidi; comune in estate",extra:"ATTENZIONE: tutte le parti sono molto velenose — usare guanti, non bruciare i rami"},
-    bio:{prodotti:"Bio·Bloom · Top·Max · Alg·A·Mic · Root·Juice",primavera:"Bio·Bloom a dose piena ogni 2 settimane da marzo. Alg·A·Mic 1× al mese per stimolare la fioritura",estate:"Bio·Bloom ogni 2 settimane. Top·Max 1× al mese durante il picco della fioritura per incrementare la resa",autunno:"Stop da ottobre. In settembre ultima dose Alg·A·Mic",rinvaso:"Root·Juice sulle radici al rinvaso ogni 2 anni",note:"Mai usare Bio·Grow — l'azoto in eccesso produce foglie a scapito dei fiori. Il Top·Max con acidi umici amplifica la resa della fioritura in modo significativo."}},
-  { id:5, name:"Glicine / Bonsai", latin:"Wisteria", icon:"💜", isNew:false, tags:["Esterno","Zero azoto","Potatura"], tc:["pg","pc","pgr"],
-    con:{periodo:"Aprile – Agosto (dopo la fioritura)",frequenza:"Ogni 3-4 settimane",concime:"Fosforo e potassio (3-8-8), zero azoto",stop:"Stop autunno/inverno; non disturbare le gemme fiorali",note:"Fiorisce sui rami dell'anno precedente. La potatura radicale del bonsai già stimola la fioritura!"},
-    sub:{terreno:"Terriccio per bonsai o miscela sabbia + akadama + humus in parti uguali",ph:"6.0 – 7.0",vaso:"Vaso bonsai poco profondo e largo; buon drenaggio essenziale",rinvaso:"Ogni 2 anni in primavera, con potatura radicale contestuale",vivo:"Aggiungere 10% di humus di lombrico nella miscela. Micorrize specifiche per bonsai sulle radici potate al rinvaso: accelerano la rigenerazione radicale."},
-    esp:{luce:"Pieno sole o mezz'ombra; almeno 6 ore di luce per fiorire",sole:"Sole diretto mattutino ideale; ombra nelle ore più calde in estate",temperatura:"Rustico; resiste al gelo — il freddo invernale è necessario per la fioritura",umidita:"Media; il bonsai asciuga più velocemente — monitorare"},
-    cur:{acqua:"Regolare in estate — il bonsai asciuga in fretta; ridurre in autunno/inverno",potatura:"Estate: accorcia germogli a 2-3 foglie. Fine inverno: ritaglia a 1-2 gemme",parassiti:"Afidi e cocciniglia; trattare in primavera preventivamente",extra:"Cresce con forza esplosiva in primavera — potature frequenti per mantenere la forma bonsai"},
-    bio:{prodotti:"Bio·Bloom · Alg·A·Mic · Root·Juice",primavera:"Solo Alg·A·Mic durante la fioritura (marzo/aprile) — non stimolare la crescita. Dopo la fioritura: Bio·Bloom a ½ dose ogni 3-4 settimane",estate:"Bio·Bloom a ½ dose ogni 3-4 settimane. Zero azoto",autunno:"Stop da settembre. Le gemme fiorali si stanno formando — non disturbare",rinvaso:"Root·Juice sulle radici potate al rinvaso biennale — fondamentale per la rigenerazione radicale",note:"Mai usare Bio·Grow o Fish·Mix — l'azoto produce crescita vegetativa eccessiva e blocca la fioritura. Il glicine è una leguminosa: produce azoto da solo."}},
-  { id:6, name:"Limone", latin:"Citrus limon", icon:"🍋", isNew:false, tags:["Esterno/Interno","Agrumi","Ferro + Mg"], tc:["pg","pa","pt"],
-    con:{periodo:"Tutto l'anno con regime granulare + lupini macinati in inverno",frequenza:"Granulare a lento rilascio: 3× l'anno (marzo, giugno, settembre). Lupini macinati: 2× l'anno (febbraio e novembre)",concime:"Granulare specifico agrumi a lento rilascio + lupini macinati (100-150g per vaso da 50 cm)",stop:"Non fermare mai del tutto — il limone fruttifica quasi tutto l'anno. I lupini garantiscono nutrimento organico anche in inverno",note:"Il granulare a lento rilascio nutre costantemente per 2-3 mesi senza rischio di sovradosaggio. I lupini macinati acidificano il substrato (ottimo per agrumi) e rilasciano azoto lentamente per 3-4 mesi. Interrali leggermente nel terriccio. Integrare sempre ferro chelato e magnesio solfato (CalMag) mensilmente — il granulare da solo non è sufficiente per questi microelementi."},
-    sub:{terreno:"Specifico agrumi o mix universale + sabbia + perlite per drenaggio ottimale",ph:"5.5 – 6.5 (acido); il calcare blocca il ferro",vaso:"Grande (min 50 cm); non limitare la crescita",rinvaso:"Ogni 2-3 anni in primavera; rinnovare il terriccio esausto",vivo:"Fondamentale: 20% di humus di lombrico + compost maturo. Micorrize specifiche per agrumi al rinvaso. I lupini macinati (100-150g per vaso da 50 cm) in febbraio e novembre sono la base del tuo regime invernale: acidificano il substrato, rilasciano azoto per 3-4 mesi e nutrono attivamente i batteri del suolo."},
-    esp:{luce:"Pieno sole — almeno 6-8 ore al giorno",sole:"Ama il sole diretto; ottima esposizione a sud o sud-ovest",temperatura:"Ideale 15–30°C; proteggere sotto i 5°C; non sopporta il gelo prolungato",umidita:"Media-alta; nebulizzare in inverno in ambienti riscaldati secchi"},
-    cur:{acqua:"Abbondante e regolare in estate; ridurre in inverno; no ristagni — causa marciume radicale",potatura:"Leggera in primavera: eliminare rami secchi, incrociati o troppo vigorosi",parassiti:"Cocciniglia, afidi, minatore fogliare; trattare con olio di neem in primavera",extra:"Usare preferibilmente acqua piovana o decantata — il calcare causa clorosi ferrica"},
-    bio:{prodotti:"CalMag · Alg·A·Mic · Bio·Bloom · Root·Juice",primavera:"Con il granulare come base, il BioBizz diventa integrativo. CalMag 1× al mese (indispensabile tutto l'anno). Alg·A·Mic 1× al mese come rinvigorente",estate:"CalMag mensile. Alg·A·Mic 1× al mese. Bio·Bloom a ½ dose 1× al mese per supporto alla fruttificazione in aggiunta al granulare",autunno:"CalMag mensile tutto l'anno — non sospendere mai. In inverno i lupini macinati sostituiscono Fish·Mix e Bio·Grow come fonte di azoto organico",rinvaso:"Root·Juice sulle radici + Worm·Humus nel substrato + prima dose CalMag dopo il rinvaso",note:"Con il regime granulare + lupini, Fish·Mix e Bio·Grow non servono più come concimazione di base — il granulare fa quel lavoro. Il CalMag resta indispensabile perché il granulare non copre ferro e magnesio a sufficienza. I lupini macinati in inverno sostituiscono il Fish·Mix come fonte di azoto organico e attività microbica."}},
-  { id:7, name:"Moneta Cinese", latin:"Pilea peperomioides", icon:"🪙", isNew:false, tags:["Interno","Facile","Poco esigente"], tc:["pt","pg","pb"],
-    con:{periodo:"Primavera – Estate",frequenza:"Ogni 3-4 settimane",concime:"Liquido universale bilanciato, ½ dose",stop:"Stop completo in autunno/inverno",note:"Foglie gialle = spesso troppa acqua. Foglie piccole e pallide = poca luce. Meno è meglio."},
-    sub:{terreno:"Terriccio universale leggero con perlite (20-30%) per drenaggio",ph:"6.0 – 7.0",vaso:"Non troppo grande — le radici non devono nuotare in troppa terra",rinvaso:"Ogni anno in primavera; produce molti figlioletti che puoi separare",vivo:"Aggiungere 10-15% di humus di lombrico. Micorrize universali al rinvaso annuale."},
-    esp:{luce:"Luce intensa indiretta; si orienta verso la fonte luminosa",sole:"Nessun sole diretto — brucia le foglie tonde",temperatura:"15–30°C; no correnti d'aria fredda",umidita:"Media; non richiede nebulizzazioni"},
-    cur:{acqua:"Annaffiare solo quando i primi 2-3 cm sono asciutti; no ristagni",potatura:"Non necessaria; rimuovere foglie secche e separare i figlioletti alla base",parassiti:"Ragnetto rosso in ambienti secchi; cocciniglia raramente",extra:"Ruotare il vaso regolarmente per crescita simmetrica — si inclina verso la luce"},
-    bio:{prodotti:"Bio·Grow · Alg·A·Mic · Root·Juice",primavera:"Bio·Grow a ¼ dose ogni 4 settimane — è sufficiente",estate:"Bio·Grow a ¼ dose ogni 4 settimane. Alg·A·Mic 1× al mese come booster",autunno:"Stop completo da settembre",rinvaso:"Root·Juice sulle radici al rinvaso annuale",note:"Pianta poco esigente — non esagerare. A dose piena il Bio·Grow causa crescita eccessiva e foglie deformate. Meno è meglio anche con BioBizz."}},
-  { id:8, name:"Vinca (Pervinca)", latin:"Vinca minor / major", icon:"🔵", isNew:false, tags:["Esterno","Rustica","P-K"], tc:["pg","pt","pc"],
-    con:{periodo:"Primavera – Estate",frequenza:"Ogni 3-4 settimane",concime:"Liquido per piante da fiore, P-K prevalente",stop:"Semiriposo in autunno/inverno",note:"Evitare eccessi di azoto. In vaso concimazione più regolare che in piena terra."},
-    sub:{terreno:"Tollera quasi qualsiasi terriccio; preferisce terreno fresco e ben drenato",ph:"6.0 – 7.5; molto adattabile",vaso:"Vaso ampio per le varietà tappezzanti; buon drenaggio",rinvaso:"Ogni 2 anni o quando la pianta è eccessivamente densa",vivo:"In vaso aggiungere 15% di compost maturo o humus di lombrico. Micorrize universali al rinvaso."},
-    esp:{luce:"Mezz'ombra o ombra — fiorisce all'ombra meglio di molte altre piante da fiore",sole:"Tollera il sole ma preferisce posizioni ombreggiate; ottima sotto gli alberi",temperatura:"Molto rustica; resiste bene al gelo fino a -10°C",umidita:"Media; non richiede attenzioni particolari"},
-    cur:{acqua:"Moderata; una volta stabilita tollera bene la siccità. In vaso annaffiare regolarmente",potatura:"Tagliare i rami dopo la fioritura per stimolare crescita compatta e nuovi fiori",parassiti:"Molto resistente; raramente attaccata da parassiti",extra:"Pianta tappezzante molto vigorosa — in giardino può espandersi rapidamente, controllare"},
-    bio:{prodotti:"Bio·Bloom · Alg·A·Mic",primavera:"Bio·Bloom a ½ dose ogni 3-4 settimane da aprile",estate:"Bio·Bloom a ½ dose ogni 3-4 settimane",autunno:"Stop da settembre",rinvaso:"Alg·A·Mic come rinvigorente dopo potature importanti o rinvaso",note:"Mai Bio·Grow — l'azoto in eccesso produce molto fogliame ma pochi fiori. In piena terra bastano 1-2 applicazioni di Bio·Bloom per stagione."}},
-  { id:9, name:"Mimosa", latin:"Acacia dealbata", icon:"🌼", isNew:false, tags:["Esterno","Zero azoto","Leguminosa"], tc:["pg","pc","pt"],
-    con:{periodo:"Marzo – Settembre (iniziare dopo la fioritura)",frequenza:"Ogni 3-4 settimane",concime:"Povero di azoto, ricco P-K; ottimi concimi per azalee",stop:"Stop in autunno/inverno — non disturbare le gemme fiorali",note:"Leguminosa: fissa l'azoto da sola. Eccesso di N inibisce i noduli radicali. Non concimare durante la fioritura."},
-    sub:{terreno:"Terreno acido, siliceo, ben drenante; no calcare",ph:"5.5 – 6.5 (acido); soffre molto in terreni alcalini",vaso:"Vaso molto grande; ha radici potenti e profonde",rinvaso:"Ogni 2 anni; preferisce la piena terra dove possibile",vivo:"Ospita già batteri Rhizobium nei noduli radicali. Aggiungere humus di lombrico (10-15%) e micorrize acidofile. Non disturbare i noduli radicali durante il rinvaso."},
-    esp:{luce:"Pieno sole o luce intensa",sole:"Ama il sole diretto; fiorisce meglio con esposizione a sud",temperatura:"Resiste fino a -8/-10°C se adulta; i giovani esemplari vanno protetti dal gelo",umidita:"Bassa; tipica pianta mediterranea"},
-    cur:{acqua:"Moderata; tollera siccità una volta stabilita; evitare ristagni",potatura:"Immediatamente dopo la fioritura (febbraio/marzo) — non potare in autunno",parassiti:"Generalmente resistente; possibile cocciniglia",extra:"Cresce molto rapidamente — in vaso va potata regolarmente per contenerne le dimensioni"},
-    bio:{prodotti:"Bio·Bloom · Alg·A·Mic · Root·Juice",primavera:"Bio·Bloom a ½ dose ogni 3-4 settimane dopo la fioritura e potatura. Alg·A·Mic durante la fioritura (febbraio) come rinvigorente senza stimolare la crescita",estate:"Bio·Bloom a ½ dose ogni 3-4 settimane",autunno:"Stop da settembre — le gemme fiorali si stanno formando",rinvaso:"Root·Juice sulle radici al rinvaso. Attenzione a non danneggiare i noduli di Rhizobium",note:"Mai Bio·Grow — la mimosa è una leguminosa che fissa l'azoto atmosfericamente. L'azoto aggiunto inibisce i noduli radicali. Solo Bio·Bloom con basso azoto e buon P-K."}},
-  { id:10, name:"Melograno", latin:"Punica granatum", icon:"🍎", isNew:false, tags:["Esterno","Fruttifero","P-K"], tc:["pg","pa","pc"],
-    con:{periodo:"Marzo – Settembre",frequenza:"Ogni 3-4 settimane con liquido; oppure granulare 2× l'anno",concime:"Primavera: bilanciato o leggermente azotato. Da giugno: P-K prevalente per frutti e fioritura",stop:"Stop completo da ottobre a febbraio",note:"Evitare eccesso di azoto dopo la fioritura. In piena terra quasi autonomo con granulare a lenta cessione."},
-    sub:{terreno:"Tollera quasi qualsiasi terreno; preferisce terreno ben drenante, anche argilloso o calcareo",ph:"5.5 – 7.5; molto adattabile, uno dei pochi frutti tolleranti al calcare",vaso:"Vaso grande (min 50 cm di diametro); cambia vaso ogni 2-3 anni",rinvaso:"Ogni 2-3 anni in primavera; rinnovare almeno la metà del substrato",vivo:"Aggiungere 20% di humus di lombrico + compost maturo. Micorrize universali sulle radici al rinvaso. Un substrato vivo riduce sensibilmente il rischio di spaccatura dei frutti."},
-    esp:{luce:"Pieno sole — essenziale per fruttificare abbondantemente",sole:"Ama il sole diretto per molte ore; posizione a sud o sud-ovest",temperatura:"Rustico; resiste fino a -10/-12°C da adulto; giovani piante proteggere sotto i -5°C",umidita:"Bassa — pianta mediterranea e semiarida per eccellenza; tollera la siccità"},
-    cur:{acqua:"Moderata e regolare durante la fruttificazione; irregolarità idriche causano spaccatura dei frutti. Ridurre molto in autunno/inverno",potatura:"Fine inverno (febbraio/marzo): eliminare rami secchi, succhioni e rami incrociati",parassiti:"Molto resistente; possibili afidi sui germogli. Il fungo Alternaria può attaccare i frutti in condizioni umide",extra:"Fiori rosso-arancio spettacolari da maggio a luglio. I frutti maturano in ottobre-novembre."},
-    bio:{prodotti:"Bio·Grow · Bio·Bloom · Top·Max · Alg·A·Mic · Root·Juice",primavera:"Bio·Grow a dose piena ogni 3-4 settimane a marzo/aprile per la ripresa vegetativa",estate:"Bio·Bloom a dose piena da maggio in poi ogni 3-4 settimane. Top·Max 1× al mese da giugno ad agosto per sostenere la fruttificazione",autunno:"Stop da ottobre. In settembre ultima dose Alg·A·Mic",rinvaso:"Root·Juice + Worm·Humus nel substrato al rinvaso",note:"Il Top·Max con acidi umici migliora l'assorbimento di nutrienti durante la fruttificazione, riducendo anche il rischio di spaccatura dei frutti. Passa da Bio·Grow a Bio·Bloom non appena compaiono i fiori (maggio)."}},
-  { id:11, name:"Stella di Natale", latin:"Euphorbia pulcherrima", icon:"🌟", isNew:false, tags:["Interno","Stagionale","Delicata"], tc:["pt","pa","pc"],
-    con:{periodo:"Ottobre – dicembre (fase decorativa); primavera-estate per la crescita",frequenza:"Ogni 2 settimane in primavera/estate; ogni 3-4 settimane in autunno",concime:"Liquido universale bilanciato, dose piena",stop:"Stop completo durante il riposo invernale (gennaio-febbraio)",note:"Non concimare mai durante la fase decorativa (foglie rosse). Riprendere solo quando emette nuovi germogli verdi in primavera."},
-    sub:{terreno:"Terriccio universale leggero e ben drenante, con 20% di perlite",ph:"6.0 – 7.0",vaso:"Vaso con ottimo drenaggio — è tra le piante più sensibili ai ristagni",rinvaso:"Ogni anno in primavera, quando riprende la vegetazione attiva",vivo:"Aggiungere 10-15% di humus di lombrico nella miscela di rinvaso. Micorrize universali in polvere sulle radici. Substrato non eccessivamente ricco — o produce poca colorazione."},
-    esp:{luce:"Luce intensa indiretta per almeno 6 ore al giorno — fondamentale",sole:"No sole diretto estivo; in autunno un po' di sole mattutino è tollerato",temperatura:"Ideale 15–22°C; non sopporta correnti d'aria, né temperature sotto i 12°C",umidita:"Media; lontana da caloriferi e bocchette d'aria calda"},
-    cur:{acqua:"Moderata e costante; annaffiare quando i primi 2 cm sono asciutti. Usare acqua a temperatura ambiente",potatura:"Dopo la fase decorativa (febbraio/marzo): tagliare i rami a circa 10 cm dal suolo",parassiti:"Mosca bianca e cocciniglia — molto frequenti. Trattare con olio di neem",extra:"Per ottenere la colorazione rossa: da ottobre, 14 ore di buio totale per 8 settimane consecutive. È fotoperiodica. Il lattice è irritante: usare guanti."},
-    bio:{prodotti:"Bio·Grow · Alg·A·Mic",primavera:"Bio·Grow a dose piena ogni 2-3 settimane quando emette i nuovi germogli verdi",estate:"Bio·Grow a dose piena ogni 2-3 settimane fino a luglio. Stop in agosto per preparare al protocollo buio",autunno:"Stop totale da agosto/settembre in poi. Nessun prodotto durante il buio forzato",rinvaso:"Alg·A·Mic come rinvigorente dopo il rinvaso annuale primaverile",note:"Mai Bio·Bloom — non serve stimolare la fioritura che è indotta dal buio, non dai nutrienti. Il Bio·Grow sostiene solo la crescita vegetativa. Stop assoluto durante il protocollo fotoperiodico."}},
-  { id:12, name:"Aloe Vera", latin:"Aloe barbadensis miller", icon:"🌵", isNew:false, tags:["Interno/Esterno","Succulenta","Facile"], tc:["pt","pgr","pg"],
-    con:{periodo:"Aprile – Settembre",frequenza:"1× al mese, non di più",concime:"Liquido specifico per succulente e cactus, ½ dose",stop:"Stop completo in autunno/inverno",note:"Pianta del deserto abituata a terreni poveri. Concimazioni eccessive producono foglie molli e pallide. Meno è decisamente meglio."},
-    sub:{terreno:"Substrato specifico per succulente; oppure terriccio universale + 30-40% di sabbia grossa o perlite",ph:"6.0 – 7.0; tollera leggera alcalinità",vaso:"Terracotta con foro di drenaggio. Non troppo grande: radici compresse stimolano la produzione di figli",rinvaso:"Ogni 2-3 anni in primavera",vivo:"Dosi minime di humus di lombrico (5-10%) — non di più. Micorrize universali al rinvaso. Substrato troppo ricco di materia organica trattiene umidità in eccesso e favorisce il marciume radicale."},
-    esp:{luce:"Piena luce o sole diretto — più luce ha, più è sana e compatta",sole:"Tollera il sole diretto; in estate può stare all'aperto. Portarla fuori gradualmente",temperatura:"Ideale 18–30°C; tollera brevi gelate fino a -2°C ma non il gelo prolungato",umidita:"Bassissima; è una pianta del deserto — l'umidità elevata è nemica"},
-    cur:{acqua:"Annaffiare solo quando il substrato è completamente asciutto. Metodo 'soak and dry': bagno abbondante, poi attesa fino a completa asciugatura",potatura:"Non necessaria. Rimuovere i figli (polloni) quando hanno 8-10 cm, separandoli con un coltello pulito",parassiti:"Cocciniglia radicale e ragnetto rosso. Marciume basale da eccesso d'acqua — il principale rischio",extra:"Il gel delle foglie ha proprietà lenitive reali. Foglie appiattite verso il basso = sete; ingiallite = eccesso d'acqua."},
-    bio:{prodotti:"Alg·A·Mic · Root·Juice",primavera:"Alg·A·Mic a ¼ dose 1× al mese — è tutto quello che serve",estate:"Alg·A·Mic a ¼ dose 1× al mese",autunno:"Stop totale da ottobre",rinvaso:"Root·Juice diluito sulle radici al rinvaso. Worm·Humus a dose minima (5%) nel substrato",note:"Pianta del deserto — qualsiasi fertilizzante va usato a dosi minime. Bio·Grow e Bio·Bloom sono troppo ricchi e causano crescita molle. L'Alg·A·Mic è l'unico prodotto BioBizz adatto, e va sempre usato a ¼ della dose in etichetta."}},
-  { id:13, name:"Liquidambar", latin:"Liquidambar styraciflua", icon:"🍂", isNew:true, tags:["Esterno","Alberatura","Acidofilo"], tc:["pg","pc","pt"],
-    con:{periodo:"Marzo – Luglio",frequenza:"Ogni 4-6 settimane",concime:"Specifico acidofile (azalee/rododendri) o universale a basso pH",stop:"Stop da agosto — non stimolare crescita tardiva",note:"Pianta a lenta crescita, quasi autonoma dopo il terzo anno in piena terra. Evitare assolutamente concimi calcarei o pH alcalino."},
-    sub:{terreno:"Terreno acido, profondo, fresco e ben drenante; ricco di humus. Non tollera calcare",ph:"5.5 – 6.5 (acido)",vaso:"Preferisce la piena terra dove cresce splendidamente",rinvaso:"Solo nelle prime fasi; poi a dimora definitiva",vivo:"Humus di lombrico (20%) + compost maturo in abbondanza nella buca di impianto. Micorrize acidofile al trapianto — fondamentali per l'attecchimento."},
-    esp:{luce:"Pieno sole o ombra leggera — si adatta bene",sole:"Tollera bene il sole diretto; i colori autunnali sono più spettacolari con buona luce",temperatura:"Molto rustico; resiste a -20°C da adulto",umidita:"Media-alta; non ama la siccità prolungata"},
-    cur:{acqua:"Regolare nei primi 3 anni di impianto — poi quasi autonomo",potatura:"Minima e solo su rami secchi — ha una bella forma naturale da preservare",parassiti:"Molto resistente. Raramente attaccato da parassiti significativi",extra:"I colori autunnali (rosso, arancio, viola, giallo) sono tra i più spettacolari. La forma delle foglie a stella è caratteristica. Produce frutti spinosi simili a ricci."},
-    bio:{prodotti:"Bio·Grow · Alg·A·Mic · Root·Juice",primavera:"Bio·Grow a dose piena ogni 4-6 settimane nei primi 3 anni. Adulto in piena terra: Alg·A·Mic 1-2× a stagione come unico intervento",estate:"Bio·Grow a dose piena ogni 4-6 settimane (solo giovani piante)",autunno:"Stop da agosto — i colori autunnali si sviluppano meglio senza azoto in circolo",rinvaso:"Root·Juice + Worm·Humus nella buca di impianto. Micorrize acidofile al trapianto (non BioBizz, ma prodotto specifico separato)",note:"Usa concimi per acidofile (tipo azalee): il Bio·Grow standard va bene ma verifica che il pH del substrato resti acido. Da adulto in piena terra è quasi autosufficiente — intervieni solo con Alg·A·Mic come tonificante."}},
-  { id:14, name:"Ippocastano", latin:"Aesculus hippocastanum", icon:"🌰", isNew:true, tags:["Esterno","Albero grande","Rustico"], tc:["pg","pgr","pt"],
-    con:{periodo:"Marzo – Giugno",frequenza:"1-2× all'anno (granulare); in piena terra quasi inutile",concime:"Granulare universale a lenta cessione in primavera; solo per esemplari giovani",stop:"Stop da luglio — albero adulto completamente autosufficiente in piena terra",note:"La concimazione ha senso solo nei primi 2-3 anni di impianto o se l'albero mostra segni di sofferenza."},
-    sub:{terreno:"Qualsiasi terreno purché profondo e ben drenante; tollera anche calcare e argilla",ph:"6.0 – 7.5; molto adattabile",vaso:"Non adatto alla coltivazione in vaso per le dimensioni che raggiunge",rinvaso:"Non applicabile — pianta da piena terra esclusivamente",vivo:"Alla buca di impianto: abbondante compost maturo + humus di lombrico. Micorrize universali sulle radici al trapianto. Da adulto il terreno si arricchisce naturalmente grazie alla lettiera fogliare annuale."},
-    esp:{luce:"Pieno sole o mezzombra — molto adattabile",sole:"Tollera bene il sole diretto; cresce anche in posizioni semi-ombreggiate",temperatura:"Molto rustico; resiste a -25°C",umidita:"Media; tollera periodi di siccità una volta stabilito"},
-    cur:{acqua:"Annaffiatura necessaria solo nei primi 2 anni. Poi completamente autonomo",potatura:"Minima; solo rami secchi o pericolosi",parassiti:"Attenzione alla Cameraria ohridella (minatore fogliare) — trattamento preventivo in primavera se presente",extra:"Fioritura spettacolare bianca o rosa in aprile-maggio. Produce ippocastani (castagne matte) non commestibili. Albero longevo e monumentale."},
-    bio:{prodotti:"Bio·Grow · Worm·Humus · Root·Juice · Alg·A·Mic",primavera:"Giovani piante: Bio·Grow a dose piena 1× in marzo. Adulti: nessun intervento",estate:"Giovani piante: Bio·Grow 1× in maggio-giugno. Adulti: nessun intervento",autunno:"Stop da luglio per tutte le età",rinvaso:"Alla buca di impianto: Worm·Humus abbondante + Root·Juice sulle radici",note:"Albero praticamente autosufficiente da adulto. Il BioBizz è utile solo nella fase giovanile (primi 2-3 anni). Dopo: solo Alg·A·Mic come rinvigorente se la pianta mostra segni di stress dopo siccità o potature importanti."}},
-  { id:15, name:"Betulla", latin:"Betula pendula", icon:"🌿", isNew:true, tags:["Esterno","Acidofilo","Crescita rapida"], tc:["pg","pt","pa"],
-    con:{periodo:"Marzo – Giugno",frequenza:"Ogni 4-6 settimane (solo giovani piante)",concime:"Concime per acidofile o universale a basso pH, bilanciato",stop:"Stop da luglio — non stimolare crescita tardiva",note:"Crescita naturalmente molto rapida. Adulte in piena terra completamente autosufficienti grazie alla lettiera fogliare."},
-    sub:{terreno:"Terreno acido, fresco, ben drenante; tollera anche terreni poveri e sabbiosi — è pioniera per natura",ph:"5.0 – 6.5 (acido-neutro); non ama il calcare",vaso:"Può essere coltivata in vaso nelle fasi giovanili; poi piena terra",rinvaso:"Solo nei primissimi anni; poi a dimora definitiva",vivo:"Buca di impianto con compost maturo e humus di lombrico. Micorrize ectomicorriziche specifiche per Betula — sono fondamentali: la betulla dipende molto dalle micorrize in natura."},
-    esp:{luce:"Pieno sole — ama la luce diretta",sole:"Richiede esposizione solare piena per crescere al meglio",temperatura:"Rusticissima; resiste a -30°C",umidita:"Media; preferisce terreni freschi ma tollera anche periodi asciutti da adulta"},
-    cur:{acqua:"Regolare nei primi 2 anni. Da adulta quasi autonoma, ma soffre siccità prolungate estive",potatura:"Minima; potare solo in estate o tarda estate — la betulla 'piange' molto se potata in primavera",parassiti:"Afidi e minatori fogliari possibili; generalmente resistente",extra:"La corteccia bianca argentata è il suo tratto distintivo. Foglie piccole e tremolanti al vento. Ottima pioniera per rimboschimenti. Vive 60-80 anni."},
-    bio:{prodotti:"Bio·Grow · Alg·A·Mic · Root·Juice · Worm·Humus",primavera:"Bio·Grow a ½ dose ogni 4-6 settimane nei primi 3 anni. Adulta: Alg·A·Mic 1× in primavera come unico intervento",estate:"Bio·Grow a ½ dose ogni 4-6 settimane (solo giovani). Stop in luglio",autunno:"Stop da luglio",rinvaso:"Root·Juice + Worm·Humus nella buca di impianto. Micorrize ectomicorriziche specifiche per Betula al trapianto (separate da BioBizz)",note:"Usa concimi per acidofile o abbina una leggera acidificazione del substrato. La betulla dipende moltissimo dalle micorrize naturali — il terreno vivo con Worm·Humus le favorisce enormemente. Da adulta è autosufficiente."}},
-  { id:16, name:"Acero Campestre", latin:"Acer campestre", icon:"🍁", isNew:true, tags:["Esterno","Rustico","Siepe/Alberatura"], tc:["pg","pgr","pt"],
-    con:{periodo:"Marzo – Giugno",frequenza:"1× anno con granulare in primavera; oppure nessuna in piena terra",concime:"Granulare universale a lenta cessione; pochissimo azoto",stop:"Stop da luglio — pianta già molto vigorosa da sola",note:"Tra le piante meno esigenti in assoluto. Utile solo per esemplari appena trapiantati o siepi intensivamente potate."},
-    sub:{terreno:"Tollera qualsiasi tipo di terreno: argilloso, calcareo, povero, compatto — è una delle piante più adattabili",ph:"6.0 – 8.0; tollera anche forte alcalinità",vaso:"Adatto in giovane età; poi piena terra",rinvaso:"Solo nelle prime fasi",vivo:"Buca di impianto con compost. Micorrize universali al trapianto. In piena terra si gestisce autonomamente — è una pianta della flora spontanea italiana."},
-    esp:{luce:"Sole pieno, mezz'ombra o ombra — straordinariamente adattabile",sole:"Cresce bene in qualsiasi esposizione; ottima anche all'ombra di edifici o altri alberi",temperatura:"Rusticissimo; resiste a -25°C. Pianta autoctona italiana",umidita:"Molto adattabile; tollera sia siccità che umidità"},
-    cur:{acqua:"Necessita annaffiatura solo nel primo anno. Poi completamente autonomo",potatura:"Tollera potature anche severe — ottimo per siepi formali. Potare in autunno o fine inverno",parassiti:"Molto resistente; raramente problemi seri",extra:"Foglie a 5 lobi con colori giallo dorato in autunno. Produce samare (frutti alati) caratteristici. Pianta autoctona preziosa per la biodiversità."},
-    bio:{prodotti:"Worm·Humus · Root·Juice · Alg·A·Mic",primavera:"Solo giovani piante: Bio·Grow a ½ dose 1× in marzo. Adulto: nessun intervento",estate:"Nessun intervento",autunno:"Nessun intervento",rinvaso:"Worm·Humus nella buca di impianto + Root·Juice sulle radici al trapianto",note:"Pianta autoctona della flora italiana — è praticamente autosufficiente. L'unico intervento BioBizz davvero utile è il Worm·Humus nella buca di impianto per arricchire il terreno vivo. Da adulta: Alg·A·Mic solo dopo stress importanti (siccità prolungata, potature drastiche)."}},
-  { id:17, name:"Pitosforo", latin:"Pittosporum tobira", icon:"🌿", isNew:true, tags:["Esterno","Sempreverde","Siepe"], tc:["pg","pt","pa"],
-    con:{periodo:"Marzo – Settembre",frequenza:"Ogni 4-6 settimane",concime:"Concime universale bilanciato o specifico per sempreverdi",stop:"Stop da ottobre a febbraio",note:"Pianta molto rustica e poco esigente. Come siepe: concimazioni più regolari per sostenere la ricrescita dopo la potatura."},
-    sub:{terreno:"Qualsiasi terreno ben drenante; tollera anche calcare, sabbia e terreni poveri",ph:"6.0 – 8.0; molto adattabile",vaso:"Ottimo in vaso grande; usato spesso su terrazzi e balconi",rinvaso:"Ogni 2-3 anni in primavera",vivo:"Aggiungere 15% di compost maturo o humus di lombrico. Micorrize universali al rinvaso."},
-    esp:{luce:"Sole pieno o mezz'ombra — molto adattabile",sole:"Cresce bene in pieno sole; tollera anche posizioni semi-ombreggiate",temperatura:"Resiste fino a -8/-10°C; in zone molto fredde proteggere con tessuto non tessuto in inverno",umidita:"Bassa; pianta mediterranea che tollera bene la siccità"},
-    cur:{acqua:"Moderata; una volta stabilito tollera siccità prolungate. In vaso annaffiare regolarmente in estate",potatura:"Tollera potature anche severe — ideale per siepi formali. Potare in primavera dopo la fioritura e in agosto",parassiti:"Molto resistente. Possibile cocciniglia in ambienti secchi; afidi sui germogli primaverili",extra:"Fiori bianchi profumatissimi (simili alla zagara) in aprile-maggio. Foglie coriacee, lucide, persistenti. Bacche arancio decorative in autunno."},
-    bio:{prodotti:"Bio·Grow · Fish·Mix · Alg·A·Mic · Root·Juice",primavera:"Bio·Grow a dose piena ogni 4-6 settimane. Dopo ogni potatura: Fish·Mix per sostenere la ricrescita rapida",estate:"Bio·Grow a dose piena ogni 4-6 settimane. Fish·Mix dopo la potatura estiva di agosto",autunno:"Stop da ottobre",rinvaso:"Root·Juice + Worm·Humus nel substrato al rinvaso",note:"Il Fish·Mix dopo la potatura è particolarmente efficace per il pitosforo usato come siepe — l'idrolizzato di pesce stimola rapidamente la crescita dei nuovi getti. Pianta robusta che tollera dosi standard senza problemi."}},
-  { id:18, name:"Spino di Giuda", latin:"Gleditsia triacanthos", icon:"🌿", isNew:true, tags:["Esterno","Albero urbano","Rustico"], tc:["pg","pgr","pt"],
-    con:{periodo:"Marzo – Luglio",frequenza:"Ogni 4-6 settimane; adulto in piena terra quasi autonomo",concime:"Universale bilanciato a lenta cessione; NPK equilibrato",stop:"Stop da agosto — non stimolare crescita tardiva. In piena terra spesso nessun intervento necessario dopo il terzo anno",note:"Nonostante sia nella famiglia Fabaceae, la Gleditsia NON fissa l'azoto atmosferico. Accetta concimi normali bilanciati. Pianta estremamente rustica e autonoma."},
-    sub:{terreno:"Tollera qualsiasi terreno: argilloso, sabbioso, calcareo, povero, anche salino",ph:"6.0 – 8.0; indifferente al pH, tollera bene il calcare",vaso:"Non adatta a lungo termine in vaso; usare solo nelle fasi giovanili",rinvaso:"Solo nei primissimi anni; poi a dimora definitiva",vivo:"Buca di impianto ricca di compost maturo e humus di lombrico. Micorrize universali al trapianto. Da adulta si gestisce autonomamente."},
-    esp:{luce:"Pieno sole — cresce meglio con esposizione diretta",sole:"Ama il sole diretto; ottima in posizioni soleggiate e calde",temperatura:"Rusticissima; resiste a -25°C. Una delle piante più resistenti al freddo, caldo, siccità e inquinamento urbano",umidita:"Bassissima; tollera siccità prolungate meglio di quasi qualsiasi altro albero"},
-    cur:{acqua:"Necessaria solo nel primo anno. Da adulta completamente autonoma",potatura:"Potatura di formazione nei primi anni. ATTENZIONE: le spine sono lunghissime (fino a 30 cm) — usare sempre guanti resistenti",parassiti:"Quasi inattaccabile. Estrema resistenza a parassiti e malattie",extra:"Le spine triforcute sul tronco e sui rami sono caratteristiche e impressionanti. Foglie bipennate finissime ed eleganti. Esistono cultivar senza spine ('Inermis') e con foglie dorate ('Sunburst'). Baccelli attorcigliati fino a 40 cm."},
-    bio:{prodotti:"Bio·Grow · Worm·Humus · Root·Juice · Alg·A·Mic",primavera:"Giovani piante: Bio·Grow a dose piena ogni 4-6 settimane. Adulta in piena terra: nessun intervento o Alg·A·Mic 1× in primavera",estate:"Giovani piante: Bio·Grow ogni 4-6 settimane fino a luglio. Adulta: nessun intervento",autunno:"Stop da agosto",rinvaso:"Worm·Humus abbondante nella buca di impianto + Root·Juice sulle radici al trapianto",note:"A differenza di Mimosa e Glicine, la Gleditsia NON fissa azoto — quindi il Bio·Grow è appropriato. Da adulta è però completamente autosufficiente. L'Alg·A·Mic come rinvigorente è utile dopo stress da siccità intensa o potature importanti."}},
-  { id:19, name:"Gelso Bonsai", latin:"Morus alba / Morus nigra", icon:"🍃", isNew:true, tags:["Esterno","Bonsai","Caducifoglie"], tc:["pg","pa","pt"],
-    con:{periodo:"Aprile – Agosto (dopo la ripresa vegetativa)",frequenza:"Ogni 2-3 settimane in primavera/estate; ogni 4 settimane in tarda estate",concime:"Concime liquido bilanciato NPK (tipo 5-5-5 o simile) in primavera; passare a basso azoto e più P-K da luglio per favorire la lignificazione",stop:"Stop completo da settembre — non stimolare la crescita in prossimità del riposo vegetativo. In inverno la pianta è completamente a riposo",note:"Il gelso è una delle specie più usate per il bonsai per la sua grande vigoria e la rapidità di risposta alle potature. Proprio per questo bisogna modulare bene l'azoto: troppo in estate produce crescita eccessiva e rami che non lignificano bene prima dell'inverno."},
-    sub:{terreno:"Substrato per bonsai ben drenante: miscela di akadama (60%) + pomice (20%) + humus (20%). Tollera anche terricci più ricchi nelle fasi di sviluppo",ph:"6.0 – 7.0; molto adattabile",vaso:"Vaso bonsai con ottimo drenaggio. In fase di sviluppo si può usare un vaso da allenamento più profondo per stimolare la crescita",rinvaso:"Ogni 1-2 anni in primavera, prima della ripresa vegetativa (febbraio/marzo). Il gelso ha radici molto vigorose — il rinvaso è fondamentale per contenere l'apparato radicale",vivo:"Aggiungere 10-15% di humus di lombrico nella miscela di substrato. Micorrize universali sulle radici potate al rinvaso — accelerano la rigenerazione radicale dopo la potatura. Il gelso risponde benissimo a un substrato biologicamente attivo."},
-    esp:{luce:"Pieno sole o luce intensa — almeno 6 ore di sole diretto al giorno",sole:"Ama il sole diretto; più sole = crescita più controllata e foglie più piccole (ideale per il bonsai). Posizione a sud o sud-ovest",temperatura:"Pianta rustica; resiste a -15°C da adulta. Il bonsai va però protetto dalle gelate forti (sotto -5°C) per preservare le radici nel vaso superficiale. In inverno può stare in un luogo fresco ma protetto dal gelo intenso",umidita:"Media; non ama la siccità prolungata ma non vuole nemmeno ristagni. Il vaso bonsai asciuga rapidamente in estate — monitorare quotidianamente"},
-    cur:{acqua:"Abbondante in estate — il bonsai asciuga in fretta sotto il sole diretto. Controllare ogni giorno e annaffiare quando la superficie del substrato inizia ad asciugarsi. Ridurre progressivamente in autunno; quasi stop in inverno durante il riposo",potatura:"Potatura di mantenimento frequente in primavera/estate: accorcia ogni nuovo germoglio a 1-2 foglie appena raggiunge 4-5 foglie. Potatura strutturale in inverno (febbraio), quando la pianta è priva di foglie. Le foglie del gelso sono grandi — la defogliazione parziale in giugno aiuta a ridurne le dimensioni",parassiti:"Abbastanza resistente. Possibile cocciniglia e ragnetto rosso in estate (ambienti caldi e secchi). Trattare con olio di neem preventivamente. Attenzione al marciume radicale in caso di ristagni",extra:"Il gelso è una scelta eccellente per il bonsai per la sua vigoria e la bella corteccia che con il tempo diventa grigiastra e rugosa. Le foglie lobate sono decorative. Il Morus nigra produce more commestibili anche su bonsai. Produce un lattice bianco se i rami vengono tagliati — non irritante ma abbondante: lasciare asciugare naturalmente prima di applicare pasta cicatrizzante."},
-    bio:{prodotti:"Bio·Grow · Bio·Bloom · Alg·A·Mic · Root·Juice",primavera:"Bio·Grow a ½ dose ogni 2-3 settimane da aprile a giugno — sostiene la crescita esplosiva primaverile",estate:"Passa a Bio·Bloom a ½ dose ogni 3-4 settimane da luglio — il basso azoto e il P-K favoriscono la lignificazione dei rami",autunno:"Stop da settembre. Alg·A·Mic 1× a fine agosto come rinvigorente pre-riposo",rinvaso:"Root·Juice direttamente sulle radici potate al rinvaso biennale (febbraio/marzo) — accelera la rigenerazione radicale in modo significativo. Worm·Humus a 10% nel substrato",note:"Il cambio da Bio·Grow (primavera) a Bio·Bloom (estate) è fondamentale per il gelso bonsai: l'azoto in luglio-agosto produce crescita che non lignifica prima dell'inverno, indebolendo la struttura. Alg·A·Mic come spray fogliare diluito dopo ogni defogliazione aiuta la ripresa."}},
-  { id:20, name:"Tradescantia", latin:"Tradescantia zebrina", icon:"💜", isNew:true, tags:["Interno","Facile","Crescita rapida"], tc:["pt","pg","pp"],
-    con:{periodo:"Aprile – Settembre",frequenza:"Ogni 3-4 settimane",concime:"Liquido universale bilanciato, ½ dose",stop:"Stop completo in autunno/inverno",note:"Pianta vigorosissima e poco esigente. La concimazione eccessiva fa perdere la colorazione viola delle foglie — meno è meglio."},
-    sub:{terreno:"Terriccio universale leggero con 20% perlite per drenaggio",ph:"6.0 – 7.0",vaso:"Vaso sospeso o ampio; i rami ricadenti si allungano molto rapidamente",rinvaso:"Ogni anno in primavera; tende a svuotarsi al centro — meglio ripropagare",vivo:"10% humus di lombrico nel substrato. Micorrize universali al rinvaso. Non eccedere con materia organica o perde la colorazione."},
-    esp:{luce:"Luce intensa indiretta — più luce = colori più intensi (viola/argento)",sole:"Tollera qualche ora di sole mattutino; no sole diretto estivo che brucia le foglie",temperatura:"15–28°C; non sotto i 10°C — soffre il freddo",umidita:"Media-alta; apprezza nebulizzazioni occasionali"},
-    cur:{acqua:"Regolare in estate — terreno leggermente umido ma mai saturo. In inverno ridurre sensibilmente",potatura:"Potature frequenti per mantenere la forma compatta; radica facilmente in acqua — ottima per propagazione",parassiti:"Afidi e ragnetto rosso in ambienti secchi. Generalmente molto resistente",extra:"Cresce con estrema rapidità. I rami tagliati radicano in acqua in pochi giorni. Se la pianta si svuota al centro, taglia e ripropaga le punte nel vaso."},
-    bio:{prodotti:"Bio·Grow · Alg·A·Mic",primavera:"Bio·Grow a ¼ dose ogni 3-4 settimane da aprile",estate:"Bio·Grow a ¼ dose ogni 3-4 settimane. Alg·A·Mic 1× al mese come rinvigorente",autunno:"Stop completo da ottobre",rinvaso:"Alg·A·Mic dopo il rinvaso o la ripropagazione",note:"Pianta poco esigente — la concimazione eccessiva (anche BioBizz) causa perdita della colorazione viola e crescita allungata e debole. Dose minima sempre."}},
-  { id:21, name:"Rosmarino", latin:"Salvia rosmarinus", icon:"🌿", isNew:true, tags:["Esterno","Aromatica","Mediterranea"], tc:["pg","pt","pa"],
-    con:{periodo:"Marzo – Luglio",frequenza:"Ogni 6-8 settimane o nessuna",concime:"Leggero, P-K prevalente; concime per piante mediterranee o fiorite",stop:"Stop da agosto — non stimolare crescita tardiva. Pianta quasi autonoma in piena terra",note:"Il rosmarino è una pianta frugale per eccellenza: in piena terra spesso non necessita di alcuna concimazione. Eccesso di azoto = crescita molle e meno aroma."},
-    sub:{terreno:"Terreno molto drenante: sabbioso, sassoso, calcareo. Aggiungere 30-40% sabbia o ghiaia al terriccio universale",ph:"6.5 – 8.0; tollera bene il calcare — è una pianta della macchia mediterranea",vaso:"Vaso in terracotta con drenaggio eccellente; non troppo grande",rinvaso:"Ogni 2-3 anni; le radici non amano essere disturbate",vivo:"In piena terra è autosufficiente. In vaso: 10% humus di lombrico max. Non eccedere con materia organica — il rosmarino preferisce terreni poveri e minerali."},
-    esp:{luce:"Pieno sole — più sole = più oli essenziali e aroma",sole:"Ama il sole diretto per molte ore; esposizione a sud ideale",temperatura:"Rustico fino a -10/-12°C da adulto; proteggere le giovani piante dal gelo prolungato",umidita:"Bassissima; odia l'umidità stagnante — causa principale di morte"},
-    cur:{acqua:"Molto moderata; tollera la siccità meglio dell'eccesso d'acqua. In vaso annaffiare solo quando il terreno è completamente asciutto",potatura:"Dopo la fioritura (tarda primavera); non potare mai sul legno vecchio senza foglie — non ricaccia",parassiti:"Molto resistente. Possibile oidio (mal bianco) in condizioni umide e poco ventilate",extra:"Pianta aromatica officinale. La fioritura azzurro-viola in primavera è anche molto ornamentale e amata dalle api. Non sopporta i ristagni — è la causa più frequente di morte."},
-    bio:{prodotti:"Bio·Bloom · Alg·A·Mic",primavera:"Bio·Bloom a ½ dose ogni 6-8 settimane da marzo — il basso azoto è ideale",estate:"Bio·Bloom a ½ dose 1× a giugno se in vaso. In piena terra: nessun intervento",autunno:"Stop da agosto",rinvaso:"Alg·A·Mic come rinvigorente al rinvaso",note:"Mai Bio·Grow — l'azoto in eccesso produce crescita molle, riduce l'aroma e predispone a malattie fungine. In piena terra il rosmarino è praticamente autosufficiente. Solo Bio·Bloom a dose ridotta in vaso."}},
-  { id:22, name:"Salvia", latin:"Salvia officinalis", icon:"🍃", isNew:true, tags:["Esterno","Aromatica","Mediterranea"], tc:["pg","pt","pa"],
-    con:{periodo:"Marzo – Luglio",frequenza:"Ogni 6-8 settimane",concime:"Leggero, P-K prevalente; concime per piante mediterranee",stop:"Stop da agosto. In piena terra spesso nessuna concimazione necessaria",note:"Pianta aromatica della macchia mediterranea — frugale per natura. Troppo azoto = meno aroma e crescita molle. In piena terra praticamente autonoma."},
-    sub:{terreno:"Terreno ben drenante, sabbioso o ghiaioso; no terricci pesanti e umidi. 30% sabbia grossa o perlite",ph:"6.5 – 8.0; tollera bene il calcare",vaso:"Terracotta con ottimo drenaggio; non troppo grande",rinvaso:"Ogni 2-3 anni; in piena terra dura 4-5 anni prima di lignificare e andare rinnovata",vivo:"In piena terra autosufficiente. In vaso: 10% humus di lombrico. Come il rosmarino, preferisce substrati minerali e poveri."},
-    esp:{luce:"Pieno sole — almeno 6 ore al giorno per sviluppare oli essenziali e aroma",sole:"Ama il sole diretto; posizione a sud o sud-ovest ideale",temperatura:"Rustica fino a -10/-15°C da adulta; le varietà a foglia colorata (purpurascens, tricolor) sono meno rustiche",umidita:"Bassa; la macchia mediterranea è il suo habitat naturale"},
-    cur:{acqua:"Molto moderata; meglio asciutta che troppo umida. In vaso solo quando il terreno è asciutto",potatura:"Potatura leggera in primavera per mantenere la forma compatta; non tagliare nel legno vecchio",parassiti:"Oidio (mal bianco) in condizioni umide. Afidi raramente. Generalmente molto resistente",extra:"Le foglie grigio-verdi vellutate sono ornamentali oltre che aromatiche. Fioritura viola-blu in primavera attrattiva per le api. Rinnovare la pianta ogni 4-5 anni quando diventa troppo legnosa."},
-    bio:{prodotti:"Bio·Bloom · Alg·A·Mic",primavera:"Bio·Bloom a ½ dose ogni 6-8 settimane da marzo",estate:"Bio·Bloom a ½ dose 1× a giugno se in vaso. Stop da luglio",autunno:"Stop da agosto",rinvaso:"Alg·A·Mic come rinvigorente al rinvaso o dopo potature importanti",note:"Identica filosofia del rosmarino: mai Bio·Grow, solo Bio·Bloom a dose ridotta. L'azoto diluisce gli oli essenziali e rende la pianta vulnerabile ai funghi. In piena terra nessun intervento BioBizz necessario."}},
-  { id:23, name:"Paulownia", latin:"Paulownia tomentosa", icon:"🌸", isNew:true, tags:["Esterno","Albero","Crescita rapidissima"], tc:["pg","pt","pb"],
-    con:{periodo:"Marzo – Luglio",frequenza:"Ogni 3-4 settimane (solo giovani piante)",concime:"Bilanciato NPK con buona quota di azoto in primavera; universale a dose piena",stop:"Stop da agosto — non stimolare crescita tardiva che non lignifica. Da adulta quasi autonoma in piena terra",note:"La Paulownia è l'albero a più rapida crescita del mondo temperato (fino a 3-5 metri/anno da giovane). La concimazione accelera ancora di più questa crescita nei primi anni."},
-    sub:{terreno:"Terreno fertile, profondo, ben drenante; tollera anche terreni poveri ma cresce più lentamente",ph:"5.5 – 7.5; adattabile",vaso:"Non adatta a lungo in vaso — raggiunge dimensioni enormi molto rapidamente",rinvaso:"Solo nei primissimi mesi; poi a dimora definitiva il prima possibile",vivo:"Buca di impianto molto ricca: compost maturo abbondante + humus di lombrico (20-30%). Micorrize universali al trapianto. La Paulownia risponde enormemente a un terreno biologicamente ricco."},
-    esp:{luce:"Pieno sole — essenziale per la crescita ottimale",sole:"Ama il sole diretto tutto il giorno; esposizione a sud perfetta",temperatura:"Rustica fino a -15/-20°C da adulta; i giovani esemplari possono subire danni sotto i -10°C ma ricacciano vigorosamente dalla base",umidita:"Media; tollera periodi di siccità da adulta ma preferisce terreni freschi"},
-    cur:{acqua:"Regolare e abbondante nei primi 2-3 anni per sostenere la crescita esplosiva. Da adulta quasi autonoma",potatura:"Non necessaria per la forma naturale. Se ceduata (tagliata alla base), produce foglie enormi (fino a 60 cm) su un unico fusto dritto",parassiti:"Molto resistente a parassiti e malattie. Praticamente inattaccabile",extra:"Fioritura viola spettacolare a maggio PRIMA delle foglie — uno degli alberi ornamentali più belli. Foglie enormi a forma di cuore. Il legno è leggerissimo e pregiato. Usata anche per il rimboschimento rapido e la cattura di CO₂. Può essere invasiva in climi favorevoli."},
-    bio:{prodotti:"Bio·Grow · Fish·Mix · Root·Juice · Alg·A·Mic",primavera:"Bio·Grow a dose piena ogni 3-4 settimane + Fish·Mix alternato. Solo giovani piante (primi 3 anni)",estate:"Bio·Grow a dose piena ogni 3-4 settimane fino a luglio (solo giovani)",autunno:"Stop da agosto — i rami devono lignificare prima dell'inverno",rinvaso:"Root·Juice + Worm·Humus abbondante nella buca di impianto. Micorrize universali al trapianto",note:"La Paulownia è una delle poche piante che tollera e beneficia di dosi piene di BioBizz nei primi anni. La crescita è talmente rapida che assorbe tutto. Da adulta in piena terra: nessun intervento o solo Alg·A·Mic dopo stress."}},
-  { id:24, name:"Crassula Ovata", latin:"Crassula ovata", icon:"🪴", isNew:true, tags:["Interno/Esterno","Succulenta","Facile"], tc:["pt","pgr","pg"],
-    con:{periodo:"Aprile – Settembre",frequenza:"1× al mese, non di più",concime:"Liquido specifico per succulente e cactus, ½ dose",stop:"Stop completo in autunno/inverno",note:"Pianta del Sudafrica adattata a terreni poveri e secchi. Come l'Aloe, soffre più di eccessi che di carenze. Meno è decisamente meglio."},
-    sub:{terreno:"Substrato per succulente e cactus; oppure terriccio universale + 40% di sabbia grossa, perlite o pomice",ph:"6.0 – 7.0",vaso:"Terracotta con foro di drenaggio. Vaso pesante e stabile — la pianta diventa grande e pesante negli anni",rinvaso:"Ogni 2-3 anni in primavera; tollera bene vasi leggermente stretti",vivo:"Dosi minime di humus di lombrico (5-10%) come per l'Aloe. Micorrize universali al rinvaso. Substrato troppo ricco trattiene umidità e causa marciume."},
-    esp:{luce:"Piena luce o sole diretto — più luce = crescita compatta e possibilità di fioritura",sole:"Tollera il sole diretto; in estate proteggere dal sole più forte nelle ore centrali se appena spostata fuori",temperatura:"Ideale 15–28°C; resiste a brevi gelate fino a -2°C ma non al gelo prolungato",umidita:"Bassissima; odia l'umidità elevata"},
-    cur:{acqua:"Annaffiare solo quando il substrato è completamente asciutto. Metodo 'soak and dry' come l'Aloe. In inverno 1× al mese o meno",potatura:"Non necessaria; si può potare per dare forma ad alberello. I rami tagliati radicano facilmente",parassiti:"Cocciniglia (soprattutto cotonosa) e marciume radicale da eccesso d'acqua",extra:"Può vivere decenni e diventare un piccolo albero. Le foglie carnose diventano rosse ai bordi con molta luce. Fiorisce in inverno con piccoli fiori bianchi/rosa stellati se le condizioni sono ideali (estate calda, inverno fresco)."},
-    bio:{prodotti:"Alg·A·Mic · Root·Juice",primavera:"Alg·A·Mic a ¼ dose 1× al mese da aprile — è sufficiente",estate:"Alg·A·Mic a ¼ dose 1× al mese",autunno:"Stop totale da ottobre",rinvaso:"Root·Juice diluito sulle radici al rinvaso. Worm·Humus a dose minima (5%)",note:"Come l'Aloe: Bio·Grow e Bio·Bloom sono troppo ricchi per le succulente. L'Alg·A·Mic a ¼ dose è l'unico prodotto BioBizz adatto. Qualsiasi eccesso produce crescita molle e predispone al marciume."}},
-  { id:25, name:"Carmona Bonsai", latin:"Carmona microphylla (Ehretia buxifolia)", icon:"🌳", isNew:true, tags:["Interno","Bonsai","Tropicale"], tc:["pt","pb","pc"],
-    con:{periodo:"Aprile – Settembre (ridotta in inverno se temp >18°C)",frequenza:"Ogni 2-3 settimane",concime:"Liquido bilanciato NPK per bonsai, ½ dose",stop:"Ridurre in inverno ma non fermare del tutto — è tropicale e non va mai in vero riposo se tenuto al caldo",note:"Se l'ambiente è caldo (>18°C) continua a vegetare anche in inverno: una leggera concimazione mensile è possibile. Non eccedere — le radici sono delicate."},
-    sub:{terreno:"Substrato per bonsai ben drenante: akadama (50%) + pomice (25%) + humus di lombrico (25%). Il drenaggio è fondamentale",ph:"5.5 – 7.0",vaso:"Vaso bonsai poco profondo con ottimo drenaggio. Non troppo grande — preferisce sentirsi contenuto",rinvaso:"Ogni 2-3 anni in tarda primavera (maggio/giugno), quando le temperature notturne sono sopra i 15°C. Mai rinvasare in inverno",vivo:"15% di humus di lombrico nella miscela. Micorrize universali sulle radici al rinvaso. Non disturbare troppo le radici: è meno vigoroso di Gelso e Glicine nella rigenerazione radicale."},
-    esp:{luce:"Luce intensa indiretta o sole mattutino filtrato. Pianta da interni nella nostra latitudine",sole:"Alcune ore di sole mattutino sono benefiche; evitare sole diretto estivo pomeridiano",temperatura:"18–28°C ideale. Non scendere MAI sotto i 12°C — è tropicale e il freddo è letale. Niente balcone in inverno",umidita:"Alta (50–70%): fondamentale. Nebulizzare le foglie regolarmente. Sottovaso con argilla espansa e acqua per umidità costante"},
-    cur:{acqua:"Substrato leggermente umido ma mai saturo. Odia sia la siccità prolungata sia i ristagni. Controllare ogni giorno in estate — il vaso bonsai asciuga rapidamente",potatura:"Accorciare i germogli a 2-3 foglie quando raggiungono 5-6 foglie. Potatura strutturale in tarda primavera. Produce fiorellini bianchi e bacche rosse decorative",parassiti:"Molto sensibile a cocciniglia, ragnetto rosso e mosca bianca in ambienti secchi. L'umidità insufficiente è la causa principale. Neem a dose ridotta",extra:"Le foglie cadono se: fa troppo freddo, l'aria è troppo secca, il terreno è troppo asciutto/bagnato, oppure se viene spostato bruscamente. Pianta esigente ma gratificante — i fiorellini bianchi e le bacche rosse sono spettacolari."},
-    bio:{prodotti:"Bio·Grow · Alg·A·Mic · Root·Juice",primavera:"Bio·Grow a ½ dose ogni 2-3 settimane da aprile. Alg·A·Mic 1× al mese come rinvigorente",estate:"Bio·Grow a ½ dose ogni 2-3 settimane. Alg·A·Mic come spray fogliare diluito per umidità",autunno:"Ridurre a Bio·Grow 1× al mese a ¼ dose se temp >18°C. Stop sotto i 18°C",rinvaso:"Root·Juice sulle radici al rinvaso (solo in tarda primavera/estate). Worm·Humus a 15%",note:"Mai Bio·Bloom. Il Bio·Grow a ½ dose è sufficiente. L'Alg·A·Mic come spray fogliare è particolarmente utile per mantenere l'alta umidità che il Carmona richiede."}}
+  {
+    id: 0, name: "Sanseviera", latin: "", icon: "🌿", isNew: false, tags: ["Interno", "Facile", "Stop invernale"], tc: ["pt", "pg", "pgr"],
+    con: { periodo: "Aprile – Settembre", frequenza: "1× al mese", concime: "Liquido succulente, ½ dose", stop: "Stop completo in autunno/inverno", note: "Non concimare mai su terreno secco. Soffre più di eccessi che di carenze." },
+    sub: { terreno: "Substrato per succulente e cactus, ben drenante", ph: "6.0 – 7.0", vaso: "Terracotta con foro di drenaggio, non troppo grande", rinvaso: "Ogni 2-3 anni o quando le radici escono dal vaso", vivo: "Aggiungere 10% di humus di lombrico al substrato. Micorrize universali in polvere al rinvaso. Dose contenuta — la sanseviera preferisce substrati poveri; eccedere con organico rischia il marciume." },
+    esp: { luce: "Luce indiretta brillante; tollera anche poca luce ma cresce più lentamente", sole: "Evitare sole diretto estivo — brucia le foglie", temperatura: "15–30°C; non sotto i 10°C", umidita: "Bassa; non nebulizzare" },
+    cur: { acqua: "Annaffiare poco e solo quando il terreno è completamente asciutto; in inverno 1× al mese", potatura: "Rimuovere foglie secche o danneggiate alla base", parassiti: "Cocciniglia e ragnetto rosso; trattare con olio di neem", extra: "Quasi indistruttibile — il nemico principale è l'eccesso d'acqua" },
+    bio: { prodotti: "Bio·Grow · Alg·A·Mic · Root·Juice", primavera: "Bio·Grow a ¼ dose ogni 4-5 settimane — inizia con cautela", estate: "Bio·Grow a ¼ dose 1× al mese. In alternativa Alg·A·Mic ogni 3 settimane (più delicato)", autunno: "Stop totale da ottobre. Nessun prodotto BioBizz in inverno", rinvaso: "Root·Juice diluito sulle radici al momento del rinvaso", note: "Pianta abituata a terreni poveri — meno è meglio. Mai superare ¼ della dose consigliata. L'Alg·A·Mic è preferibile al Bio·Grow se la pianta è in posizione di scarsa luce." }
+  },
+  {
+    id: 1, name: "Orchidea", latin: "Phalaenopsis", icon: "🌸", isNew: false, tags: ["Interno", "Delicata", "Stop fioritura"], tc: ["pt", "pc", "pa"],
+    con: { periodo: "Primavera – Estate", frequenza: 'Ogni 1-2 settimane ("weakly, weekly")', concime: "Liquido specifico orchidee, ¼ dose", stop: "Ridurre in autunno; stop durante fioritura", note: "Lavare il substrato ogni 4-6 annaffiature. Evitare lento rilascio sulle epifite." },
+    sub: { terreno: "Corteccia di pino o substrato specifico per orchidee — mai terriccio comune", ph: "5.5 – 6.5", vaso: "Vaso trasparente per monitorare le radici; ottimo drenaggio", rinvaso: "Ogni 2 anni o quando il substrato si decompone", vivo: "La corteccia in decomposizione ospita naturalmente batteri e funghi benefici. Al rinvaso aggiungere micorrize specifiche per orchidee. Evitare humus di lombrico: trattiene troppa umidità e soffoca le radici aeree." },
+    esp: { luce: "Luce intensa ma indiretta — vicino a finestra con tende", sole: "Sole diretto brucia le foglie; luce filtrante ideale", temperatura: "18–28°C; differenziale giorno/notte favorisce la fioritura", umidita: "Alta (50–70%); nebulizzare le radici aeree" },
+    cur: { acqua: "Immergere il vaso in acqua 15 min, poi scolare completamente; mai ristagni", potatura: "Tagliare lo stelo dopo la fioritura sopra un nodo per stimolare nuovi fiori", parassiti: "Cocciniglia e marciume radicale (da eccesso d'acqua)", extra: "Radici verdi = pianta idratata; radici grigio-argentate = vuole acqua" },
+    bio: { prodotti: "Alg·A·Mic · Root·Juice", primavera: "Alg·A·Mic ogni 2 settimane a ¼ dose — è il prodotto più delicato e sicuro per le radici epifite", estate: "Alg·A·Mic ogni 2 settimane. Stop durante la fioritura", autunno: "Alg·A·Mic 1× al mese a dose ridotta. Stop in inverno", rinvaso: "Root·Juice diluito nel vaso dopo il rinvaso — favorisce la ripresa radicale nella corteccia nuova", note: "Evita Bio·Grow e Bio·Bloom — troppo concentrati per le orchidee epifite. Anche l'Alg·A·Mic va sempre usato a ¼ della dose indicata in etichetta." }
+  },
+  {
+    id: 2, name: "Ficus Benjamina", latin: "", icon: "🌳", isNew: false, tags: ["Interno", "Azoto", "Ferro chelato"], tc: ["pt", "pb", "pa"],
+    con: { periodo: "Marzo – Settembre", frequenza: "Ogni 2 settimane", concime: "Liquido azotato NPK 3-1-2, dose ridotta", stop: "Stop completo in autunno/inverno", note: "Clorosi ferrica frequente: integrare con ferro chelato se foglie nuove gialle con venature verdi." },
+    sub: { terreno: "Terriccio universale di qualità con perlite (20%) per drenaggio", ph: "6.0 – 7.0", vaso: "Vaso proporzionato alla chioma, con buon drenaggio", rinvaso: "Ogni 2 anni in primavera", vivo: "Aggiungere 15% di humus di lombrico e 10% di compost maturo. Micorrize universali al rinvaso. Uno strato di humus in superficie ogni primavera inocula nuovi batteri." },
+    esp: { luce: "Luce intensa indiretta; più luce = meno caduta foglie", sole: "Tolera qualche ora di sole mattutino; no sole diretto estivo", temperatura: "16–24°C; odia correnti d'aria e spostamenti — perde foglie", umidita: "Media; nebulizzare occasionalmente in inverno con riscaldamento acceso" },
+    cur: { acqua: "Regolare in estate, ridurre in inverno; terreno leggermente umido ma mai saturo", potatura: "Potatura formativa in primavera; elimina rami incrociati", parassiti: "Cocciniglia e ragnetto rosso; frequente in ambienti secchi", extra: "Non spostarlo — è molto sensibile ai cambi di posizione" },
+    bio: { prodotti: "Bio·Grow · Alg·A·Mic · Root·Juice · CalMag", primavera: "Bio·Grow a ½ dose ogni 2 settimane. Aggiungi Alg·A·Mic alternato ogni 2 settimane come rinvigorente", estate: "Bio·Grow a ½ dose ogni 2 settimane. Se compaiono foglie nuove gialle: CalMag 1× al mese", autunno: "Stop da ottobre. In settembre ultima dose di Alg·A·Mic per preparare la pianta al riposo", rinvaso: "Root·Juice sulle radici al rinvaso primaverile + Worm·Humus incorporato nel nuovo substrato", note: "Il CalMag è utile per prevenire la clorosi ferrica frequente in questa specie. Il Bio·Grow a dose piena rischia di bruciare le radici — usa sempre ½ dose." }
+  },
+  {
+    id: 3, name: "Ficus Elastica", latin: "", icon: "🌱", isNew: false, tags: ["Interno", "Robusto", "Azoto + K"], tc: ["pt", "pg", "pb"],
+    con: { periodo: "Marzo – Settembre", frequenza: "Ogni 2 settimane", concime: "Liquido azotato con buona quota K", stop: "Stop completo in autunno/inverno", note: "Più robusto del Benjamina. Il potassio mantiene le foglie lucide e coriacee." },
+    sub: { terreno: "Terriccio universale ricco con buon drenaggio; aggiungere perlite o sabbia", ph: "6.0 – 7.0", vaso: "Vaso largo e stabile, proporzionato alla dimensione", rinvaso: "Ogni 2 anni; cresce velocemente", vivo: "15% humus di lombrico + 10% compost maturo nella miscela. Micorrize universali al rinvaso." },
+    esp: { luce: "Luce intensa indiretta; le varietà con foglie scure tollerano anche meno luce", sole: "Qualche ora di sole mattutino va bene; no sole diretto estivo", temperatura: "15–30°C; tollera meglio le variazioni rispetto al Benjamina", umidita: "Media; non necessita nebulizzazioni frequenti" },
+    cur: { acqua: "Annaffiare quando i primi 3-4 cm di terreno sono asciutti", potatura: "Potatura apicale per stimolare la ramificazione; lattice irritante — usare guanti", parassiti: "Cocciniglia e ragnetto; pulire le foglie periodicamente con panno umido", extra: "Pulire le foglie grandi con panno umido per ottimizzare la fotosintesi" },
+    bio: { prodotti: "Bio·Grow · Alg·A·Mic · Root·Juice", primavera: "Bio·Grow a ½ dose ogni 2 settimane", estate: "Bio·Grow a ½ dose ogni 2 settimane. Alg·A·Mic 1× al mese come rinvigorente fogliare", autunno: "Stop da ottobre. Ultima dose Alg·A·Mic in settembre", rinvaso: "Root·Juice sulle radici al rinvaso. Worm·Humus nel substrato", note: "Più robusto del Benjamina — tollera dosi leggermente più alte ma non superare ½ dose. L'Alg·A·Mic usato come spray fogliare (diluito) mantiene le foglie lucide e sane." }
+  },
+  {
+    id: 4, name: "Oleandro", latin: "Nerium oleander", icon: "🌺", isNew: false, tags: ["Esterno", "P-K", "Fioritura"], tc: ["pg", "pc", "pa"],
+    con: { periodo: "Marzo – Settembre", frequenza: "Ogni 2 settimane", concime: "Fosforo e potassio prevalenti (5-10-10)", stop: "Stop da ottobre a febbraio", note: "In piena terra ottimo il granulare in primavera. Evitare azoto per non frenare la fioritura." },
+    sub: { terreno: "Terriccio universale ben drenante; tollera anche terreni poveri e sassosi", ph: "6.5 – 7.5; tollera leggera alcalinità", vaso: "Vaso grande (min 40 cm); non penalizzarlo con vasi piccoli", rinvaso: "Ogni 2 anni o quando le radici escono dal foro", vivo: "In piena terra: compost maturo in superficie ogni anno. In vaso: 15% humus di lombrico + micorrize universali al rinvaso." },
+    esp: { luce: "Pieno sole — più sole = più fiori", sole: "Ama il sole diretto per molte ore; posizione a sud ideale", temperatura: "Resistente fino a -5°C; in zone fredde proteggere in inverno", umidita: "Bassa; pianta mediterranea, tollera siccità" },
+    cur: { acqua: "Abbondante in estate; ridurre molto in inverno; tollera brevi siccità", potatura: "Potare subito dopo la fioritura per stimolare nuovi rami fiorali l'anno successivo", parassiti: "Cocciniglia e afidi; comune in estate", extra: "ATTENZIONE: tutte le parti sono molto velenose — usare guanti, non bruciare i rami" },
+    bio: { prodotti: "Bio·Bloom · Top·Max · Alg·A·Mic · Root·Juice", primavera: "Bio·Bloom a dose piena ogni 2 settimane da marzo. Alg·A·Mic 1× al mese per stimolare la fioritura", estate: "Bio·Bloom ogni 2 settimane. Top·Max 1× al mese durante il picco della fioritura per incrementare la resa", autunno: "Stop da ottobre. In settembre ultima dose Alg·A·Mic", rinvaso: "Root·Juice sulle radici al rinvaso ogni 2 anni", note: "Mai usare Bio·Grow — l'azoto in eccesso produce foglie a scapito dei fiori. Il Top·Max con acidi umici amplifica la resa della fioritura in modo significativo." }
+  },
+  {
+    id: 5, name: "Glicine / Bonsai", latin: "Wisteria", icon: "💜", isNew: false, tags: ["Esterno", "Zero azoto", "Potatura"], tc: ["pg", "pc", "pgr"],
+    con: { periodo: "Aprile – Agosto (dopo la fioritura)", frequenza: "Ogni 3-4 settimane", concime: "Fosforo e potassio (3-8-8), zero azoto", stop: "Stop autunno/inverno; non disturbare le gemme fiorali", note: "Fiorisce sui rami dell'anno precedente. La potatura radicale del bonsai già stimola la fioritura!" },
+    sub: { terreno: "Terriccio per bonsai o miscela sabbia + akadama + humus in parti uguali", ph: "6.0 – 7.0", vaso: "Vaso bonsai poco profondo e largo; buon drenaggio essenziale", rinvaso: "Ogni 2 anni in primavera, con potatura radicale contestuale", vivo: "Aggiungere 10% di humus di lombrico nella miscela. Micorrize specifiche per bonsai sulle radici potate al rinvaso: accelerano la rigenerazione radicale." },
+    esp: { luce: "Pieno sole o mezz'ombra; almeno 6 ore di luce per fiorire", sole: "Sole diretto mattutino ideale; ombra nelle ore più calde in estate", temperatura: "Rustico; resiste al gelo — il freddo invernale è necessario per la fioritura", umidita: "Media; il bonsai asciuga più velocemente — monitorare" },
+    cur: { acqua: "Regolare in estate — il bonsai asciuga in fretta; ridurre in autunno/inverno", potatura: "Estate: accorcia germogli a 2-3 foglie. Fine inverno: ritaglia a 1-2 gemme", parassiti: "Afidi e cocciniglia; trattare in primavera preventivamente", extra: "Cresce con forza esplosiva in primavera — potature frequenti per mantenere la forma bonsai" },
+    bio: { prodotti: "Bio·Bloom · Alg·A·Mic · Root·Juice", primavera: "Solo Alg·A·Mic durante la fioritura (marzo/aprile) — non stimolare la crescita. Dopo la fioritura: Bio·Bloom a ½ dose ogni 3-4 settimane", estate: "Bio·Bloom a ½ dose ogni 3-4 settimane. Zero azoto", autunno: "Stop da settembre. Le gemme fiorali si stanno formando — non disturbare", rinvaso: "Root·Juice sulle radici potate al rinvaso biennale — fondamentale per la rigenerazione radicale", note: "Mai usare Bio·Grow o Fish·Mix — l'azoto produce crescita vegetativa eccessiva e blocca la fioritura. Il glicine è una leguminosa: produce azoto da solo." }
+  },
+  {
+    id: 6, name: "Limone", latin: "Citrus limon", icon: "🍋", isNew: false, tags: ["Esterno/Interno", "Agrumi", "Ferro + Mg"], tc: ["pg", "pa", "pt"],
+    con: { periodo: "Tutto l'anno con regime granulare + lupini macinati in inverno", frequenza: "Granulare a lento rilascio: 3× l'anno (marzo, giugno, settembre). Lupini macinati: 2× l'anno (febbraio e novembre)", concime: "Granulare specifico agrumi a lento rilascio + lupini macinati (100-150g per vaso da 50 cm)", stop: "Non fermare mai del tutto — il limone fruttifica quasi tutto l'anno. I lupini garantiscono nutrimento organico anche in inverno", note: "Il granulare a lento rilascio nutre costantemente per 2-3 mesi senza rischio di sovradosaggio. I lupini macinati acidificano il substrato (ottimo per agrumi) e rilasciano azoto lentamente per 3-4 mesi. Interrali leggermente nel terriccio. Integrare sempre ferro chelato e magnesio solfato (CalMag) mensilmente — il granulare da solo non è sufficiente per questi microelementi." },
+    sub: { terreno: "Specifico agrumi o mix universale + sabbia + perlite per drenaggio ottimale", ph: "5.5 – 6.5 (acido); il calcare blocca il ferro", vaso: "Grande (min 50 cm); non limitare la crescita", rinvaso: "Ogni 2-3 anni in primavera; rinnovare il terriccio esausto", vivo: "Fondamentale: 20% di humus di lombrico + compost maturo. Micorrize specifiche per agrumi al rinvaso. I lupini macinati (100-150g per vaso da 50 cm) in febbraio e novembre sono la base del tuo regime invernale: acidificano il substrato, rilasciano azoto per 3-4 mesi e nutrono attivamente i batteri del suolo." },
+    esp: { luce: "Pieno sole — almeno 6-8 ore al giorno", sole: "Ama il sole diretto; ottima esposizione a sud o sud-ovest", temperatura: "Ideale 15–30°C; proteggere sotto i 5°C; non sopporta il gelo prolungato", umidita: "Media-alta; nebulizzare in inverno in ambienti riscaldati secchi" },
+    cur: { acqua: "Abbondante e regolare in estate; ridurre in inverno; no ristagni — causa marciume radicale", potatura: "Leggera in primavera: eliminare rami secchi, incrociati o troppo vigorosi", parassiti: "Cocciniglia, afidi, minatore fogliare; trattare con olio di neem in primavera", extra: "Usare preferibilmente acqua piovana o decantata — il calcare causa clorosi ferrica" },
+    bio: { prodotti: "CalMag · Alg·A·Mic · Bio·Bloom · Root·Juice", primavera: "Con il granulare come base, il BioBizz diventa integrativo. CalMag 1× al mese (indispensabile tutto l'anno). Alg·A·Mic 1× al mese come rinvigorente", estate: "CalMag mensile. Alg·A·Mic 1× al mese. Bio·Bloom a ½ dose 1× al mese per supporto alla fruttificazione in aggiunta al granulare", autunno: "CalMag mensile tutto l'anno — non sospendere mai. In inverno i lupini macinati sostituiscono Fish·Mix e Bio·Grow come fonte di azoto organico", rinvaso: "Root·Juice sulle radici + Worm·Humus nel substrato + prima dose CalMag dopo il rinvaso", note: "Con il regime granulare + lupini, Fish·Mix e Bio·Grow non servono più come concimazione di base — il granulare fa quel lavoro. Il CalMag resta indispensabile perché il granulare non copre ferro e magnesio a sufficienza. I lupini macinati in inverno sostituiscono il Fish·Mix come fonte di azoto organico e attività microbica." }
+  },
+  {
+    id: 7, name: "Moneta Cinese", latin: "Pilea peperomioides", icon: "🪙", isNew: false, tags: ["Interno", "Facile", "Poco esigente"], tc: ["pt", "pg", "pb"],
+    con: { periodo: "Primavera – Estate", frequenza: "Ogni 3-4 settimane", concime: "Liquido universale bilanciato, ½ dose", stop: "Stop completo in autunno/inverno", note: "Foglie gialle = spesso troppa acqua. Foglie piccole e pallide = poca luce. Meno è meglio." },
+    sub: { terreno: "Terriccio universale leggero con perlite (20-30%) per drenaggio", ph: "6.0 – 7.0", vaso: "Non troppo grande — le radici non devono nuotare in troppa terra", rinvaso: "Ogni anno in primavera; produce molti figlioletti che puoi separare", vivo: "Aggiungere 10-15% di humus di lombrico. Micorrize universali al rinvaso annuale." },
+    esp: { luce: "Luce intensa indiretta; si orienta verso la fonte luminosa", sole: "Nessun sole diretto — brucia le foglie tonde", temperatura: "15–30°C; no correnti d'aria fredda", umidita: "Media; non richiede nebulizzazioni" },
+    cur: { acqua: "Annaffiare solo quando i primi 2-3 cm sono asciutti; no ristagni", potatura: "Non necessaria; rimuovere foglie secche e separare i figlioletti alla base", parassiti: "Ragnetto rosso in ambienti secchi; cocciniglia raramente", extra: "Ruotare il vaso regolarmente per crescita simmetrica — si inclina verso la luce" },
+    bio: { prodotti: "Bio·Grow · Alg·A·Mic · Root·Juice", primavera: "Bio·Grow a ¼ dose ogni 4 settimane — è sufficiente", estate: "Bio·Grow a ¼ dose ogni 4 settimane. Alg·A·Mic 1× al mese come booster", autunno: "Stop completo da settembre", rinvaso: "Root·Juice sulle radici al rinvaso annuale", note: "Pianta poco esigente — non esagerare. A dose piena il Bio·Grow causa crescita eccessiva e foglie deformate. Meno è meglio anche con BioBizz." }
+  },
+  {
+    id: 8, name: "Vinca (Pervinca)", latin: "Vinca minor / major", icon: "🔵", isNew: false, tags: ["Esterno", "Rustica", "P-K"], tc: ["pg", "pt", "pc"],
+    con: { periodo: "Primavera – Estate", frequenza: "Ogni 3-4 settimane", concime: "Liquido per piante da fiore, P-K prevalente", stop: "Semiriposo in autunno/inverno", note: "Evitare eccessi di azoto. In vaso concimazione più regolare che in piena terra." },
+    sub: { terreno: "Tollera quasi qualsiasi terriccio; preferisce terreno fresco e ben drenato", ph: "6.0 – 7.5; molto adattabile", vaso: "Vaso ampio per le varietà tappezzanti; buon drenaggio", rinvaso: "Ogni 2 anni o quando la pianta è eccessivamente densa", vivo: "In vaso aggiungere 15% di compost maturo o humus di lombrico. Micorrize universali al rinvaso." },
+    esp: { luce: "Mezz'ombra o ombra — fiorisce all'ombra meglio di molte altre piante da fiore", sole: "Tollera il sole ma preferisce posizioni ombreggiate; ottima sotto gli alberi", temperatura: "Molto rustica; resiste bene al gelo fino a -10°C", umidita: "Media; non richiede attenzioni particolari" },
+    cur: { acqua: "Moderata; una volta stabilita tollera bene la siccità. In vaso annaffiare regolarmente", potatura: "Tagliare i rami dopo la fioritura per stimolare crescita compatta e nuovi fiori", parassiti: "Molto resistente; raramente attaccata da parassiti", extra: "Pianta tappezzante molto vigorosa — in giardino può espandersi rapidamente, controllare" },
+    bio: { prodotti: "Bio·Bloom · Alg·A·Mic", primavera: "Bio·Bloom a ½ dose ogni 3-4 settimane da aprile", estate: "Bio·Bloom a ½ dose ogni 3-4 settimane", autunno: "Stop da settembre", rinvaso: "Alg·A·Mic come rinvigorente dopo potature importanti o rinvaso", note: "Mai Bio·Grow — l'azoto in eccesso produce molto fogliame ma pochi fiori. In piena terra bastano 1-2 applicazioni di Bio·Bloom per stagione." }
+  },
+  {
+    id: 9, name: "Mimosa", latin: "Acacia dealbata", icon: "🌼", isNew: false, tags: ["Esterno", "Zero azoto", "Leguminosa"], tc: ["pg", "pc", "pt"],
+    con: { periodo: "Marzo – Settembre (iniziare dopo la fioritura)", frequenza: "Ogni 3-4 settimane", concime: "Povero di azoto, ricco P-K; ottimi concimi per azalee", stop: "Stop in autunno/inverno — non disturbare le gemme fiorali", note: "Leguminosa: fissa l'azoto da sola. Eccesso di N inibisce i noduli radicali. Non concimare durante la fioritura." },
+    sub: { terreno: "Terreno acido, siliceo, ben drenante; no calcare", ph: "5.5 – 6.5 (acido); soffre molto in terreni alcalini", vaso: "Vaso molto grande; ha radici potenti e profonde", rinvaso: "Ogni 2 anni; preferisce la piena terra dove possibile", vivo: "Ospita già batteri Rhizobium nei noduli radicali. Aggiungere humus di lombrico (10-15%) e micorrize acidofile. Non disturbare i noduli radicali durante il rinvaso." },
+    esp: { luce: "Pieno sole o luce intensa", sole: "Ama il sole diretto; fiorisce meglio con esposizione a sud", temperatura: "Resiste fino a -8/-10°C se adulta; i giovani esemplari vanno protetti dal gelo", umidita: "Bassa; tipica pianta mediterranea" },
+    cur: { acqua: "Moderata; tollera siccità una volta stabilita; evitare ristagni", potatura: "Immediatamente dopo la fioritura (febbraio/marzo) — non potare in autunno", parassiti: "Generalmente resistente; possibile cocciniglia", extra: "Cresce molto rapidamente — in vaso va potata regolarmente per contenerne le dimensioni" },
+    bio: { prodotti: "Bio·Bloom · Alg·A·Mic · Root·Juice", primavera: "Bio·Bloom a ½ dose ogni 3-4 settimane dopo la fioritura e potatura. Alg·A·Mic durante la fioritura (febbraio) come rinvigorente senza stimolare la crescita", estate: "Bio·Bloom a ½ dose ogni 3-4 settimane", autunno: "Stop da settembre — le gemme fiorali si stanno formando", rinvaso: "Root·Juice sulle radici al rinvaso. Attenzione a non danneggiare i noduli di Rhizobium", note: "Mai Bio·Grow — la mimosa è una leguminosa che fissa l'azoto atmosfericamente. L'azoto aggiunto inibisce i noduli radicali. Solo Bio·Bloom con basso azoto e buon P-K." }
+  },
+  {
+    id: 10, name: "Melograno", latin: "Punica granatum", icon: "🍎", isNew: false, tags: ["Esterno", "Fruttifero", "P-K"], tc: ["pg", "pa", "pc"],
+    con: { periodo: "Marzo – Settembre", frequenza: "Ogni 3-4 settimane con liquido; oppure granulare 2× l'anno", concime: "Primavera: bilanciato o leggermente azotato. Da giugno: P-K prevalente per frutti e fioritura", stop: "Stop completo da ottobre a febbraio", note: "Evitare eccesso di azoto dopo la fioritura. In piena terra quasi autonomo con granulare a lenta cessione." },
+    sub: { terreno: "Tollera quasi qualsiasi terreno; preferisce terreno ben drenante, anche argilloso o calcareo", ph: "5.5 – 7.5; molto adattabile, uno dei pochi frutti tolleranti al calcare", vaso: "Vaso grande (min 50 cm di diametro); cambia vaso ogni 2-3 anni", rinvaso: "Ogni 2-3 anni in primavera; rinnovare almeno la metà del substrato", vivo: "Aggiungere 20% di humus di lombrico + compost maturo. Micorrize universali sulle radici al rinvaso. Un substrato vivo riduce sensibilmente il rischio di spaccatura dei frutti." },
+    esp: { luce: "Pieno sole — essenziale per fruttificare abbondantemente", sole: "Ama il sole diretto per molte ore; posizione a sud o sud-ovest", temperatura: "Rustico; resiste fino a -10/-12°C da adulto; giovani piante proteggere sotto i -5°C", umidita: "Bassa — pianta mediterranea e semiarida per eccellenza; tollera la siccità" },
+    cur: { acqua: "Moderata e regolare durante la fruttificazione; irregolarità idriche causano spaccatura dei frutti. Ridurre molto in autunno/inverno", potatura: "Fine inverno (febbraio/marzo): eliminare rami secchi, succhioni e rami incrociati", parassiti: "Molto resistente; possibili afidi sui germogli. Il fungo Alternaria può attaccare i frutti in condizioni umide", extra: "Fiori rosso-arancio spettacolari da maggio a luglio. I frutti maturano in ottobre-novembre." },
+    bio: { prodotti: "Bio·Grow · Bio·Bloom · Top·Max · Alg·A·Mic · Root·Juice", primavera: "Bio·Grow a dose piena ogni 3-4 settimane a marzo/aprile per la ripresa vegetativa", estate: "Bio·Bloom a dose piena da maggio in poi ogni 3-4 settimane. Top·Max 1× al mese da giugno ad agosto per sostenere la fruttificazione", autunno: "Stop da ottobre. In settembre ultima dose Alg·A·Mic", rinvaso: "Root·Juice + Worm·Humus nel substrato al rinvaso", note: "Il Top·Max con acidi umici migliora l'assorbimento di nutrienti durante la fruttificazione, riducendo anche il rischio di spaccatura dei frutti. Passa da Bio·Grow a Bio·Bloom non appena compaiono i fiori (maggio)." }
+  },
+  {
+    id: 11, name: "Stella di Natale", latin: "Euphorbia pulcherrima", icon: "🌟", isNew: false, tags: ["Interno", "Stagionale", "Delicata"], tc: ["pt", "pa", "pc"],
+    con: { periodo: "Ottobre – dicembre (fase decorativa); primavera-estate per la crescita", frequenza: "Ogni 2 settimane in primavera/estate; ogni 3-4 settimane in autunno", concime: "Liquido universale bilanciato, dose piena", stop: "Stop completo durante il riposo invernale (gennaio-febbraio)", note: "Non concimare mai durante la fase decorativa (foglie rosse). Riprendere solo quando emette nuovi germogli verdi in primavera." },
+    sub: { terreno: "Terriccio universale leggero e ben drenante, con 20% di perlite", ph: "6.0 – 7.0", vaso: "Vaso con ottimo drenaggio — è tra le piante più sensibili ai ristagni", rinvaso: "Ogni anno in primavera, quando riprende la vegetazione attiva", vivo: "Aggiungere 10-15% di humus di lombrico nella miscela di rinvaso. Micorrize universali in polvere sulle radici. Substrato non eccessivamente ricco — o produce poca colorazione." },
+    esp: { luce: "Luce intensa indiretta per almeno 6 ore al giorno — fondamentale", sole: "No sole diretto estivo; in autunno un po' di sole mattutino è tollerato", temperatura: "Ideale 15–22°C; non sopporta correnti d'aria, né temperature sotto i 12°C", umidita: "Media; lontana da caloriferi e bocchette d'aria calda" },
+    cur: { acqua: "Moderata e costante; annaffiare quando i primi 2 cm sono asciutti. Usare acqua a temperatura ambiente", potatura: "Dopo la fase decorativa (febbraio/marzo): tagliare i rami a circa 10 cm dal suolo", parassiti: "Mosca bianca e cocciniglia — molto frequenti. Trattare con olio di neem", extra: "Per ottenere la colorazione rossa: da ottobre, 14 ore di buio totale per 8 settimane consecutive. È fotoperiodica. Il lattice è irritante: usare guanti." },
+    bio: { prodotti: "Bio·Grow · Alg·A·Mic", primavera: "Bio·Grow a dose piena ogni 2-3 settimane quando emette i nuovi germogli verdi", estate: "Bio·Grow a dose piena ogni 2-3 settimane fino a luglio. Stop in agosto per preparare al protocollo buio", autunno: "Stop totale da agosto/settembre in poi. Nessun prodotto durante il buio forzato", rinvaso: "Alg·A·Mic come rinvigorente dopo il rinvaso annuale primaverile", note: "Mai Bio·Bloom — non serve stimolare la fioritura che è indotta dal buio, non dai nutrienti. Il Bio·Grow sostiene solo la crescita vegetativa. Stop assoluto durante il protocollo fotoperiodico." }
+  },
+  {
+    id: 12, name: "Aloe Vera", latin: "Aloe barbadensis miller", icon: "🌵", isNew: false, tags: ["Interno/Esterno", "Succulenta", "Facile"], tc: ["pt", "pgr", "pg"],
+    con: { periodo: "Aprile – Settembre", frequenza: "1× al mese, non di più", concime: "Liquido specifico per succulente e cactus, ½ dose", stop: "Stop completo in autunno/inverno", note: "Pianta del deserto abituata a terreni poveri. Concimazioni eccessive producono foglie molli e pallide. Meno è decisamente meglio." },
+    sub: { terreno: "Substrato specifico per succulente; oppure terriccio universale + 30-40% di sabbia grossa o perlite", ph: "6.0 – 7.0; tollera leggera alcalinità", vaso: "Terracotta con foro di drenaggio. Non troppo grande: radici compresse stimolano la produzione di figli", rinvaso: "Ogni 2-3 anni in primavera", vivo: "Dosi minime di humus di lombrico (5-10%) — non di più. Micorrize universali al rinvaso. Substrato troppo ricco di materia organica trattiene umidità in eccesso e favorisce il marciume radicale." },
+    esp: { luce: "Piena luce o sole diretto — più luce ha, più è sana e compatta", sole: "Tollera il sole diretto; in estate può stare all'aperto. Portarla fuori gradualmente", temperatura: "Ideale 18–30°C; tollera brevi gelate fino a -2°C ma non il gelo prolungato", umidita: "Bassissima; è una pianta del deserto — l'umidità elevata è nemica" },
+    cur: { acqua: "Annaffiare solo quando il substrato è completamente asciutto. Metodo 'soak and dry': bagno abbondante, poi attesa fino a completa asciugatura", potatura: "Non necessaria. Rimuovere i figli (polloni) quando hanno 8-10 cm, separandoli con un coltello pulito", parassiti: "Cocciniglia radicale e ragnetto rosso. Marciume basale da eccesso d'acqua — il principale rischio", extra: "Il gel delle foglie ha proprietà lenitive reali. Foglie appiattite verso il basso = sete; ingiallite = eccesso d'acqua." },
+    bio: { prodotti: "Alg·A·Mic · Root·Juice", primavera: "Alg·A·Mic a ¼ dose 1× al mese — è tutto quello che serve", estate: "Alg·A·Mic a ¼ dose 1× al mese", autunno: "Stop totale da ottobre", rinvaso: "Root·Juice diluito sulle radici al rinvaso. Worm·Humus a dose minima (5%) nel substrato", note: "Pianta del deserto — qualsiasi fertilizzante va usato a dosi minime. Bio·Grow e Bio·Bloom sono troppo ricchi e causano crescita molle. L'Alg·A·Mic è l'unico prodotto BioBizz adatto, e va sempre usato a ¼ della dose in etichetta." }
+  },
+  {
+    id: 13, name: "Liquidambar", latin: "Liquidambar styraciflua", icon: "🍂", isNew: true, tags: ["Esterno", "Alberatura", "Acidofilo"], tc: ["pg", "pc", "pt"],
+    con: { periodo: "Marzo – Luglio", frequenza: "Ogni 4-6 settimane", concime: "Specifico acidofile (azalee/rododendri) o universale a basso pH", stop: "Stop da agosto — non stimolare crescita tardiva", note: "Pianta a lenta crescita, quasi autonoma dopo il terzo anno in piena terra. Evitare assolutamente concimi calcarei o pH alcalino." },
+    sub: { terreno: "Terreno acido, profondo, fresco e ben drenante; ricco di humus. Non tollera calcare", ph: "5.5 – 6.5 (acido)", vaso: "Preferisce la piena terra dove cresce splendidamente", rinvaso: "Solo nelle prime fasi; poi a dimora definitiva", vivo: "Humus di lombrico (20%) + compost maturo in abbondanza nella buca di impianto. Micorrize acidofile al trapianto — fondamentali per l'attecchimento." },
+    esp: { luce: "Pieno sole o ombra leggera — si adatta bene", sole: "Tollera bene il sole diretto; i colori autunnali sono più spettacolari con buona luce", temperatura: "Molto rustico; resiste a -20°C da adulto", umidita: "Media-alta; non ama la siccità prolungata" },
+    cur: { acqua: "Regolare nei primi 3 anni di impianto — poi quasi autonomo", potatura: "Minima e solo su rami secchi — ha una bella forma naturale da preservare", parassiti: "Molto resistente. Raramente attaccato da parassiti significativi", extra: "I colori autunnali (rosso, arancio, viola, giallo) sono tra i più spettacolari. La forma delle foglie a stella è caratteristica. Produce frutti spinosi simili a ricci." },
+    bio: { prodotti: "Bio·Grow · Alg·A·Mic · Root·Juice", primavera: "Bio·Grow a dose piena ogni 4-6 settimane nei primi 3 anni. Adulto in piena terra: Alg·A·Mic 1-2× a stagione come unico intervento", estate: "Bio·Grow a dose piena ogni 4-6 settimane (solo giovani piante)", autunno: "Stop da agosto — i colori autunnali si sviluppano meglio senza azoto in circolo", rinvaso: "Root·Juice + Worm·Humus nella buca di impianto. Micorrize acidofile al trapianto (non BioBizz, ma prodotto specifico separato)", note: "Usa concimi per acidofile (tipo azalee): il Bio·Grow standard va bene ma verifica che il pH del substrato resti acido. Da adulto in piena terra è quasi autosufficiente — intervieni solo con Alg·A·Mic come tonificante." }
+  },
+  {
+    id: 14, name: "Ippocastano", latin: "Aesculus hippocastanum", icon: "🌰", isNew: true, tags: ["Esterno", "Albero grande", "Rustico"], tc: ["pg", "pgr", "pt"],
+    con: { periodo: "Marzo – Giugno", frequenza: "1-2× all'anno (granulare); in piena terra quasi inutile", concime: "Granulare universale a lenta cessione in primavera; solo per esemplari giovani", stop: "Stop da luglio — albero adulto completamente autosufficiente in piena terra", note: "La concimazione ha senso solo nei primi 2-3 anni di impianto o se l'albero mostra segni di sofferenza." },
+    sub: { terreno: "Qualsiasi terreno purché profondo e ben drenante; tollera anche calcare e argilla", ph: "6.0 – 7.5; molto adattabile", vaso: "Non adatto alla coltivazione in vaso per le dimensioni che raggiunge", rinvaso: "Non applicabile — pianta da piena terra esclusivamente", vivo: "Alla buca di impianto: abbondante compost maturo + humus di lombrico. Micorrize universali sulle radici al trapianto. Da adulto il terreno si arricchisce naturalmente grazie alla lettiera fogliare annuale." },
+    esp: { luce: "Pieno sole o mezzombra — molto adattabile", sole: "Tollera bene il sole diretto; cresce anche in posizioni semi-ombreggiate", temperatura: "Molto rustico; resiste a -25°C", umidita: "Media; tollera periodi di siccità una volta stabilito" },
+    cur: { acqua: "Annaffiatura necessaria solo nei primi 2 anni. Poi completamente autonomo", potatura: "Minima; solo rami secchi o pericolosi", parassiti: "Attenzione alla Cameraria ohridella (minatore fogliare) — trattamento preventivo in primavera se presente", extra: "Fioritura spettacolare bianca o rosa in aprile-maggio. Produce ippocastani (castagne matte) non commestibili. Albero longevo e monumentale." },
+    bio: { prodotti: "Bio·Grow · Worm·Humus · Root·Juice · Alg·A·Mic", primavera: "Giovani piante: Bio·Grow a dose piena 1× in marzo. Adulti: nessun intervento", estate: "Giovani piante: Bio·Grow 1× in maggio-giugno. Adulti: nessun intervento", autunno: "Stop da luglio per tutte le età", rinvaso: "Alla buca di impianto: Worm·Humus abbondante + Root·Juice sulle radici", note: "Albero praticamente autosufficiente da adulto. Il BioBizz è utile solo nella fase giovanile (primi 2-3 anni). Dopo: solo Alg·A·Mic come rinvigorente se la pianta mostra segni di stress dopo siccità o potature importanti." }
+  },
+  {
+    id: 15, name: "Betulla", latin: "Betula pendula", icon: "🌿", isNew: true, tags: ["Esterno", "Acidofilo", "Crescita rapida"], tc: ["pg", "pt", "pa"],
+    con: { periodo: "Marzo – Giugno", frequenza: "Ogni 4-6 settimane (solo giovani piante)", concime: "Concime per acidofile o universale a basso pH, bilanciato", stop: "Stop da luglio — non stimolare crescita tardiva", note: "Crescita naturalmente molto rapida. Adulte in piena terra completamente autosufficienti grazie alla lettiera fogliare." },
+    sub: { terreno: "Terreno acido, fresco, ben drenante; tollera anche terreni poveri e sabbiosi — è pioniera per natura", ph: "5.0 – 6.5 (acido-neutro); non ama il calcare", vaso: "Può essere coltivata in vaso nelle fasi giovanili; poi piena terra", rinvaso: "Solo nei primissimi anni; poi a dimora definitiva", vivo: "Buca di impianto con compost maturo e humus di lombrico. Micorrize ectomicorriziche specifiche per Betula — sono fondamentali: la betulla dipende molto dalle micorrize in natura." },
+    esp: { luce: "Pieno sole — ama la luce diretta", sole: "Richiede esposizione solare piena per crescere al meglio", temperatura: "Rusticissima; resiste a -30°C", umidita: "Media; preferisce terreni freschi ma tollera anche periodi asciutti da adulta" },
+    cur: { acqua: "Regolare nei primi 2 anni. Da adulta quasi autonoma, ma soffre siccità prolungate estive", potatura: "Minima; potare solo in estate o tarda estate — la betulla 'piange' molto se potata in primavera", parassiti: "Afidi e minatori fogliari possibili; generalmente resistente", extra: "La corteccia bianca argentata è il suo tratto distintivo. Foglie piccole e tremolanti al vento. Ottima pioniera per rimboschimenti. Vive 60-80 anni." },
+    bio: { prodotti: "Bio·Grow · Alg·A·Mic · Root·Juice · Worm·Humus", primavera: "Bio·Grow a ½ dose ogni 4-6 settimane nei primi 3 anni. Adulta: Alg·A·Mic 1× in primavera come unico intervento", estate: "Bio·Grow a ½ dose ogni 4-6 settimane (solo giovani). Stop in luglio", autunno: "Stop da luglio", rinvaso: "Root·Juice + Worm·Humus nella buca di impianto. Micorrize ectomicorriziche specifiche per Betula al trapianto (separate da BioBizz)", note: "Usa concimi per acidofile o abbina una leggera acidificazione del substrato. La betulla dipende moltissimo dalle micorrize naturali — il terreno vivo con Worm·Humus le favorisce enormemente. Da adulta è autosufficiente." }
+  },
+  {
+    id: 16, name: "Acero Campestre", latin: "Acer campestre", icon: "🍁", isNew: true, tags: ["Esterno", "Rustico", "Siepe/Alberatura"], tc: ["pg", "pgr", "pt"],
+    con: { periodo: "Marzo – Giugno", frequenza: "1× anno con granulare in primavera; oppure nessuna in piena terra", concime: "Granulare universale a lenta cessione; pochissimo azoto", stop: "Stop da luglio — pianta già molto vigorosa da sola", note: "Tra le piante meno esigenti in assoluto. Utile solo per esemplari appena trapiantati o siepi intensivamente potate." },
+    sub: { terreno: "Tollera qualsiasi tipo di terreno: argilloso, calcareo, povero, compatto — è una delle piante più adattabili", ph: "6.0 – 8.0; tollera anche forte alcalinità", vaso: "Adatto in giovane età; poi piena terra", rinvaso: "Solo nelle prime fasi", vivo: "Buca di impianto con compost. Micorrize universali al trapianto. In piena terra si gestisce autonomamente — è una pianta della flora spontanea italiana." },
+    esp: { luce: "Sole pieno, mezz'ombra o ombra — straordinariamente adattabile", sole: "Cresce bene in qualsiasi esposizione; ottima anche all'ombra di edifici o altri alberi", temperatura: "Rusticissimo; resiste a -25°C. Pianta autoctona italiana", umidita: "Molto adattabile; tollera sia siccità che umidità" },
+    cur: { acqua: "Necessita annaffiatura solo nel primo anno. Poi completamente autonomo", potatura: "Tollera potature anche severe — ottimo per siepi formali. Potare in autunno o fine inverno", parassiti: "Molto resistente; raramente problemi seri", extra: "Foglie a 5 lobi con colori giallo dorato in autunno. Produce samare (frutti alati) caratteristici. Pianta autoctona preziosa per la biodiversità." },
+    bio: { prodotti: "Worm·Humus · Root·Juice · Alg·A·Mic", primavera: "Solo giovani piante: Bio·Grow a ½ dose 1× in marzo. Adulto: nessun intervento", estate: "Nessun intervento", autunno: "Nessun intervento", rinvaso: "Worm·Humus nella buca di impianto + Root·Juice sulle radici al trapianto", note: "Pianta autoctona della flora italiana — è praticamente autosufficiente. L'unico intervento BioBizz davvero utile è il Worm·Humus nella buca di impianto per arricchire il terreno vivo. Da adulta: Alg·A·Mic solo dopo stress importanti (siccità prolungata, potature drastiche)." }
+  },
+  {
+    id: 17, name: "Pitosforo", latin: "Pittosporum tobira", icon: "🌿", isNew: true, tags: ["Esterno", "Sempreverde", "Siepe"], tc: ["pg", "pt", "pa"],
+    con: { periodo: "Marzo – Settembre", frequenza: "Ogni 4-6 settimane", concime: "Concime universale bilanciato o specifico per sempreverdi", stop: "Stop da ottobre a febbraio", note: "Pianta molto rustica e poco esigente. Come siepe: concimazioni più regolari per sostenere la ricrescita dopo la potatura." },
+    sub: { terreno: "Qualsiasi terreno ben drenante; tollera anche calcare, sabbia e terreni poveri", ph: "6.0 – 8.0; molto adattabile", vaso: "Ottimo in vaso grande; usato spesso su terrazzi e balconi", rinvaso: "Ogni 2-3 anni in primavera", vivo: "Aggiungere 15% di compost maturo o humus di lombrico. Micorrize universali al rinvaso." },
+    esp: { luce: "Sole pieno o mezz'ombra — molto adattabile", sole: "Cresce bene in pieno sole; tollera anche posizioni semi-ombreggiate", temperatura: "Resiste fino a -8/-10°C; in zone molto fredde proteggere con tessuto non tessuto in inverno", umidita: "Bassa; pianta mediterranea che tollera bene la siccità" },
+    cur: { acqua: "Moderata; una volta stabilito tollera siccità prolungate. In vaso annaffiare regolarmente in estate", potatura: "Tollera potature anche severe — ideale per siepi formali. Potare in primavera dopo la fioritura e in agosto", parassiti: "Molto resistente. Possibile cocciniglia in ambienti secchi; afidi sui germogli primaverili", extra: "Fiori bianchi profumatissimi (simili alla zagara) in aprile-maggio. Foglie coriacee, lucide, persistenti. Bacche arancio decorative in autunno." },
+    bio: { prodotti: "Bio·Grow · Fish·Mix · Alg·A·Mic · Root·Juice", primavera: "Bio·Grow a dose piena ogni 4-6 settimane. Dopo ogni potatura: Fish·Mix per sostenere la ricrescita rapida", estate: "Bio·Grow a dose piena ogni 4-6 settimane. Fish·Mix dopo la potatura estiva di agosto", autunno: "Stop da ottobre", rinvaso: "Root·Juice + Worm·Humus nel substrato al rinvaso", note: "Il Fish·Mix dopo la potatura è particolarmente efficace per il pitosforo usato come siepe — l'idrolizzato di pesce stimola rapidamente la crescita dei nuovi getti. Pianta robusta che tollera dosi standard senza problemi." }
+  },
+  {
+    id: 18, name: "Spino di Giuda", latin: "Gleditsia triacanthos", icon: "🌿", isNew: true, tags: ["Esterno", "Albero urbano", "Rustico"], tc: ["pg", "pgr", "pt"],
+    con: { periodo: "Marzo – Luglio", frequenza: "Ogni 4-6 settimane; adulto in piena terra quasi autonomo", concime: "Universale bilanciato a lenta cessione; NPK equilibrato", stop: "Stop da agosto — non stimolare crescita tardiva. In piena terra spesso nessun intervento necessario dopo il terzo anno", note: "Nonostante sia nella famiglia Fabaceae, la Gleditsia NON fissa l'azoto atmosferico. Accetta concimi normali bilanciati. Pianta estremamente rustica e autonoma." },
+    sub: { terreno: "Tollera qualsiasi terreno: argilloso, sabbioso, calcareo, povero, anche salino", ph: "6.0 – 8.0; indifferente al pH, tollera bene il calcare", vaso: "Non adatta a lungo termine in vaso; usare solo nelle fasi giovanili", rinvaso: "Solo nei primissimi anni; poi a dimora definitiva", vivo: "Buca di impianto ricca di compost maturo e humus di lombrico. Micorrize universali al trapianto. Da adulta si gestisce autonomamente." },
+    esp: { luce: "Pieno sole — cresce meglio con esposizione diretta", sole: "Ama il sole diretto; ottima in posizioni soleggiate e calde", temperatura: "Rusticissima; resiste a -25°C. Una delle piante più resistenti al freddo, caldo, siccità e inquinamento urbano", umidita: "Bassissima; tollera siccità prolungate meglio di quasi qualsiasi altro albero" },
+    cur: { acqua: "Necessaria solo nel primo anno. Da adulta completamente autonoma", potatura: "Potatura di formazione nei primi anni. ATTENZIONE: le spine sono lunghissime (fino a 30 cm) — usare sempre guanti resistenti", parassiti: "Quasi inattaccabile. Estrema resistenza a parassiti e malattie", extra: "Le spine triforcute sul tronco e sui rami sono caratteristiche e impressionanti. Foglie bipennate finissime ed eleganti. Esistono cultivar senza spine ('Inermis') e con foglie dorate ('Sunburst'). Baccelli attorcigliati fino a 40 cm." },
+    bio: { prodotti: "Bio·Grow · Worm·Humus · Root·Juice · Alg·A·Mic", primavera: "Giovani piante: Bio·Grow a dose piena ogni 4-6 settimane. Adulta in piena terra: nessun intervento o Alg·A·Mic 1× in primavera", estate: "Giovani piante: Bio·Grow ogni 4-6 settimane fino a luglio. Adulta: nessun intervento", autunno: "Stop da agosto", rinvaso: "Worm·Humus abbondante nella buca di impianto + Root·Juice sulle radici al trapianto", note: "A differenza di Mimosa e Glicine, la Gleditsia NON fissa azoto — quindi il Bio·Grow è appropriato. Da adulta è però completamente autosufficiente. L'Alg·A·Mic come rinvigorente è utile dopo stress da siccità intensa o potature importanti." }
+  },
+  {
+    id: 19, name: "Gelso Bonsai", latin: "Morus alba / Morus nigra", icon: "🍃", isNew: true, tags: ["Esterno", "Bonsai", "Caducifoglie"], tc: ["pg", "pa", "pt"],
+    con: { periodo: "Aprile – Agosto (dopo la ripresa vegetativa)", frequenza: "Ogni 2-3 settimane in primavera/estate; ogni 4 settimane in tarda estate", concime: "Concime liquido bilanciato NPK (tipo 5-5-5 o simile) in primavera; passare a basso azoto e più P-K da luglio per favorire la lignificazione", stop: "Stop completo da settembre — non stimolare la crescita in prossimità del riposo vegetativo. In inverno la pianta è completamente a riposo", note: "Il gelso è una delle specie più usate per il bonsai per la sua grande vigoria e la rapidità di risposta alle potature. Proprio per questo bisogna modulare bene l'azoto: troppo in estate produce crescita eccessiva e rami che non lignificano bene prima dell'inverno." },
+    sub: { terreno: "Substrato per bonsai ben drenante: miscela di akadama (60%) + pomice (20%) + humus (20%). Tollera anche terricci più ricchi nelle fasi di sviluppo", ph: "6.0 – 7.0; molto adattabile", vaso: "Vaso bonsai con ottimo drenaggio. In fase di sviluppo si può usare un vaso da allenamento più profondo per stimolare la crescita", rinvaso: "Ogni 1-2 anni in primavera, prima della ripresa vegetativa (febbraio/marzo). Il gelso ha radici molto vigorose — il rinvaso è fondamentale per contenere l'apparato radicale", vivo: "Aggiungere 10-15% di humus di lombrico nella miscela di substrato. Micorrize universali sulle radici potate al rinvaso — accelerano la rigenerazione radicale dopo la potatura. Il gelso risponde benissimo a un substrato biologicamente attivo." },
+    esp: { luce: "Pieno sole o luce intensa — almeno 6 ore di sole diretto al giorno", sole: "Ama il sole diretto; più sole = crescita più controllata e foglie più piccole (ideale per il bonsai). Posizione a sud o sud-ovest", temperatura: "Pianta rustica; resiste a -15°C da adulta. Il bonsai va però protetto dalle gelate forti (sotto -5°C) per preservare le radici nel vaso superficiale. In inverno può stare in un luogo fresco ma protetto dal gelo intenso", umidita: "Media; non ama la siccità prolungata ma non vuole nemmeno ristagni. Il vaso bonsai asciuga rapidamente in estate — monitorare quotidianamente" },
+    cur: { acqua: "Abbondante in estate — il bonsai asciuga in fretta sotto il sole diretto. Controllare ogni giorno e annaffiare quando la superficie del substrato inizia ad asciugarsi. Ridurre progressivamente in autunno; quasi stop in inverno durante il riposo", potatura: "Potatura di mantenimento frequente in primavera/estate: accorcia ogni nuovo germoglio a 1-2 foglie appena raggiunge 4-5 foglie. Potatura strutturale in inverno (febbraio), quando la pianta è priva di foglie. Le foglie del gelso sono grandi — la defogliazione parziale in giugno aiuta a ridurne le dimensioni", parassiti: "Abbastanza resistente. Possibile cocciniglia e ragnetto rosso in estate (ambienti caldi e secchi). Trattare con olio di neem preventivamente. Attenzione al marciume radicale in caso di ristagni", extra: "Il gelso è una scelta eccellente per il bonsai per la sua vigoria e la bella corteccia che con il tempo diventa grigiastra e rugosa. Le foglie lobate sono decorative. Il Morus nigra produce more commestibili anche su bonsai. Produce un lattice bianco se i rami vengono tagliati — non irritante ma abbondante: lasciare asciugare naturalmente prima di applicare pasta cicatrizzante." },
+    bio: { prodotti: "Bio·Grow · Bio·Bloom · Alg·A·Mic · Root·Juice", primavera: "Bio·Grow a ½ dose ogni 2-3 settimane da aprile a giugno — sostiene la crescita esplosiva primaverile", estate: "Passa a Bio·Bloom a ½ dose ogni 3-4 settimane da luglio — il basso azoto e il P-K favoriscono la lignificazione dei rami", autunno: "Stop da settembre. Alg·A·Mic 1× a fine agosto come rinvigorente pre-riposo", rinvaso: "Root·Juice direttamente sulle radici potate al rinvaso biennale (febbraio/marzo) — accelera la rigenerazione radicale in modo significativo. Worm·Humus a 10% nel substrato", note: "Il cambio da Bio·Grow (primavera) a Bio·Bloom (estate) è fondamentale per il gelso bonsai: l'azoto in luglio-agosto produce crescita che non lignifica prima dell'inverno, indebolendo la struttura. Alg·A·Mic come spray fogliare diluito dopo ogni defogliazione aiuta la ripresa." }
+  },
+  {
+    id: 20, name: "Tradescantia", latin: "Tradescantia zebrina", icon: "💜", isNew: true, tags: ["Interno", "Facile", "Crescita rapida"], tc: ["pt", "pg", "pp"],
+    con: { periodo: "Aprile – Settembre", frequenza: "Ogni 3-4 settimane", concime: "Liquido universale bilanciato, ½ dose", stop: "Stop completo in autunno/inverno", note: "Pianta vigorosissima e poco esigente. La concimazione eccessiva fa perdere la colorazione viola delle foglie — meno è meglio." },
+    sub: { terreno: "Terriccio universale leggero con 20% perlite per drenaggio", ph: "6.0 – 7.0", vaso: "Vaso sospeso o ampio; i rami ricadenti si allungano molto rapidamente", rinvaso: "Ogni anno in primavera; tende a svuotarsi al centro — meglio ripropagare", vivo: "10% humus di lombrico nel substrato. Micorrize universali al rinvaso. Non eccedere con materia organica o perde la colorazione." },
+    esp: { luce: "Luce intensa indiretta — più luce = colori più intensi (viola/argento)", sole: "Tollera qualche ora di sole mattutino; no sole diretto estivo che brucia le foglie", temperatura: "15–28°C; non sotto i 10°C — soffre il freddo", umidita: "Media-alta; apprezza nebulizzazioni occasionali" },
+    cur: { acqua: "Regolare in estate — terreno leggermente umido ma mai saturo. In inverno ridurre sensibilmente", potatura: "Potature frequenti per mantenere la forma compatta; radica facilmente in acqua — ottima per propagazione", parassiti: "Afidi e ragnetto rosso in ambienti secchi. Generalmente molto resistente", extra: "Cresce con estrema rapidità. I rami tagliati radicano in acqua in pochi giorni. Se la pianta si svuota al centro, taglia e ripropaga le punte nel vaso." },
+    bio: { prodotti: "Bio·Grow · Alg·A·Mic", primavera: "Bio·Grow a ¼ dose ogni 3-4 settimane da aprile", estate: "Bio·Grow a ¼ dose ogni 3-4 settimane. Alg·A·Mic 1× al mese come rinvigorente", autunno: "Stop completo da ottobre", rinvaso: "Alg·A·Mic dopo il rinvaso o la ripropagazione", note: "Pianta poco esigente — la concimazione eccessiva (anche BioBizz) causa perdita della colorazione viola e crescita allungata e debole. Dose minima sempre." }
+  },
+  {
+    id: 21, name: "Rosmarino", latin: "Salvia rosmarinus", icon: "🌿", isNew: true, tags: ["Esterno", "Aromatica", "Mediterranea"], tc: ["pg", "pt", "pa"],
+    con: { periodo: "Marzo – Luglio", frequenza: "Ogni 6-8 settimane o nessuna", concime: "Leggero, P-K prevalente; concime per piante mediterranee o fiorite", stop: "Stop da agosto — non stimolare crescita tardiva. Pianta quasi autonoma in piena terra", note: "Il rosmarino è una pianta frugale per eccellenza: in piena terra spesso non necessita di alcuna concimazione. Eccesso di azoto = crescita molle e meno aroma." },
+    sub: { terreno: "Terreno molto drenante: sabbioso, sassoso, calcareo. Aggiungere 30-40% sabbia o ghiaia al terriccio universale", ph: "6.5 – 8.0; tollera bene il calcare — è una pianta della macchia mediterranea", vaso: "Vaso in terracotta con drenaggio eccellente; non troppo grande", rinvaso: "Ogni 2-3 anni; le radici non amano essere disturbate", vivo: "In piena terra è autosufficiente. In vaso: 10% humus di lombrico max. Non eccedere con materia organica — il rosmarino preferisce terreni poveri e minerali." },
+    esp: { luce: "Pieno sole — più sole = più oli essenziali e aroma", sole: "Ama il sole diretto per molte ore; esposizione a sud ideale", temperatura: "Rustico fino a -10/-12°C da adulto; proteggere le giovani piante dal gelo prolungato", umidita: "Bassissima; odia l'umidità stagnante — causa principale di morte" },
+    cur: { acqua: "Molto moderata; tollera la siccità meglio dell'eccesso d'acqua. In vaso annaffiare solo quando il terreno è completamente asciutto", potatura: "Dopo la fioritura (tarda primavera); non potare mai sul legno vecchio senza foglie — non ricaccia", parassiti: "Molto resistente. Possibile oidio (mal bianco) in condizioni umide e poco ventilate", extra: "Pianta aromatica officinale. La fioritura azzurro-viola in primavera è anche molto ornamentale e amata dalle api. Non sopporta i ristagni — è la causa più frequente di morte." },
+    bio: { prodotti: "Bio·Bloom · Alg·A·Mic", primavera: "Bio·Bloom a ½ dose ogni 6-8 settimane da marzo — il basso azoto è ideale", estate: "Bio·Bloom a ½ dose 1× a giugno se in vaso. In piena terra: nessun intervento", autunno: "Stop da agosto", rinvaso: "Alg·A·Mic come rinvigorente al rinvaso", note: "Mai Bio·Grow — l'azoto in eccesso produce crescita molle, riduce l'aroma e predispone a malattie fungine. In piena terra il rosmarino è praticamente autosufficiente. Solo Bio·Bloom a dose ridotta in vaso." }
+  },
+  {
+    id: 22, name: "Salvia", latin: "Salvia officinalis", icon: "🍃", isNew: true, tags: ["Esterno", "Aromatica", "Mediterranea"], tc: ["pg", "pt", "pa"],
+    con: { periodo: "Marzo – Luglio", frequenza: "Ogni 6-8 settimane", concime: "Leggero, P-K prevalente; concime per piante mediterranee", stop: "Stop da agosto. In piena terra spesso nessuna concimazione necessaria", note: "Pianta aromatica della macchia mediterranea — frugale per natura. Troppo azoto = meno aroma e crescita molle. In piena terra praticamente autonoma." },
+    sub: { terreno: "Terreno ben drenante, sabbioso o ghiaioso; no terricci pesanti e umidi. 30% sabbia grossa o perlite", ph: "6.5 – 8.0; tollera bene il calcare", vaso: "Terracotta con ottimo drenaggio; non troppo grande", rinvaso: "Ogni 2-3 anni; in piena terra dura 4-5 anni prima di lignificare e andare rinnovata", vivo: "In piena terra autosufficiente. In vaso: 10% humus di lombrico. Come il rosmarino, preferisce substrati minerali e poveri." },
+    esp: { luce: "Pieno sole — almeno 6 ore al giorno per sviluppare oli essenziali e aroma", sole: "Ama il sole diretto; posizione a sud o sud-ovest ideale", temperatura: "Rustica fino a -10/-15°C da adulta; le varietà a foglia colorata (purpurascens, tricolor) sono meno rustiche", umidita: "Bassa; la macchia mediterranea è il suo habitat naturale" },
+    cur: { acqua: "Molto moderata; meglio asciutta che troppo umida. In vaso solo quando il terreno è asciutto", potatura: "Potatura leggera in primavera per mantenere la forma compatta; non tagliare nel legno vecchio", parassiti: "Oidio (mal bianco) in condizioni umide. Afidi raramente. Generalmente molto resistente", extra: "Le foglie grigio-verdi vellutate sono ornamentali oltre che aromatiche. Fioritura viola-blu in primavera attrattiva per le api. Rinnovare la pianta ogni 4-5 anni quando diventa troppo legnosa." },
+    bio: { prodotti: "Bio·Bloom · Alg·A·Mic", primavera: "Bio·Bloom a ½ dose ogni 6-8 settimane da marzo", estate: "Bio·Bloom a ½ dose 1× a giugno se in vaso. Stop da luglio", autunno: "Stop da agosto", rinvaso: "Alg·A·Mic come rinvigorente al rinvaso o dopo potature importanti", note: "Identica filosofia del rosmarino: mai Bio·Grow, solo Bio·Bloom a dose ridotta. L'azoto diluisce gli oli essenziali e rende la pianta vulnerabile ai funghi. In piena terra nessun intervento BioBizz necessario." }
+  },
+  {
+    id: 23, name: "Paulownia", latin: "Paulownia tomentosa", icon: "🌸", isNew: true, tags: ["Esterno", "Albero", "Crescita rapidissima"], tc: ["pg", "pt", "pb"],
+    con: { periodo: "Marzo – Luglio", frequenza: "Ogni 3-4 settimane (solo giovani piante)", concime: "Bilanciato NPK con buona quota di azoto in primavera; universale a dose piena", stop: "Stop da agosto — non stimolare crescita tardiva che non lignifica. Da adulta quasi autonoma in piena terra", note: "La Paulownia è l'albero a più rapida crescita del mondo temperato (fino a 3-5 metri/anno da giovane). La concimazione accelera ancora di più questa crescita nei primi anni." },
+    sub: { terreno: "Terreno fertile, profondo, ben drenante; tollera anche terreni poveri ma cresce più lentamente", ph: "5.5 – 7.5; adattabile", vaso: "Non adatta a lungo in vaso — raggiunge dimensioni enormi molto rapidamente", rinvaso: "Solo nei primissimi mesi; poi a dimora definitiva il prima possibile", vivo: "Buca di impianto molto ricca: compost maturo abbondante + humus di lombrico (20-30%). Micorrize universali al trapianto. La Paulownia risponde enormemente a un terreno biologicamente ricco." },
+    esp: { luce: "Pieno sole — essenziale per la crescita ottimale", sole: "Ama il sole diretto tutto il giorno; esposizione a sud perfetta", temperatura: "Rustica fino a -15/-20°C da adulta; i giovani esemplari possono subire danni sotto i -10°C ma ricacciano vigorosamente dalla base", umidita: "Media; tollera periodi di siccità da adulta ma preferisce terreni freschi" },
+    cur: { acqua: "Regolare e abbondante nei primi 2-3 anni per sostenere la crescita esplosiva. Da adulta quasi autonoma", potatura: "Non necessaria per la forma naturale. Se ceduata (tagliata alla base), produce foglie enormi (fino a 60 cm) su un unico fusto dritto", parassiti: "Molto resistente a parassiti e malattie. Praticamente inattaccabile", extra: "Fioritura viola spettacolare a maggio PRIMA delle foglie — uno degli alberi ornamentali più belli. Foglie enormi a forma di cuore. Il legno è leggerissimo e pregiato. Usata anche per il rimboschimento rapido e la cattura di CO₂. Può essere invasiva in climi favorevoli." },
+    bio: { prodotti: "Bio·Grow · Fish·Mix · Root·Juice · Alg·A·Mic", primavera: "Bio·Grow a dose piena ogni 3-4 settimane + Fish·Mix alternato. Solo giovani piante (primi 3 anni)", estate: "Bio·Grow a dose piena ogni 3-4 settimane fino a luglio (solo giovani)", autunno: "Stop da agosto — i rami devono lignificare prima dell'inverno", rinvaso: "Root·Juice + Worm·Humus abbondante nella buca di impianto. Micorrize universali al trapianto", note: "La Paulownia è una delle poche piante che tollera e beneficia di dosi piene di BioBizz nei primi anni. La crescita è talmente rapida che assorbe tutto. Da adulta in piena terra: nessun intervento o solo Alg·A·Mic dopo stress." }
+  },
+  {
+    id: 24, name: "Crassula Ovata", latin: "Crassula ovata", icon: "🪴", isNew: true, tags: ["Interno/Esterno", "Succulenta", "Facile"], tc: ["pt", "pgr", "pg"],
+    con: { periodo: "Aprile – Settembre", frequenza: "1× al mese, non di più", concime: "Liquido specifico per succulente e cactus, ½ dose", stop: "Stop completo in autunno/inverno", note: "Pianta del Sudafrica adattata a terreni poveri e secchi. Come l'Aloe, soffre più di eccessi che di carenze. Meno è decisamente meglio." },
+    sub: { terreno: "Substrato per succulente e cactus; oppure terriccio universale + 40% di sabbia grossa, perlite o pomice", ph: "6.0 – 7.0", vaso: "Terracotta con foro di drenaggio. Vaso pesante e stabile — la pianta diventa grande e pesante negli anni", rinvaso: "Ogni 2-3 anni in primavera; tollera bene vasi leggermente stretti", vivo: "Dosi minime di humus di lombrico (5-10%) come per l'Aloe. Micorrize universali al rinvaso. Substrato troppo ricco trattiene umidità e causa marciume." },
+    esp: { luce: "Piena luce o sole diretto — più luce = crescita compatta e possibilità di fioritura", sole: "Tollera il sole diretto; in estate proteggere dal sole più forte nelle ore centrali se appena spostata fuori", temperatura: "Ideale 15–28°C; resiste a brevi gelate fino a -2°C ma non al gelo prolungato", umidita: "Bassissima; odia l'umidità elevata" },
+    cur: { acqua: "Annaffiare solo quando il substrato è completamente asciutto. Metodo 'soak and dry' come l'Aloe. In inverno 1× al mese o meno", potatura: "Non necessaria; si può potare per dare forma ad alberello. I rami tagliati radicano facilmente", parassiti: "Cocciniglia (soprattutto cotonosa) e marciume radicale da eccesso d'acqua", extra: "Può vivere decenni e diventare un piccolo albero. Le foglie carnose diventano rosse ai bordi con molta luce. Fiorisce in inverno con piccoli fiori bianchi/rosa stellati se le condizioni sono ideali (estate calda, inverno fresco)." },
+    bio: { prodotti: "Alg·A·Mic · Root·Juice", primavera: "Alg·A·Mic a ¼ dose 1× al mese da aprile — è sufficiente", estate: "Alg·A·Mic a ¼ dose 1× al mese", autunno: "Stop totale da ottobre", rinvaso: "Root·Juice diluito sulle radici al rinvaso. Worm·Humus a dose minima (5%)", note: "Come l'Aloe: Bio·Grow e Bio·Bloom sono troppo ricchi per le succulente. L'Alg·A·Mic a ¼ dose è l'unico prodotto BioBizz adatto. Qualsiasi eccesso produce crescita molle e predispone al marciume." }
+  },
+  {
+    id: 25, name: "Carmona Bonsai", latin: "Carmona microphylla (Ehretia buxifolia)", icon: "🌳", isNew: true, tags: ["Interno", "Bonsai", "Tropicale"], tc: ["pt", "pb", "pc"],
+    con: { periodo: "Aprile – Settembre (ridotta in inverno se temp >18°C)", frequenza: "Ogni 2-3 settimane", concime: "Liquido bilanciato NPK per bonsai, ½ dose", stop: "Ridurre in inverno ma non fermare del tutto — è tropicale e non va mai in vero riposo se tenuto al caldo", note: "Se l'ambiente è caldo (>18°C) continua a vegetare anche in inverno: una leggera concimazione mensile è possibile. Non eccedere — le radici sono delicate." },
+    sub: { terreno: "Substrato per bonsai ben drenante: akadama (50%) + pomice (25%) + humus di lombrico (25%). Il drenaggio è fondamentale", ph: "5.5 – 7.0", vaso: "Vaso bonsai poco profondo con ottimo drenaggio. Non troppo grande — preferisce sentirsi contenuto", rinvaso: "Ogni 2-3 anni in tarda primavera (maggio/giugno), quando le temperature notturne sono sopra i 15°C. Mai rinvasare in inverno", vivo: "15% di humus di lombrico nella miscela. Micorrize universali sulle radici al rinvaso. Non disturbare troppo le radici: è meno vigoroso di Gelso e Glicine nella rigenerazione radicale." },
+    esp: { luce: "Luce intensa indiretta o sole mattutino filtrato. Pianta da interni nella nostra latitudine", sole: "Alcune ore di sole mattutino sono benefiche; evitare sole diretto estivo pomeridiano", temperatura: "18–28°C ideale. Non scendere MAI sotto i 12°C — è tropicale e il freddo è letale. Niente balcone in inverno", umidita: "Alta (50–70%): fondamentale. Nebulizzare le foglie regolarmente. Sottovaso con argilla espansa e acqua per umidità costante" },
+    cur: { acqua: "Substrato leggermente umido ma mai saturo. Odia sia la siccità prolungata sia i ristagni. Controllare ogni giorno in estate — il vaso bonsai asciuga rapidamente", potatura: "Accorciare i germogli a 2-3 foglie quando raggiungono 5-6 foglie. Potatura strutturale in tarda primavera. Produce fiorellini bianchi e bacche rosse decorative", parassiti: "Molto sensibile a cocciniglia, ragnetto rosso e mosca bianca in ambienti secchi. L'umidità insufficiente è la causa principale. Neem a dose ridotta", extra: "Le foglie cadono se: fa troppo freddo, l'aria è troppo secca, il terreno è troppo asciutto/bagnato, oppure se viene spostato bruscamente. Pianta esigente ma gratificante — i fiorellini bianchi e le bacche rosse sono spettacolari." },
+    bio: { prodotti: "Bio·Grow · Alg·A·Mic · Root·Juice", primavera: "Bio·Grow a ½ dose ogni 2-3 settimane da aprile. Alg·A·Mic 1× al mese come rinvigorente", estate: "Bio·Grow a ½ dose ogni 2-3 settimane. Alg·A·Mic come spray fogliare diluito per umidità", autunno: "Ridurre a Bio·Grow 1× al mese a ¼ dose se temp >18°C. Stop sotto i 18°C", rinvaso: "Root·Juice sulle radici al rinvaso (solo in tarda primavera/estate). Worm·Humus a 15%", note: "Mai Bio·Bloom. Il Bio·Grow a ½ dose è sufficiente. L'Alg·A·Mic come spray fogliare è particolarmente utile per mantenere l'alta umidità che il Carmona richiede." }
+  }
 ];
 
 // ── Helper: lookup pianta per id reale ─────────────────────────────────────
@@ -261,11 +313,11 @@ function getPlantById(id, list) {
 }
 
 const sTabDefs = [
-  {key:"con",label:"Concimazione",fields:[{k:"periodo",l:"Periodo"},{k:"frequenza",l:"Frequenza"},{k:"concime",l:"Concime"},{k:"stop",l:"Stop"},{k:"note",l:"Note"}]},
-  {key:"sub",label:"Substrato",fields:[{k:"terreno",l:"Terreno"},{k:"ph",l:"pH ideale"},{k:"vaso",l:"Vaso"},{k:"rinvaso",l:"Rinvaso"},{k:"vivo",l:"Terreno vivo"}]},
-  {key:"esp",label:"Esposizione",fields:[{k:"luce",l:"Luce"},{k:"sole",l:"Sole diretto"},{k:"temperatura",l:"Temperatura"},{k:"umidita",l:"Umidità"}]},
-  {key:"cur",label:"Cure",fields:[{k:"acqua",l:"Annaffiatura"},{k:"potatura",l:"Potatura"},{k:"parassiti",l:"Parassiti"},{k:"extra",l:"Da sapere"}]},
-  {key:"bio",label:"BioBizz",fields:[{k:"prodotti",l:"Prodotti"},{k:"primavera",l:"Primavera"},{k:"estate",l:"Estate"},{k:"autunno",l:"Autunno/inverno"},{k:"rinvaso",l:"Al rinvaso"},{k:"note",l:"Note"}]}
+  { key: "con", label: "Concimazione", fields: [{ k: "periodo", l: "Periodo" }, { k: "frequenza", l: "Frequenza" }, { k: "concime", l: "Concime" }, { k: "stop", l: "Stop" }, { k: "note", l: "Note" }] },
+  { key: "sub", label: "Substrato", fields: [{ k: "terreno", l: "Terreno" }, { k: "ph", l: "pH ideale" }, { k: "vaso", l: "Vaso" }, { k: "rinvaso", l: "Rinvaso" }, { k: "vivo", l: "Terreno vivo" }] },
+  { key: "esp", label: "Esposizione", fields: [{ k: "luce", l: "Luce" }, { k: "sole", l: "Sole diretto" }, { k: "temperatura", l: "Temperatura" }, { k: "umidita", l: "Umidità" }] },
+  { key: "cur", label: "Cure", fields: [{ k: "acqua", l: "Annaffiatura" }, { k: "potatura", l: "Potatura" }, { k: "parassiti", l: "Parassiti" }, { k: "extra", l: "Da sapere" }] },
+  { key: "bio", label: "BioBizz", fields: [{ k: "prodotti", l: "Prodotti" }, { k: "primavera", l: "Primavera" }, { k: "estate", l: "Estate" }, { k: "autunno", l: "Autunno/inverno" }, { k: "rinvaso", l: "Al rinvaso" }, { k: "note", l: "Note" }] }
 ];
 
 function sInitSchede() { renderCards(sPlants); }
@@ -275,17 +327,17 @@ let sFilteredPlants = sPlants;
 function renderCards(list) {
   sFilteredPlants = list;
   const grid = document.getElementById('s-grid');
-  document.getElementById('s-count').textContent = list.length + (list.length===1?' pianta':' piante');
-  grid.innerHTML = list.map((p,i)=>`
+  document.getElementById('s-count').textContent = list.length + (list.length === 1 ? ' pianta' : ' piante');
+  grid.innerHTML = list.map((p, i) => `
     <div class="plant-card" onclick="sOpenDetail(${i})">
       <div class="card-header">
         <div class="plant-icon">${p.icon}</div>
         <div>
-          <div class="card-title">${p.name}${p.isNew?'<span class="new-badge">nuovo</span>':''}</div>
-          <div class="card-subtitle">${p.latin||'Pianta ornamentale'}</div>
+          <div class="card-title">${p.name}${p.isNew ? '<span class="new-badge">nuovo</span>' : ''}</div>
+          <div class="card-subtitle">${p.latin || 'Pianta ornamentale'}</div>
         </div>
       </div>
-      <div class="pill-row">${p.tags.map((t,ti)=>`<span class="pill ${p.tc[ti]}">${t}</span>`).join('')}</div>
+      <div class="pill-row">${p.tags.map((t, ti) => `<span class="pill ${p.tc[ti]}">${t}</span>`).join('')}</div>
       <p class="toggle-hint">tocca per dettagli</p>
     </div>`).join('');
 }
@@ -296,13 +348,13 @@ function sOpenDetail(idx) {
   document.getElementById('s-panel-icon').textContent = p.icon;
   document.getElementById('s-panel-title').textContent = p.name;
   document.getElementById('s-panel-latin').textContent = p.latin || 'Pianta ornamentale';
-  document.getElementById('s-panel-tags').innerHTML = p.tags.map((t,i)=>`<span class="pill ${p.tc[i]}">${t}</span>`).join('');
+  document.getElementById('s-panel-tags').innerHTML = p.tags.map((t, i) => `<span class="pill ${p.tc[i]}">${t}</span>`).join('');
   // Tabs
   const tabsEl = document.getElementById('s-panel-tabs');
-  tabsEl.innerHTML = sTabDefs.map((t,i)=>`<button class="tab-btn${i===0?' active':''}" onclick="sSwitchTab(this,'${t.key}')">${t.label}</button>`).join('');
+  tabsEl.innerHTML = sTabDefs.map((t, i) => `<button class="tab-btn${i === 0 ? ' active' : ''}" onclick="sSwitchTab(this,'${t.key}')">${t.label}</button>`).join('');
   // Content
   const body = document.getElementById('s-panel-body');
-  body.innerHTML = sTabDefs.map((t,i)=>`<div class="tab-content${i===0?' active':''}" data-tab="${t.key}">${t.fields.map(f=>`<div class="detail-row"><span class="detail-label">${f.l}</span><span class="detail-value">${p[t.key][f.k]||'—'}</span></div>`).join('')}</div>`).join('');
+  body.innerHTML = sTabDefs.map((t, i) => `<div class="tab-content${i === 0 ? ' active' : ''}" data-tab="${t.key}">${t.fields.map(f => `<div class="detail-row"><span class="detail-label">${f.l}</span><span class="detail-value">${p[t.key][f.k] || '—'}</span></div>`).join('')}</div>`).join('');
   document.getElementById('s-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -314,18 +366,18 @@ function sCloseDetail() {
 
 function sSwitchTab(btn, key) {
   const panel = document.getElementById('s-overlay');
-  panel.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  panel.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  panel.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  panel.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   btn.classList.add('active');
-  panel.querySelector('[data-tab="'+key+'"]').classList.add('active');
+  panel.querySelector('[data-tab="' + key + '"]').classList.add('active');
 }
 
 function sFilter(q) {
   const l = q.toLowerCase();
-  renderCards(sPlants.filter(p=>
-    p.name.toLowerCase().includes(l)||p.latin.toLowerCase().includes(l)||
-    p.tags.some(t=>t.toLowerCase().includes(l))||
-    ['con','sub','esp','cur'].flatMap(k=>Object.values(p[k])).join(' ').toLowerCase().includes(l)
+  renderCards(sPlants.filter(p =>
+    p.name.toLowerCase().includes(l) || p.latin.toLowerCase().includes(l) ||
+    p.tags.some(t => t.toLowerCase().includes(l)) ||
+    ['con', 'sub', 'esp', 'cur'].flatMap(k => Object.values(p[k])).join(' ').toLowerCase().includes(l)
   ));
 }
 
@@ -337,78 +389,78 @@ function sFilter(q) {
 // dedotti dai fert_months oppure prelevati dalle colonne monthly_states e
 // monthly_notes se l'utente ha compilato il calendario manualmente.
 let cPlants = [
-  {name:"Sanseviera",latin:"",icon:"🌿",months:[0,0,0,1,1,1,1,1,1,0,0,0],freq:"1× al mese",concime:"Liquido succulente, ½ dose",notes:{4:"Riprendi la concimazione — usa metà dose.",5:"Concima regolarmente. Suolo asciutto tra le annaffiature.",6:"Piena stagione. Controlla eventuali cocciniglie.",7:"Continua normalmente.",8:"Ultima parte della stagione attiva.",9:"Ultima concimazione dell'anno. Da ottobre stop totale."}},
-  {name:"Orchidea",latin:"Phalaenopsis",icon:"🌸",months:[2,0,1,1,1,1,1,1,2,0,0,0],freq:"Ogni 1-2 settimane (weakly, weekly)",concime:"Specifico orchidee, ¼ dose",notes:{1:"Riposo. Nessuna concimazione.",3:"Riprendi con dosi molto leggere se emette nuovi germogli.",4:"Stagione attiva. Ogni settimana con dose ¼.",5:"Massima crescita — concima regolarmente.",6:"Se in fioritura, sospendi il concime.",7:"Continua normalmente se non in fioritura.",8:"Inizio riduzione. Scala a ogni 2 settimane.",9:"Dose molto ridotta — 1× al mese.",10:"Stop quasi totale. Solo annaffiatura."}},
-  {name:"Ficus Benjamina",latin:"",icon:"🌳",months:[0,0,1,1,1,1,1,1,1,0,0,0],freq:"Ogni 2 settimane",concime:"Liquido azotato NPK 3-1-2",notes:{3:"Riprendi con la prima concimazione.",4:"Stagione piena. Tieni d'occhio le foglie nuove per clorosi ferrica.",5:"Se foglie nuove gialle con venature verdi → ferro chelato subito.",6:"Non spostare la pianta — perde foglie facilmente.",7:"Continua normalmente.",8:"Inizia a scalare leggermente la frequenza.",9:"Ultima concimazione. Da ottobre stop totale."}},
-  {name:"Ficus Elastica",latin:"",icon:"🌱",months:[0,0,1,1,1,1,1,1,1,0,0,0],freq:"Ogni 2 settimane",concime:"Liquido azotato con buona quota K",notes:{3:"Prima concimazione dell'anno. Ideale per il rinvaso.",4:"Stagione attiva. Pulisci le foglie grandi con panno umido.",6:"Controlla ragnetto rosso in estate.",9:"Ultima concimazione. Poi stop totale."}},
-  {name:"Oleandro",latin:"Nerium oleander",icon:"🌺",months:[0,0,1,1,1,1,1,1,1,0,0,0],freq:"Ogni 2 settimane",concime:"P-K prevalente (5-10-10)",notes:{3:"Prima concimazione. Se in vaso, valuta il rinvaso.",4:"Inizia a comparire la fioritura — concime P-K per sostenerla.",5:"Piena fioritura. Concima ogni 2 settimane.",6:"Estate — massima fioritura.",7:"Continua con P-K. Attento agli afidi.",8:"Dopo la fioritura, pota leggermente.",9:"Ultima concimazione. Stop da ottobre."}},
-  {name:"Glicine Bonsai",latin:"Wisteria",icon:"💜",months:[0,3,3,1,1,1,1,1,0,0,0,0],freq:"Ogni 3-4 settimane",concime:"P-K (3-8-8), zero azoto",notes:{2:"Potatura invernale dei rami a 1-2 gemme. Gemme fiorali già formate.",3:"Fioritura! Non concimare — lascia che la pianta usi le riserve.",4:"Dopo la fioritura: prima concimazione con P-K. Zero azoto.",5:"Estate: pota i germogli nuovi a 2-3 foglie per mantenere la forma bonsai.",6:"Concima ogni 3-4 settimane.",7:"Continua con P-K.",8:"Ultima concimazione. Da settembre stop totale."}},
-  {name:"Limone",latin:"Citrus limon",icon:"🍋",months:[2,3,1,1,1,1,1,1,1,2,3,2],freq:"Granulare 3×/anno (mar, giu, set) + lupini 2×/anno (feb, nov)",concime:"Granulare agrumi lento rilascio + lupini macinati",notes:{1:"Lupini di novembre in decomposizione — nutrono lentamente. CalMag mensile. Nessun altro intervento.",2:"Lupini macinati: interrare 100-150g nel terriccio. Acidificano e nutrono per i prossimi 3-4 mesi. CalMag mensile.",3:"Granulare agrumi a lento rilascio: 1ª applicazione dell'anno. Distribuire sulla superficie e annaffiare. CalMag mensile.",4:"Il granulare sta lavorando — nessun intervento aggiuntivo. CalMag mensile. Controlla clorosi ferrica.",5:"Stagione attiva. Il granulare nutre costantemente. CalMag mensile.",6:"Granulare agrumi: 2ª applicazione dell'anno. CalMag mensile. Annaffiatura abbondante con il caldo.",7:"Il granulare di giugno è attivo. Annaffia di più con il caldo estivo. CalMag mensile.",8:"Controlla cocciniglia e minatore fogliare. CalMag mensile.",9:"Granulare agrumi: 3ª e ultima applicazione. CalMag mensile. Il limone fruttifica ancora.",10:"Il granulare di settembre nutre fino a fine anno. CalMag mensile. Riduci le annaffiature.",11:"Lupini macinati: interrare 100-150g. Forniranno azoto organico per tutto l'inverno. CalMag mensile.",12:"I lupini stanno lavorando. CalMag mensile. Annaffiatura ridotta."}},
-  {name:"Moneta Cinese",latin:"Pilea peperomioides",icon:"🪙",months:[0,0,0,1,1,1,1,1,0,0,0,0],freq:"Ogni 3-4 settimane",concime:"Universale bilanciato, ½ dose",notes:{4:"Prima concimazione. Ruota il vaso verso la luce.",5:"Stagione attiva. Separa i figlioletti alla base se presenti.",6:"Continua normalmente.",7:"Controlla ragnetto rosso in ambienti secchi.",8:"Ultima concimazione. Da settembre stop."}},
-  {name:"Vinca",latin:"Vinca minor/major",icon:"🔵",months:[0,0,0,1,1,1,1,1,0,0,0,0],freq:"Ogni 3-4 settimane",concime:"Liquido per piante da fiore, P-K",notes:{4:"Prima concimazione. Pota i rami legnosi per stimolare crescita compatta.",5:"Stagione di piena fioritura.",6:"Continua con P-K. Evita l'azoto.",7:"Controlla che non si espanda troppo se in piena terra.",8:"Ultima concimazione."}},
-  {name:"Mimosa",latin:"Acacia dealbata",icon:"🌼",months:[0,3,3,1,1,1,1,1,1,0,0,0],freq:"Ogni 3-4 settimane",concime:"Povero di N, ricco P-K; tipo azalee",notes:{2:"Fioritura spettacolare! Non concimare — pota subito dopo.",3:"Potatura post-fioritura. Prima concimazione P-K dopo la potatura.",4:"Stagione attiva. Ricorda: zero azoto.",5:"Crescita rapida. In vaso, controlla le dimensioni.",6:"Continua con P-K.",7:"Annaffiatura moderata — tollera la siccità.",8:"Ultima concimazione.",9:"Stop concimazione. Le gemme fiorali si stanno formando."}},
-  {name:"Melograno",latin:"Punica granatum",icon:"🍎",months:[0,0,1,1,1,1,1,1,1,0,0,0],freq:"Ogni 3-4 settimane",concime:"Bilanciato a primavera, P-K da giugno",notes:{3:"Prima concimazione dell'anno — bilanciata per la ripresa.",4:"Fiori rosso-arancio iniziano ad aprirsi.",5:"Passa a P-K per sostenere la fruttificazione.",6:"Estate — massima attenzione all'irrigazione regolare per evitare la spaccatura dei frutti.",7:"Continua con P-K.",8:"Frutti in crescita. Irregolarità idriche = frutti spaccati.",9:"Ultima concimazione. I frutti maturano in ottobre-novembre."}},
-  {name:"Stella di Natale",latin:"Euphorbia pulcherrima",icon:"🌟",months:[0,0,0,1,1,1,1,0,0,3,3,3],freq:"Ogni 2-3 settimane in stagione",concime:"Universale bilanciato (NPK equilibrato)",notes:{1:"Riposo post-decorativo. Nessuna concimazione.",2:"Stop totale. Annaffiatura minima.",3:"Se emette nuovi germogli, inizia con dose leggera.",4:"Stagione di crescita — concima ogni 2-3 settimane.",5:"Crescita vegetativa attiva.",6:"Continua a crescere. Buona luce indiretta.",7:"Ultima concimazione primaverile-estiva.",8:"Stop estivo. Prepara la pianta al trattamento fotoperiodico.",10:"BUIO! Inizia il protocollo: 14 ore di buio totale ogni giorno. Zero concime.",11:"Continua il buio forzato. Le foglie iniziano a colorarsi di rosso.",12:"Fase decorativa. Non concimare. Goditi i colori!"}},
-  {name:"Aloe Vera",latin:"Aloe barbadensis",icon:"🌵",months:[0,0,0,1,1,1,1,1,1,0,0,0],freq:"1× al mese",concime:"Liquido succulente, ½ dose",notes:{4:"Prima concimazione. Controlla se ci sono figli da separare.",5:"Stagione attiva. Annaffia solo quando il substrato è completamente asciutto.",6:"Se fuori all'aperto, esponi gradualmente al sole diretto.",7:"Mese di massima luce — la pianta è al meglio.",8:"Continua normalmente.",9:"Ultima concimazione. Da ottobre stop totale."}},
-  {name:"Liquidambar",latin:"Liquidambar styraciflua",icon:"🍂",months:[0,0,1,1,1,1,1,0,0,0,0,0],freq:"Ogni 4-6 settimane",concime:"Specifico acidofile (azalee/rododendri)",notes:{3:"Prima concimazione. Ideale per il trapianto con micorrize acidofile.",4:"Stagione attiva. Terreno acido fondamentale — no calcare.",5:"Crescita attiva. Mantieni il terreno fresco.",6:"Continua normalmente.",7:"Ultima concimazione. Non stimolare crescita tardiva.",10:"I colori autunnali iniziano — rosso, arancio, viola. Nessun intervento."}},
-  {name:"Ippocastano",latin:"Aesculus hippocastanum",icon:"🌰",months:[0,0,1,1,1,1,0,0,0,0,0,0],freq:"1-2× anno (granulare); solo giovani esemplari",concime:"Granulare universale a lenta cessione",notes:{3:"Unica concimazione dell'anno per piante adulte.",4:"Fioritura spettacolare bianca/rosa.",5:"Controlla la Cameraria ohridella (minatore fogliare) — trattamento preventivo se presente.",6:"Ultima concimazione per giovani piante. Da luglio stop totale."}},
-  {name:"Betulla",latin:"Betula pendula",icon:"🌿",months:[0,0,1,1,1,1,0,0,0,0,0,0],freq:"Ogni 4-6 settimane (solo giovani piante)",concime:"Acidofile o universale a basso pH",notes:{3:"Prima concimazione. Al trapianto: micorrize ectomicorriziche specifiche per Betula.",4:"Crescita rapida primaverile.",5:"Continua per giovani piante. Adulte: nessun intervento necessario.",6:"Ultima concimazione. Non potare in primavera — 'piange' molta linfa."}},
-  {name:"Acero Campestre",latin:"Acer campestre",icon:"🍁",months:[0,0,1,1,1,0,0,0,0,0,0,0],freq:"1× anno con granulare; spesso nessuna",concime:"Granulare universale, pochissimo azoto",notes:{3:"Unica concimazione dell'anno se necessaria.",4:"Se usato come siepe potata frequentemente, continua fino a maggio.",5:"Ultima concimazione per siepi. Pianta straordinariamente adattabile.",10:"Foglie giallo dorato in autunno. Nessun intervento."}},
-  {name:"Pitosforo",latin:"Pittosporum tobira",icon:"🌿",months:[0,0,1,1,1,1,1,1,1,0,0,0],freq:"Ogni 4-6 settimane",concime:"Universale bilanciato o specifico sempreverdi",notes:{3:"Prima concimazione. Ottimo momento per la potatura leggera di forma.",4:"Fioritura profumatissima (zagara).",5:"Stagione attiva. Se usato come siepe, aumenta frequenza dopo ogni potatura.",6:"Continua normalmente.",7:"Estate — tollera bene la siccità.",8:"Potatura estiva di forma se necessaria. Ultima concimazione intensa.",9:"Ultima concimazione leggera. Da ottobre stop."}},
-  {name:"Spino di Giuda",latin:"Gleditsia triacanthos",icon:"🌿",months:[0,0,1,1,1,1,1,0,0,0,0,0],freq:"Ogni 4-6 settimane; autonomo da adulto",concime:"Universale bilanciato (NO zero azoto — non fissa N)",notes:{3:"Prima concimazione. Al trapianto: buca ricca di compost e micorrize.",4:"Crescita primaverile attiva. Le foglie bipennate finissime si schiudono.",5:"Continua normalmente. Pianta molto vigorosa una volta stabilita.",6:"Continua per giovani esemplari. Adulti in piena terra: quasi nessun intervento.",7:"Ultima concimazione. Da agosto stop totale.",10:"Foglie giallo dorato in autunno. Baccelli attorcigliati caratteristici."}},
-  {name:"Gelso Bonsai",latin:"Morus alba / Morus nigra",icon:"🍃",months:[0,0,0,1,1,1,1,1,0,0,0,0],freq:"Ogni 2-3 settimane in primavera; ogni 4 in tarda estate",concime:"Bilanciato NPK in primavera; basso N e più P-K da luglio",notes:{4:"Ripresa vegetativa — prima concimazione bilanciata. Inizia la potatura di mantenimento.",5:"Piena crescita primaverile. Accorcia ogni germoglio a 1-2 foglie appena raggiunge 4-5.",6:"Valuta la defogliazione parziale per ridurre le dimensioni delle foglie.",7:"Passa a concime con meno azoto e più P-K per favorire la lignificazione.",8:"Ultima concimazione. Inizia a ridurre la frequenza delle annaffiature.",9:"Stop concimazione. La pianta si prepara al riposo vegetativo.",2:"Potatura strutturale invernale (prima del risveglio) — con la pianta priva di foglie."}},
-  {name:"Tradescantia",latin:"Tradescantia zebrina",icon:"💜",months:[0,0,0,1,1,1,1,1,1,0,0,0],freq:"Ogni 3-4 settimane",concime:"Universale bilanciato, ½ dose",notes:{4:"Prima concimazione. Taglia i rami allungati per mantenere la pianta compatta.",5:"Stagione attiva. Propaga le talee in acqua.",6:"Continua normalmente.",7:"Piena estate — la pianta cresce rapidamente.",8:"Continua. Rinfresca la pianta con nebulizzazioni.",9:"Ultima concimazione. Da ottobre stop totale."}},
-  {name:"Rosmarino",latin:"Salvia rosmarinus",icon:"🌿",months:[0,0,1,1,1,1,1,0,0,0,0,0],freq:"Ogni 6-8 settimane",concime:"Leggero P-K, tipo piante fiorite",notes:{3:"Prima concimazione dell'anno se necessaria. Pota dopo la fioritura.",4:"Fioritura azzurro-viola. Non potare durante la fioritura.",5:"Stagione attiva. In piena terra quasi autonomo.",6:"Continua per piante in vaso.",7:"Ultima concimazione leggera. Da agosto stop."}},
-  {name:"Salvia",latin:"Salvia officinalis",icon:"🍃",months:[0,0,1,1,1,1,1,0,0,0,0,0],freq:"Ogni 6-8 settimane",concime:"Leggero P-K, tipo piante mediterranee",notes:{3:"Prima concimazione leggera. Potatura di forma primaverile.",4:"Stagione attiva. Fioritura viola-blu.",5:"Continua per piante in vaso.",6:"Continua. Raccogli le foglie regolarmente per stimolare nuova crescita.",7:"Ultima concimazione. Da agosto stop."}},
-  {name:"Paulownia",latin:"Paulownia tomentosa",icon:"🌸",months:[0,0,1,1,1,1,1,0,0,0,0,0],freq:"Ogni 3-4 settimane (solo giovani piante)",concime:"Bilanciato NPK, dose piena per giovani",notes:{3:"Prima concimazione. Se giovane, sostieni la crescita esplosiva.",4:"Crescita rapidissima. Foglie enormi in sviluppo.",5:"Fioritura viola spettacolare (prima delle foglie sugli esemplari adulti).",6:"Continua per giovani piante. Adulte in piena terra: nessun intervento.",7:"Ultima concimazione. Da agosto stop — i rami devono lignificare."}},
-  {name:"Crassula Ovata",latin:"Crassula ovata",icon:"🪴",months:[0,0,0,1,1,1,1,1,1,0,0,0],freq:"1× al mese",concime:"Liquido succulente, ½ dose",notes:{4:"Prima concimazione. Controlla la pianta per cocciniglia cotonosa.",5:"Stagione attiva. Annaffia solo quando il substrato è completamente asciutto.",6:"Piena estate — può stare all'aperto in posizione luminosa.",7:"Continua normalmente.",8:"Continua. Le foglie diventano rosse ai bordi con molta luce.",9:"Ultima concimazione. Da ottobre stop totale."}},
-  {name:"Carmona Bonsai",latin:"Carmona microphylla",icon:"🌳",months:[2,2,2,1,1,1,1,1,1,2,2,2],freq:"Ogni 2-3 settimane (ridotta in inverno)",concime:"Liquido bilanciato per bonsai, ½ dose",notes:{1:"Se temp >18°C: concime ridotto 1× al mese. Nebulizzare le foglie quotidianamente.",2:"Come gennaio. Aumentare umidità ambientale con sottovaso + argilla espansa.",3:"Ripresa graduale. Aumentare frequenza se emette nuove foglie.",4:"Stagione attiva. Concima ogni 2-3 settimane. Ottimo momento per potature di formazione.",5:"Piena crescita. Può fiorire con piccoli fiori bianchi. Controlla umidità.",6:"Estate: massima attenzione all'umidità. Mai sotto il sole diretto pomeridiano.",7:"Continua. Il substrato bonsai asciuga rapidamente — controllare ogni giorno.",8:"Continua normalmente. Accorcia i germogli a 2-3 foglie.",9:"Ultima concimazione piena. Da ottobre ridurre.",10:"Concime ridotto 1× al mese se temp >18°C. Mai portare fuori — niente freddo!",11:"Dose molto ridotta. Mantenere umidità alta con i riscaldamenti.",12:"Come novembre. Bacche rosse decorative se ha fiorito."}}
+  { name: "Sanseviera", latin: "", icon: "🌿", months: [0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0], freq: "1× al mese", concime: "Liquido succulente, ½ dose", notes: { 4: "Riprendi la concimazione — usa metà dose.", 5: "Concima regolarmente. Suolo asciutto tra le annaffiature.", 6: "Piena stagione. Controlla eventuali cocciniglie.", 7: "Continua normalmente.", 8: "Ultima parte della stagione attiva.", 9: "Ultima concimazione dell'anno. Da ottobre stop totale." } },
+  { name: "Orchidea", latin: "Phalaenopsis", icon: "🌸", months: [2, 0, 1, 1, 1, 1, 1, 1, 2, 0, 0, 0], freq: "Ogni 1-2 settimane (weakly, weekly)", concime: "Specifico orchidee, ¼ dose", notes: { 1: "Riposo. Nessuna concimazione.", 3: "Riprendi con dosi molto leggere se emette nuovi germogli.", 4: "Stagione attiva. Ogni settimana con dose ¼.", 5: "Massima crescita — concima regolarmente.", 6: "Se in fioritura, sospendi il concime.", 7: "Continua normalmente se non in fioritura.", 8: "Inizio riduzione. Scala a ogni 2 settimane.", 9: "Dose molto ridotta — 1× al mese.", 10: "Stop quasi totale. Solo annaffiatura." } },
+  { name: "Ficus Benjamina", latin: "", icon: "🌳", months: [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0], freq: "Ogni 2 settimane", concime: "Liquido azotato NPK 3-1-2", notes: { 3: "Riprendi con la prima concimazione.", 4: "Stagione piena. Tieni d'occhio le foglie nuove per clorosi ferrica.", 5: "Se foglie nuove gialle con venature verdi → ferro chelato subito.", 6: "Non spostare la pianta — perde foglie facilmente.", 7: "Continua normalmente.", 8: "Inizia a scalare leggermente la frequenza.", 9: "Ultima concimazione. Da ottobre stop totale." } },
+  { name: "Ficus Elastica", latin: "", icon: "🌱", months: [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0], freq: "Ogni 2 settimane", concime: "Liquido azotato con buona quota K", notes: { 3: "Prima concimazione dell'anno. Ideale per il rinvaso.", 4: "Stagione attiva. Pulisci le foglie grandi con panno umido.", 6: "Controlla ragnetto rosso in estate.", 9: "Ultima concimazione. Poi stop totale." } },
+  { name: "Oleandro", latin: "Nerium oleander", icon: "🌺", months: [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0], freq: "Ogni 2 settimane", concime: "P-K prevalente (5-10-10)", notes: { 3: "Prima concimazione. Se in vaso, valuta il rinvaso.", 4: "Inizia a comparire la fioritura — concime P-K per sostenerla.", 5: "Piena fioritura. Concima ogni 2 settimane.", 6: "Estate — massima fioritura.", 7: "Continua con P-K. Attento agli afidi.", 8: "Dopo la fioritura, pota leggermente.", 9: "Ultima concimazione. Stop da ottobre." } },
+  { name: "Glicine Bonsai", latin: "Wisteria", icon: "💜", months: [0, 3, 3, 1, 1, 1, 1, 1, 0, 0, 0, 0], freq: "Ogni 3-4 settimane", concime: "P-K (3-8-8), zero azoto", notes: { 2: "Potatura invernale dei rami a 1-2 gemme. Gemme fiorali già formate.", 3: "Fioritura! Non concimare — lascia che la pianta usi le riserve.", 4: "Dopo la fioritura: prima concimazione con P-K. Zero azoto.", 5: "Estate: pota i germogli nuovi a 2-3 foglie per mantenere la forma bonsai.", 6: "Concima ogni 3-4 settimane.", 7: "Continua con P-K.", 8: "Ultima concimazione. Da settembre stop totale." } },
+  { name: "Limone", latin: "Citrus limon", icon: "🍋", months: [2, 3, 1, 1, 1, 1, 1, 1, 1, 2, 3, 2], freq: "Granulare 3×/anno (mar, giu, set) + lupini 2×/anno (feb, nov)", concime: "Granulare agrumi lento rilascio + lupini macinati", notes: { 1: "Lupini di novembre in decomposizione — nutrono lentamente. CalMag mensile. Nessun altro intervento.", 2: "Lupini macinati: interrare 100-150g nel terriccio. Acidificano e nutrono per i prossimi 3-4 mesi. CalMag mensile.", 3: "Granulare agrumi a lento rilascio: 1ª applicazione dell'anno. Distribuire sulla superficie e annaffiare. CalMag mensile.", 4: "Il granulare sta lavorando — nessun intervento aggiuntivo. CalMag mensile. Controlla clorosi ferrica.", 5: "Stagione attiva. Il granulare nutre costantemente. CalMag mensile.", 6: "Granulare agrumi: 2ª applicazione dell'anno. CalMag mensile. Annaffiatura abbondante con il caldo.", 7: "Il granulare di giugno è attivo. Annaffia di più con il caldo estivo. CalMag mensile.", 8: "Controlla cocciniglia e minatore fogliare. CalMag mensile.", 9: "Granulare agrumi: 3ª e ultima applicazione. CalMag mensile. Il limone fruttifica ancora.", 10: "Il granulare di settembre nutre fino a fine anno. CalMag mensile. Riduci le annaffiature.", 11: "Lupini macinati: interrare 100-150g. Forniranno azoto organico per tutto l'inverno. CalMag mensile.", 12: "I lupini stanno lavorando. CalMag mensile. Annaffiatura ridotta." } },
+  { name: "Moneta Cinese", latin: "Pilea peperomioides", icon: "🪙", months: [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0], freq: "Ogni 3-4 settimane", concime: "Universale bilanciato, ½ dose", notes: { 4: "Prima concimazione. Ruota il vaso verso la luce.", 5: "Stagione attiva. Separa i figlioletti alla base se presenti.", 6: "Continua normalmente.", 7: "Controlla ragnetto rosso in ambienti secchi.", 8: "Ultima concimazione. Da settembre stop." } },
+  { name: "Vinca", latin: "Vinca minor/major", icon: "🔵", months: [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0], freq: "Ogni 3-4 settimane", concime: "Liquido per piante da fiore, P-K", notes: { 4: "Prima concimazione. Pota i rami legnosi per stimolare crescita compatta.", 5: "Stagione di piena fioritura.", 6: "Continua con P-K. Evita l'azoto.", 7: "Controlla che non si espanda troppo se in piena terra.", 8: "Ultima concimazione." } },
+  { name: "Mimosa", latin: "Acacia dealbata", icon: "🌼", months: [0, 3, 3, 1, 1, 1, 1, 1, 1, 0, 0, 0], freq: "Ogni 3-4 settimane", concime: "Povero di N, ricco P-K; tipo azalee", notes: { 2: "Fioritura spettacolare! Non concimare — pota subito dopo.", 3: "Potatura post-fioritura. Prima concimazione P-K dopo la potatura.", 4: "Stagione attiva. Ricorda: zero azoto.", 5: "Crescita rapida. In vaso, controlla le dimensioni.", 6: "Continua con P-K.", 7: "Annaffiatura moderata — tollera la siccità.", 8: "Ultima concimazione.", 9: "Stop concimazione. Le gemme fiorali si stanno formando." } },
+  { name: "Melograno", latin: "Punica granatum", icon: "🍎", months: [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0], freq: "Ogni 3-4 settimane", concime: "Bilanciato a primavera, P-K da giugno", notes: { 3: "Prima concimazione dell'anno — bilanciata per la ripresa.", 4: "Fiori rosso-arancio iniziano ad aprirsi.", 5: "Passa a P-K per sostenere la fruttificazione.", 6: "Estate — massima attenzione all'irrigazione regolare per evitare la spaccatura dei frutti.", 7: "Continua con P-K.", 8: "Frutti in crescita. Irregolarità idriche = frutti spaccati.", 9: "Ultima concimazione. I frutti maturano in ottobre-novembre." } },
+  { name: "Stella di Natale", latin: "Euphorbia pulcherrima", icon: "🌟", months: [0, 0, 0, 1, 1, 1, 1, 0, 0, 3, 3, 3], freq: "Ogni 2-3 settimane in stagione", concime: "Universale bilanciato (NPK equilibrato)", notes: { 1: "Riposo post-decorativo. Nessuna concimazione.", 2: "Stop totale. Annaffiatura minima.", 3: "Se emette nuovi germogli, inizia con dose leggera.", 4: "Stagione di crescita — concima ogni 2-3 settimane.", 5: "Crescita vegetativa attiva.", 6: "Continua a crescere. Buona luce indiretta.", 7: "Ultima concimazione primaverile-estiva.", 8: "Stop estivo. Prepara la pianta al trattamento fotoperiodico.", 10: "BUIO! Inizia il protocollo: 14 ore di buio totale ogni giorno. Zero concime.", 11: "Continua il buio forzato. Le foglie iniziano a colorarsi di rosso.", 12: "Fase decorativa. Non concimare. Goditi i colori!" } },
+  { name: "Aloe Vera", latin: "Aloe barbadensis", icon: "🌵", months: [0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0], freq: "1× al mese", concime: "Liquido succulente, ½ dose", notes: { 4: "Prima concimazione. Controlla se ci sono figli da separare.", 5: "Stagione attiva. Annaffia solo quando il substrato è completamente asciutto.", 6: "Se fuori all'aperto, esponi gradualmente al sole diretto.", 7: "Mese di massima luce — la pianta è al meglio.", 8: "Continua normalmente.", 9: "Ultima concimazione. Da ottobre stop totale." } },
+  { name: "Liquidambar", latin: "Liquidambar styraciflua", icon: "🍂", months: [0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0], freq: "Ogni 4-6 settimane", concime: "Specifico acidofile (azalee/rododendri)", notes: { 3: "Prima concimazione. Ideale per il trapianto con micorrize acidofile.", 4: "Stagione attiva. Terreno acido fondamentale — no calcare.", 5: "Crescita attiva. Mantieni il terreno fresco.", 6: "Continua normalmente.", 7: "Ultima concimazione. Non stimolare crescita tardiva.", 10: "I colori autunnali iniziano — rosso, arancio, viola. Nessun intervento." } },
+  { name: "Ippocastano", latin: "Aesculus hippocastanum", icon: "🌰", months: [0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0], freq: "1-2× anno (granulare); solo giovani esemplari", concime: "Granulare universale a lenta cessione", notes: { 3: "Unica concimazione dell'anno per piante adulte.", 4: "Fioritura spettacolare bianca/rosa.", 5: "Controlla la Cameraria ohridella (minatore fogliare) — trattamento preventivo se presente.", 6: "Ultima concimazione per giovani piante. Da luglio stop totale." } },
+  { name: "Betulla", latin: "Betula pendula", icon: "🌿", months: [0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0], freq: "Ogni 4-6 settimane (solo giovani piante)", concime: "Acidofile o universale a basso pH", notes: { 3: "Prima concimazione. Al trapianto: micorrize ectomicorriziche specifiche per Betula.", 4: "Crescita rapida primaverile.", 5: "Continua per giovani piante. Adulte: nessun intervento necessario.", 6: "Ultima concimazione. Non potare in primavera — 'piange' molta linfa." } },
+  { name: "Acero Campestre", latin: "Acer campestre", icon: "🍁", months: [0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0], freq: "1× anno con granulare; spesso nessuna", concime: "Granulare universale, pochissimo azoto", notes: { 3: "Unica concimazione dell'anno se necessaria.", 4: "Se usato come siepe potata frequentemente, continua fino a maggio.", 5: "Ultima concimazione per siepi. Pianta straordinariamente adattabile.", 10: "Foglie giallo dorato in autunno. Nessun intervento." } },
+  { name: "Pitosforo", latin: "Pittosporum tobira", icon: "🌿", months: [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0], freq: "Ogni 4-6 settimane", concime: "Universale bilanciato o specifico sempreverdi", notes: { 3: "Prima concimazione. Ottimo momento per la potatura leggera di forma.", 4: "Fioritura profumatissima (zagara).", 5: "Stagione attiva. Se usato come siepe, aumenta frequenza dopo ogni potatura.", 6: "Continua normalmente.", 7: "Estate — tollera bene la siccità.", 8: "Potatura estiva di forma se necessaria. Ultima concimazione intensa.", 9: "Ultima concimazione leggera. Da ottobre stop." } },
+  { name: "Spino di Giuda", latin: "Gleditsia triacanthos", icon: "🌿", months: [0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0], freq: "Ogni 4-6 settimane; autonomo da adulto", concime: "Universale bilanciato (NO zero azoto — non fissa N)", notes: { 3: "Prima concimazione. Al trapianto: buca ricca di compost e micorrize.", 4: "Crescita primaverile attiva. Le foglie bipennate finissime si schiudono.", 5: "Continua normalmente. Pianta molto vigorosa una volta stabilita.", 6: "Continua per giovani esemplari. Adulti in piena terra: quasi nessun intervento.", 7: "Ultima concimazione. Da agosto stop totale.", 10: "Foglie giallo dorato in autunno. Baccelli attorcigliati caratteristici." } },
+  { name: "Gelso Bonsai", latin: "Morus alba / Morus nigra", icon: "🍃", months: [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0], freq: "Ogni 2-3 settimane in primavera; ogni 4 in tarda estate", concime: "Bilanciato NPK in primavera; basso N e più P-K da luglio", notes: { 4: "Ripresa vegetativa — prima concimazione bilanciata. Inizia la potatura di mantenimento.", 5: "Piena crescita primaverile. Accorcia ogni germoglio a 1-2 foglie appena raggiunge 4-5.", 6: "Valuta la defogliazione parziale per ridurre le dimensioni delle foglie.", 7: "Passa a concime con meno azoto e più P-K per favorire la lignificazione.", 8: "Ultima concimazione. Inizia a ridurre la frequenza delle annaffiature.", 9: "Stop concimazione. La pianta si prepara al riposo vegetativo.", 2: "Potatura strutturale invernale (prima del risveglio) — con la pianta priva di foglie." } },
+  { name: "Tradescantia", latin: "Tradescantia zebrina", icon: "💜", months: [0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0], freq: "Ogni 3-4 settimane", concime: "Universale bilanciato, ½ dose", notes: { 4: "Prima concimazione. Taglia i rami allungati per mantenere la pianta compatta.", 5: "Stagione attiva. Propaga le talee in acqua.", 6: "Continua normalmente.", 7: "Piena estate — la pianta cresce rapidamente.", 8: "Continua. Rinfresca la pianta con nebulizzazioni.", 9: "Ultima concimazione. Da ottobre stop totale." } },
+  { name: "Rosmarino", latin: "Salvia rosmarinus", icon: "🌿", months: [0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0], freq: "Ogni 6-8 settimane", concime: "Leggero P-K, tipo piante fiorite", notes: { 3: "Prima concimazione dell'anno se necessaria. Pota dopo la fioritura.", 4: "Fioritura azzurro-viola. Non potare durante la fioritura.", 5: "Stagione attiva. In piena terra quasi autonomo.", 6: "Continua per piante in vaso.", 7: "Ultima concimazione leggera. Da agosto stop." } },
+  { name: "Salvia", latin: "Salvia officinalis", icon: "🍃", months: [0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0], freq: "Ogni 6-8 settimane", concime: "Leggero P-K, tipo piante mediterranee", notes: { 3: "Prima concimazione leggera. Potatura di forma primaverile.", 4: "Stagione attiva. Fioritura viola-blu.", 5: "Continua per piante in vaso.", 6: "Continua. Raccogli le foglie regolarmente per stimolare nuova crescita.", 7: "Ultima concimazione. Da agosto stop." } },
+  { name: "Paulownia", latin: "Paulownia tomentosa", icon: "🌸", months: [0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0], freq: "Ogni 3-4 settimane (solo giovani piante)", concime: "Bilanciato NPK, dose piena per giovani", notes: { 3: "Prima concimazione. Se giovane, sostieni la crescita esplosiva.", 4: "Crescita rapidissima. Foglie enormi in sviluppo.", 5: "Fioritura viola spettacolare (prima delle foglie sugli esemplari adulti).", 6: "Continua per giovani piante. Adulte in piena terra: nessun intervento.", 7: "Ultima concimazione. Da agosto stop — i rami devono lignificare." } },
+  { name: "Crassula Ovata", latin: "Crassula ovata", icon: "🪴", months: [0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0], freq: "1× al mese", concime: "Liquido succulente, ½ dose", notes: { 4: "Prima concimazione. Controlla la pianta per cocciniglia cotonosa.", 5: "Stagione attiva. Annaffia solo quando il substrato è completamente asciutto.", 6: "Piena estate — può stare all'aperto in posizione luminosa.", 7: "Continua normalmente.", 8: "Continua. Le foglie diventano rosse ai bordi con molta luce.", 9: "Ultima concimazione. Da ottobre stop totale." } },
+  { name: "Carmona Bonsai", latin: "Carmona microphylla", icon: "🌳", months: [2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2], freq: "Ogni 2-3 settimane (ridotta in inverno)", concime: "Liquido bilanciato per bonsai, ½ dose", notes: { 1: "Se temp >18°C: concime ridotto 1× al mese. Nebulizzare le foglie quotidianamente.", 2: "Come gennaio. Aumentare umidità ambientale con sottovaso + argilla espansa.", 3: "Ripresa graduale. Aumentare frequenza se emette nuove foglie.", 4: "Stagione attiva. Concima ogni 2-3 settimane. Ottimo momento per potature di formazione.", 5: "Piena crescita. Può fiorire con piccoli fiori bianchi. Controlla umidità.", 6: "Estate: massima attenzione all'umidità. Mai sotto il sole diretto pomeridiano.", 7: "Continua. Il substrato bonsai asciuga rapidamente — controllare ogni giorno.", 8: "Continua normalmente. Accorcia i germogli a 2-3 foglie.", 9: "Ultima concimazione piena. Da ottobre ridurre.", 10: "Concime ridotto 1× al mese se temp >18°C. Mai portare fuori — niente freddo!", 11: "Dose molto ridotta. Mantenere umidità alta con i riscaldamenti.", 12: "Come novembre. Bacche rosse decorative se ha fiorito." } }
 
 ];
 
-const cMonths = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
-const cMonthsShort = ["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"];
-const cSeasons = ["Inverno","Inverno","Primavera","Primavera","Primavera","Estate","Estate","Estate","Autunno","Autunno","Autunno","Inverno"];
-function cSC(s){return["stop","active","reduce","special"][s]}
-function cSL(s){return["Riposo","Attiva","Ridotta","Attenzione"][s]}
+const cMonths = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+const cMonthsShort = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
+const cSeasons = ["Inverno", "Inverno", "Primavera", "Primavera", "Primavera", "Estate", "Estate", "Estate", "Autunno", "Autunno", "Autunno", "Inverno"];
+function cSC(s) { return ["stop", "active", "reduce", "special"][s] }
+function cSL(s) { return ["Riposo", "Attiva", "Ridotta", "Attenzione"][s] }
 
 function cInitMensile() {
   const barLabels = document.getElementById('c-bar-labels');
-  cMonthsShort.forEach(m=>{const el=document.createElement('div');el.className='bar-month-label';el.textContent=m;barLabels.appendChild(el)});
+  cMonthsShort.forEach(m => { const el = document.createElement('div'); el.className = 'bar-month-label'; el.textContent = m; barLabels.appendChild(el) });
   const yearBars = document.getElementById('c-year-bars');
-  cPlants.forEach(p=>{
-    const row=document.createElement('div');row.className='bar-plant-row';
-    const label=document.createElement('div');label.className='bar-plant-label';
+  cPlants.forEach(p => {
+    const row = document.createElement('div'); row.className = 'bar-plant-row';
+    const label = document.createElement('div'); label.className = 'bar-plant-label';
     // Per le custom aggiungo un piccolo indicatore visivo sottile accanto al nome.
     // Lo rendo discreto (font piccolo, colore tenue) per non distrarre dalla griglia.
     label.innerHTML = `${p.icon} ${cpEscape(p.name)}${p.isCustom ? ' <span style="font-size:0.7em;color:#9a8a30;font-weight:600">●</span>' : ''}`;
     row.appendChild(label);
-    const bars=document.createElement('div');bars.className='bar-months';
-    p.months.forEach((s,mi)=>{const bar=document.createElement('div');bar.className='bar-month '+cSC(s);bar.title=cMonths[mi]+': '+cSL(s);bars.appendChild(bar)});
-    row.appendChild(bars);yearBars.appendChild(row);
+    const bars = document.createElement('div'); bars.className = 'bar-months';
+    p.months.forEach((s, mi) => { const bar = document.createElement('div'); bar.className = 'bar-month ' + cSC(s); bar.title = cMonths[mi] + ': ' + cSL(s); bars.appendChild(bar) });
+    row.appendChild(bars); yearBars.appendChild(row);
   });
   const grid = document.getElementById('c-months-grid');
-  cMonths.forEach((month,mi)=>{
-    const card=document.createElement('div');card.className='month-card';card.onclick=()=>cOpenMonthDetail(mi);
-    const header=document.createElement('div');header.className='month-header';
-    header.innerHTML=`<span class="month-name">${month}</span><span class="month-season">${cSeasons[mi]}</span>`;
+  cMonths.forEach((month, mi) => {
+    const card = document.createElement('div'); card.className = 'month-card'; card.onclick = () => cOpenMonthDetail(mi);
+    const header = document.createElement('div'); header.className = 'month-header';
+    header.innerHTML = `<span class="month-name">${month}</span><span class="month-season">${cSeasons[mi]}</span>`;
     card.appendChild(header);
-    const body=document.createElement('div');body.className='month-body';
-    const active=cPlants.filter(p=>p.months[mi]>0);
-    if(!active.length){body.innerHTML='<div class="empty-month">Riposo per tutte le piante</div>';}
-    else{active.forEach(p=>{const s=p.months[mi];const row=document.createElement('div');row.className='plant-row';row.innerHTML=`<span class="plant-icon-sm">${p.icon}</span><span class="plant-name-sm">${cpEscape(p.name)}${p.isCustom?' <span style="font-size:0.75em;color:#9a8a30">●</span>':''}</span><span class="status-badge badge-${cSC(s)}">${cSL(s)}</span>`;body.appendChild(row)});}
-    card.appendChild(body);grid.appendChild(card);
+    const body = document.createElement('div'); body.className = 'month-body';
+    const active = cPlants.filter(p => p.months[mi] > 0);
+    if (!active.length) { body.innerHTML = '<div class="empty-month">Riposo per tutte le piante</div>'; }
+    else { active.forEach(p => { const s = p.months[mi]; const row = document.createElement('div'); row.className = 'plant-row'; row.innerHTML = `<span class="plant-icon-sm">${p.icon}</span><span class="plant-name-sm">${cpEscape(p.name)}${p.isCustom ? ' <span style="font-size:0.75em;color:#9a8a30">●</span>' : ''}</span><span class="status-badge badge-${cSC(s)}">${cSL(s)}</span>`; body.appendChild(row) }); }
+    card.appendChild(body); grid.appendChild(card);
   });
 }
 
 function cOpenMonthDetail(mi) {
-  document.getElementById('c-panel-title').textContent = cMonths[mi]+' · '+cSeasons[mi];
-  const active=cPlants.filter(p=>p.months[mi]===1),reduce=cPlants.filter(p=>p.months[mi]===2),special=cPlants.filter(p=>p.months[mi]===3),stop=cPlants.filter(p=>p.months[mi]===0);
-  function rg(list,status,label){
-    if(!list.length)return'';
-    let out=`<div class="detail-section-title">${label}</div>`;
-    list.forEach(p=>{
-      const note=p.notes[mi+1]||'';
+  document.getElementById('c-panel-title').textContent = cMonths[mi] + ' · ' + cSeasons[mi];
+  const active = cPlants.filter(p => p.months[mi] === 1), reduce = cPlants.filter(p => p.months[mi] === 2), special = cPlants.filter(p => p.months[mi] === 3), stop = cPlants.filter(p => p.months[mi] === 0);
+  function rg(list, status, label) {
+    if (!list.length) return '';
+    let out = `<div class="detail-section-title">${label}</div>`;
+    list.forEach(p => {
+      const note = p.notes[mi + 1] || '';
       // Per le piante custom: aggiungo il badge "personalizzata" accanto al nome
       // e, in fondo alla riga, un piccolo pulsante di modifica che apre il form.
       // Uso event.stopPropagation perché la riga potrebbe avere altri handler
@@ -419,16 +471,16 @@ function cOpenMonthDetail(mi) {
       const editBtn = (p.isCustom && p.customId)
         ? `<button onclick="event.stopPropagation();cCloseOverlay();cpOpenEditForm(${p.customId})" style="margin-top:6px;padding:4px 10px;font-size:0.85em;border:1px solid #b0a070;background:#fff8e0;border-radius:6px;cursor:pointer;color:#5a4a10">✏️ Modifica</button>`
         : '';
-      out+=`<div class="plant-detail-row ${status}"><div class="pdr-icon">${p.icon}</div><div class="pdr-content"><div class="pdr-name">${cpEscape(p.name)}${customBadge}</div>${p.latin?`<div class="pdr-latin">${cpEscape(p.latin)}</div>`:''}<div class="pdr-info"><strong>Concime:</strong> ${cpEscape(p.concime)}<br><strong>Frequenza:</strong> ${cpEscape(p.freq)}${note?'<br>'+cpEscape(note):''}</div>${editBtn}</div><span class="pdr-badge ${status}">${cSL({active:1,reduce:2,special:3,stop:0}[status])}</span></div>`;
+      out += `<div class="plant-detail-row ${status}"><div class="pdr-icon">${p.icon}</div><div class="pdr-content"><div class="pdr-name">${cpEscape(p.name)}${customBadge}</div>${p.latin ? `<div class="pdr-latin">${cpEscape(p.latin)}</div>` : ''}<div class="pdr-info"><strong>Concime:</strong> ${cpEscape(p.concime)}<br><strong>Frequenza:</strong> ${cpEscape(p.freq)}${note ? '<br>' + cpEscape(note) : ''}</div>${editBtn}</div><span class="pdr-badge ${status}">${cSL({ active: 1, reduce: 2, special: 3, stop: 0 }[status])}</span></div>`;
     });
     return out;
   }
-  document.getElementById('c-panel-body').innerHTML = rg(special,'special','⚠️ Attenzione speciale')+rg(active,'active','✅ Concimazione attiva')+rg(reduce,'reduce','🔽 Dose ridotta')+rg(stop,'stop','⏸ In riposo');
+  document.getElementById('c-panel-body').innerHTML = rg(special, 'special', '⚠️ Attenzione speciale') + rg(active, 'active', '✅ Concimazione attiva') + rg(reduce, 'reduce', '🔽 Dose ridotta') + rg(stop, 'stop', '⏸ In riposo');
   document.getElementById('c-overlay').classList.add('open');
-  document.body.style.overflow='hidden';
+  document.body.style.overflow = 'hidden';
 }
-function cCloseOverlay(){document.getElementById('c-overlay').classList.remove('open');document.body.style.overflow='';}
-function cCloseDetail(e){if(e.target===document.getElementById('c-overlay'))cCloseOverlay();}
+function cCloseOverlay() { document.getElementById('c-overlay').classList.remove('open'); document.body.style.overflow = ''; }
+function cCloseDetail(e) { if (e.target === document.getElementById('c-overlay')) cCloseOverlay(); }
 
 // ══════════════════════════════════════════════════════════════════════
 // ③ CALENDARIO GIORNI
@@ -438,37 +490,37 @@ const gTODAY = new Date();
 // Per ogni pianta custom viene generato un record con schedules basato sui
 // fert_months e fert_interval salvati nel database.
 let gPlants = [
-  {id:0,name:"Sanseviera",latin:"",icon:"🌿",color:"#5a7a4a",concime:"Liquido succulente, ½ dose",schedules:[{months:[4,5,6,7,8,9],interval:30}],startDate:new Date(2026,3,5)},
-  {id:1,name:"Orchidea",latin:"Phalaenopsis",icon:"🌸",color:"#c06080",concime:"Specifico orchidee, ¼ dose",schedules:[{months:[3,4,5,6,7,8,9],interval:10},{months:[1,10],interval:21,note:"Dose molto ridotta"}],startDate:new Date(2026,3,4)},
-  {id:2,name:"Ficus Benjamina",latin:"",icon:"🌳",color:"#3d6b30",concime:"Liquido azotato NPK 3-1-2",schedules:[{months:[3,4,5,6,7,8,9],interval:14}],startDate:new Date(2026,2,20)},
-  {id:3,name:"Ficus Elastica",latin:"",icon:"🌱",color:"#2e5522",concime:"Liquido azotato con quota K",schedules:[{months:[3,4,5,6,7,8,9],interval:14}],startDate:new Date(2026,2,23)},
-  {id:4,name:"Oleandro",latin:"Nerium oleander",icon:"🌺",color:"#c03050",concime:"P-K prevalente (5-10-10)",schedules:[{months:[3,4,5,6,7,8,9],interval:14}],startDate:new Date(2026,2,18)},
-  {id:5,name:"Glicine Bonsai",latin:"Wisteria",icon:"💜",color:"#7b5ea7",concime:"P-K zero azoto (3-8-8)",schedules:[{months:[4,5,6,7,8],interval:25}],startDate:new Date(2026,3,15)},
-  {id:6,name:"Limone",latin:"Citrus limon",icon:"🍋",color:"#c08a10",concime:"Granulare agrumi lento rilascio + lupini macinati",schedules:[{months:[3,6,9],interval:30,note:"Granulare agrumi a lento rilascio — distribuire sulla superficie e annaffiare"},{months:[2,11],interval:30,note:"Lupini macinati (100-150g) — interrare leggermente nel terriccio"}],startDate:new Date(2026,2,15)},
-  {id:7,name:"Moneta Cinese",latin:"Pilea peperomioides",icon:"🪙",color:"#7a9a50",concime:"Universale bilanciato, ½ dose",schedules:[{months:[4,5,6,7,8],interval:25}],startDate:new Date(2026,3,7)},
-  {id:8,name:"Vinca",latin:"Vinca minor/major",icon:"🔵",color:"#4060b0",concime:"Liquido piante da fiore, P-K",schedules:[{months:[4,5,6,7,8],interval:25}],startDate:new Date(2026,3,10)},
-  {id:9,name:"Mimosa",latin:"Acacia dealbata",icon:"🌼",color:"#c0a020",concime:"Povero N, ricco P-K; tipo azalee",schedules:[{months:[3,4,5,6,7,8,9],interval:25}],startDate:new Date(2026,2,25)},
-  {id:10,name:"Melograno",latin:"Punica granatum",icon:"🍎",color:"#b03030",concime:"Bilanciato→P-K da giugno",schedules:[{months:[3,4,5,6,7,8,9],interval:25}],startDate:new Date(2026,2,22)},
-  {id:11,name:"Stella di Natale",latin:"Euphorbia pulcherrima",icon:"🌟",color:"#c04030",concime:"Universale bilanciato",schedules:[{months:[4,5,6,7],interval:18}],startDate:new Date(2026,3,12)},
-  {id:12,name:"Aloe Vera",latin:"Aloe barbadensis",icon:"🌵",color:"#5a9060",concime:"Liquido succulente, ½ dose",schedules:[{months:[4,5,6,7,8,9],interval:30}],startDate:new Date(2026,3,10)},
-  {id:13,name:"Liquidambar",latin:"Liquidambar styraciflua",icon:"🍂",color:"#c05020",concime:"Acidofile (azalee/rododendri)",schedules:[{months:[3,4,5,6,7],interval:35}],startDate:new Date(2026,2,18)},
-  {id:14,name:"Ippocastano",latin:"Aesculus hippocastanum",icon:"🌰",color:"#8b5c2a",concime:"Granulare a lenta cessione (solo giovani)",schedules:[{months:[3,4,5,6],interval:45}],startDate:new Date(2026,2,20)},
-  {id:15,name:"Betulla",latin:"Betula pendula",icon:"🌿",color:"#7a9a70",concime:"Acidofile o universale pH basso",schedules:[{months:[3,4,5,6],interval:35}],startDate:new Date(2026,2,22)},
-  {id:16,name:"Acero Campestre",latin:"Acer campestre",icon:"🍁",color:"#c07820",concime:"Granulare universale, basso azoto",schedules:[{months:[3,4,5],interval:40}],startDate:new Date(2026,2,15)},
-  {id:17,name:"Pitosforo",latin:"Pittosporum tobira",icon:"🌿",color:"#3a6850",concime:"Universale bilanciato o sempreverdi",schedules:[{months:[3,4,5,6,7,8,9],interval:35}],startDate:new Date(2026,2,25)},
-  {id:18,name:"Spino di Giuda",latin:"Gleditsia triacanthos",icon:"🌿",color:"#6a8a50",concime:"Universale bilanciato (non fissa azoto)",schedules:[{months:[3,4,5,6,7],interval:35}],startDate:new Date(2026,2,28)},
-  {id:19,name:"Gelso Bonsai",latin:"Morus alba / Morus nigra",icon:"🍃",color:"#4a7a38",concime:"Bilanciato NPK → basso N + P-K da luglio",schedules:[{months:[4,5,6],interval:18},{months:[7,8],interval:28,note:"Basso azoto, più P-K per lignificazione"}],startDate:new Date(2026,3,5)},
-  {id:20,name:"Tradescantia",latin:"Tradescantia zebrina",icon:"💜",color:"#9060a0",concime:"Universale bilanciato, ½ dose",schedules:[{months:[4,5,6,7,8,9],interval:25}],startDate:new Date(2026,3,8)},
-  {id:21,name:"Rosmarino",latin:"Salvia rosmarinus",icon:"🌿",color:"#4a7060",concime:"Leggero P-K, tipo piante fiorite",schedules:[{months:[3,4,5,6,7],interval:45}],startDate:new Date(2026,2,18)},
-  {id:22,name:"Salvia",latin:"Salvia officinalis",icon:"🍃",color:"#6a8050",concime:"Leggero P-K, tipo piante mediterranee",schedules:[{months:[3,4,5,6,7],interval:45}],startDate:new Date(2026,2,20)},
-  {id:23,name:"Paulownia",latin:"Paulownia tomentosa",icon:"🌸",color:"#8060b0",concime:"Bilanciato NPK dose piena (solo giovani)",schedules:[{months:[3,4,5,6,7],interval:25}],startDate:new Date(2026,2,15)},
-  {id:24,name:"Crassula Ovata",latin:"Crassula ovata",icon:"🪴",color:"#5a8a50",concime:"Liquido succulente, ½ dose",schedules:[{months:[4,5,6,7,8,9],interval:30}],startDate:new Date(2026,3,12)},
-  {id:25,name:"Carmona Bonsai",latin:"Carmona microphylla",icon:"🌳",color:"#4a6a3a",concime:"Liquido bilanciato bonsai, ½ dose",schedules:[{months:[4,5,6,7,8,9],interval:18},{months:[1,2,3,10,11,12],interval:30,note:"Dose ridotta — solo se temp >18°C"}],startDate:new Date(2026,3,8)}
+  { id: 0, name: "Sanseviera", latin: "", icon: "🌿", color: "#5a7a4a", concime: "Liquido succulente, ½ dose", schedules: [{ months: [4, 5, 6, 7, 8, 9], interval: 30 }], startDate: new Date(2026, 3, 5) },
+  { id: 1, name: "Orchidea", latin: "Phalaenopsis", icon: "🌸", color: "#c06080", concime: "Specifico orchidee, ¼ dose", schedules: [{ months: [3, 4, 5, 6, 7, 8, 9], interval: 10 }, { months: [1, 10], interval: 21, note: "Dose molto ridotta" }], startDate: new Date(2026, 3, 4) },
+  { id: 2, name: "Ficus Benjamina", latin: "", icon: "🌳", color: "#3d6b30", concime: "Liquido azotato NPK 3-1-2", schedules: [{ months: [3, 4, 5, 6, 7, 8, 9], interval: 14 }], startDate: new Date(2026, 2, 20) },
+  { id: 3, name: "Ficus Elastica", latin: "", icon: "🌱", color: "#2e5522", concime: "Liquido azotato con quota K", schedules: [{ months: [3, 4, 5, 6, 7, 8, 9], interval: 14 }], startDate: new Date(2026, 2, 23) },
+  { id: 4, name: "Oleandro", latin: "Nerium oleander", icon: "🌺", color: "#c03050", concime: "P-K prevalente (5-10-10)", schedules: [{ months: [3, 4, 5, 6, 7, 8, 9], interval: 14 }], startDate: new Date(2026, 2, 18) },
+  { id: 5, name: "Glicine Bonsai", latin: "Wisteria", icon: "💜", color: "#7b5ea7", concime: "P-K zero azoto (3-8-8)", schedules: [{ months: [4, 5, 6, 7, 8], interval: 25 }], startDate: new Date(2026, 3, 15) },
+  { id: 6, name: "Limone", latin: "Citrus limon", icon: "🍋", color: "#c08a10", concime: "Granulare agrumi lento rilascio + lupini macinati", schedules: [{ months: [3, 6, 9], interval: 30, note: "Granulare agrumi a lento rilascio — distribuire sulla superficie e annaffiare" }, { months: [2, 11], interval: 30, note: "Lupini macinati (100-150g) — interrare leggermente nel terriccio" }], startDate: new Date(2026, 2, 15) },
+  { id: 7, name: "Moneta Cinese", latin: "Pilea peperomioides", icon: "🪙", color: "#7a9a50", concime: "Universale bilanciato, ½ dose", schedules: [{ months: [4, 5, 6, 7, 8], interval: 25 }], startDate: new Date(2026, 3, 7) },
+  { id: 8, name: "Vinca", latin: "Vinca minor/major", icon: "🔵", color: "#4060b0", concime: "Liquido piante da fiore, P-K", schedules: [{ months: [4, 5, 6, 7, 8], interval: 25 }], startDate: new Date(2026, 3, 10) },
+  { id: 9, name: "Mimosa", latin: "Acacia dealbata", icon: "🌼", color: "#c0a020", concime: "Povero N, ricco P-K; tipo azalee", schedules: [{ months: [3, 4, 5, 6, 7, 8, 9], interval: 25 }], startDate: new Date(2026, 2, 25) },
+  { id: 10, name: "Melograno", latin: "Punica granatum", icon: "🍎", color: "#b03030", concime: "Bilanciato→P-K da giugno", schedules: [{ months: [3, 4, 5, 6, 7, 8, 9], interval: 25 }], startDate: new Date(2026, 2, 22) },
+  { id: 11, name: "Stella di Natale", latin: "Euphorbia pulcherrima", icon: "🌟", color: "#c04030", concime: "Universale bilanciato", schedules: [{ months: [4, 5, 6, 7], interval: 18 }], startDate: new Date(2026, 3, 12) },
+  { id: 12, name: "Aloe Vera", latin: "Aloe barbadensis", icon: "🌵", color: "#5a9060", concime: "Liquido succulente, ½ dose", schedules: [{ months: [4, 5, 6, 7, 8, 9], interval: 30 }], startDate: new Date(2026, 3, 10) },
+  { id: 13, name: "Liquidambar", latin: "Liquidambar styraciflua", icon: "🍂", color: "#c05020", concime: "Acidofile (azalee/rododendri)", schedules: [{ months: [3, 4, 5, 6, 7], interval: 35 }], startDate: new Date(2026, 2, 18) },
+  { id: 14, name: "Ippocastano", latin: "Aesculus hippocastanum", icon: "🌰", color: "#8b5c2a", concime: "Granulare a lenta cessione (solo giovani)", schedules: [{ months: [3, 4, 5, 6], interval: 45 }], startDate: new Date(2026, 2, 20) },
+  { id: 15, name: "Betulla", latin: "Betula pendula", icon: "🌿", color: "#7a9a70", concime: "Acidofile o universale pH basso", schedules: [{ months: [3, 4, 5, 6], interval: 35 }], startDate: new Date(2026, 2, 22) },
+  { id: 16, name: "Acero Campestre", latin: "Acer campestre", icon: "🍁", color: "#c07820", concime: "Granulare universale, basso azoto", schedules: [{ months: [3, 4, 5], interval: 40 }], startDate: new Date(2026, 2, 15) },
+  { id: 17, name: "Pitosforo", latin: "Pittosporum tobira", icon: "🌿", color: "#3a6850", concime: "Universale bilanciato o sempreverdi", schedules: [{ months: [3, 4, 5, 6, 7, 8, 9], interval: 35 }], startDate: new Date(2026, 2, 25) },
+  { id: 18, name: "Spino di Giuda", latin: "Gleditsia triacanthos", icon: "🌿", color: "#6a8a50", concime: "Universale bilanciato (non fissa azoto)", schedules: [{ months: [3, 4, 5, 6, 7], interval: 35 }], startDate: new Date(2026, 2, 28) },
+  { id: 19, name: "Gelso Bonsai", latin: "Morus alba / Morus nigra", icon: "🍃", color: "#4a7a38", concime: "Bilanciato NPK → basso N + P-K da luglio", schedules: [{ months: [4, 5, 6], interval: 18 }, { months: [7, 8], interval: 28, note: "Basso azoto, più P-K per lignificazione" }], startDate: new Date(2026, 3, 5) },
+  { id: 20, name: "Tradescantia", latin: "Tradescantia zebrina", icon: "💜", color: "#9060a0", concime: "Universale bilanciato, ½ dose", schedules: [{ months: [4, 5, 6, 7, 8, 9], interval: 25 }], startDate: new Date(2026, 3, 8) },
+  { id: 21, name: "Rosmarino", latin: "Salvia rosmarinus", icon: "🌿", color: "#4a7060", concime: "Leggero P-K, tipo piante fiorite", schedules: [{ months: [3, 4, 5, 6, 7], interval: 45 }], startDate: new Date(2026, 2, 18) },
+  { id: 22, name: "Salvia", latin: "Salvia officinalis", icon: "🍃", color: "#6a8050", concime: "Leggero P-K, tipo piante mediterranee", schedules: [{ months: [3, 4, 5, 6, 7], interval: 45 }], startDate: new Date(2026, 2, 20) },
+  { id: 23, name: "Paulownia", latin: "Paulownia tomentosa", icon: "🌸", color: "#8060b0", concime: "Bilanciato NPK dose piena (solo giovani)", schedules: [{ months: [3, 4, 5, 6, 7], interval: 25 }], startDate: new Date(2026, 2, 15) },
+  { id: 24, name: "Crassula Ovata", latin: "Crassula ovata", icon: "🪴", color: "#5a8a50", concime: "Liquido succulente, ½ dose", schedules: [{ months: [4, 5, 6, 7, 8, 9], interval: 30 }], startDate: new Date(2026, 3, 12) },
+  { id: 25, name: "Carmona Bonsai", latin: "Carmona microphylla", icon: "🌳", color: "#4a6a3a", concime: "Liquido bilanciato bonsai, ½ dose", schedules: [{ months: [4, 5, 6, 7, 8, 9], interval: 18 }, { months: [1, 2, 3, 10, 11, 12], interval: 30, note: "Dose ridotta — solo se temp >18°C" }], startDate: new Date(2026, 3, 8) }
 
 ];
 
 let gCurrentMonth = gTODAY.getMonth();
-let gCurrentYear  = gTODAY.getFullYear();
+let gCurrentYear = gTODAY.getFullYear();
 let gHiddenPlants = new Set();
 
 // Helper: ritorna true se l'evento appartiene a una pianta nascosta nella legenda.
@@ -480,68 +532,68 @@ function gIsHiddenEvent(ev) {
   return gHiddenPlants.has(ev.plant.id);
 }
 const gDateMap = {};
-const gMonthNames = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
-const gWeekdays = ["Domenica","Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato"];
+const gMonthNames = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+const gWeekdays = ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"];
 
-function gDateKey(d){return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
-function gCompKey(d,id){return'fert_'+gDateKey(d)+'_'+id;}
-function gIsDone(d,id){try{return localStorage.getItem(gCompKey(d,id))==='1';}catch(e){return false;}}
-function gSetDone(d,id,v){try{if(v)localStorage.setItem(gCompKey(d,id),'1');else localStorage.removeItem(gCompKey(d,id));}catch(e){}}
+function gDateKey(d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+function gCompKey(d, id) { return 'fert_' + gDateKey(d) + '_' + id; }
+function gIsDone(d, id) { try { return localStorage.getItem(gCompKey(d, id)) === '1'; } catch (e) { return false; } }
+function gSetDone(d, id, v) { try { if (v) localStorage.setItem(gCompKey(d, id), '1'); else localStorage.removeItem(gCompKey(d, id)); } catch (e) { } }
 // ── Auto-diary helper ──────────────────────────────────────────────
 function _autoDiary(date, plantName, op, noteText) {
-  const yyyy=date.getFullYear(), mm=String(date.getMonth()+1).padStart(2,'0'), dd=String(date.getDate()).padStart(2,'0');
-  dAddEntry({date:`${yyyy}-${mm}-${dd}`, plant:plantName, op:op, note:noteText, auto:true});
+  const yyyy = date.getFullYear(), mm = String(date.getMonth() + 1).padStart(2, '0'), dd = String(date.getDate()).padStart(2, '0');
+  dAddEntry({ date: `${yyyy}-${mm}-${dd}`, plant: plantName, op: op, note: noteText, auto: true });
 }
 
-function gToggleDone(dy,dm,dd,pid){
-  const date=new Date(dy,dm,dd);
-  const wasDone=gIsDone(date,pid);
-  gSetDone(date,pid,!wasDone);
-  if(!wasDone){
-    const ev=(gDateMap[gDateKey(date)]||[]).find(e=>e.plant.id===pid);
-    if(ev) _autoDiary(date, ev.plant.name, 'concimazione', '📆 '+ev.plant.concime+(ev.note?' — '+ev.note:''));
+function gToggleDone(dy, dm, dd, pid) {
+  const date = new Date(dy, dm, dd);
+  const wasDone = gIsDone(date, pid);
+  gSetDone(date, pid, !wasDone);
+  if (!wasDone) {
+    const ev = (gDateMap[gDateKey(date)] || []).find(e => e.plant.id === pid);
+    if (ev) _autoDiary(date, ev.plant.name, 'concimazione', '📆 ' + ev.plant.concime + (ev.note ? ' — ' + ev.note : ''));
   }
   gRenderCalendar();
-  if(document.getElementById('g-overlay').classList.contains('open')){
-    const k=gDateKey(date);
-    const fe=(gFilter==='all'||gFilter==='fert')?(gDateMap[k]||[]).filter(e=>!gIsHiddenEvent(e)):[];
-    const be=(gFilter==='all'||gFilter==='biobizz')?(bbDateMap[k]||[]).filter(e=>!bbHiddenProds.has(e.prod)):[];
-    const te=(gFilter==='all'||gFilter==='tratt')?(trDateMap[k]||[]).filter(e=>!trHiddenProds.has(e.prod)):[];
-    gOpenDay(date,fe,be,te);
+  if (document.getElementById('g-overlay').classList.contains('open')) {
+    const k = gDateKey(date);
+    const fe = (gFilter === 'all' || gFilter === 'fert') ? (gDateMap[k] || []).filter(e => !gIsHiddenEvent(e)) : [];
+    const be = (gFilter === 'all' || gFilter === 'biobizz') ? (bbDateMap[k] || []).filter(e => !bbHiddenProds.has(e.prod)) : [];
+    const te = (gFilter === 'all' || gFilter === 'tratt') ? (trDateMap[k] || []).filter(e => !trHiddenProds.has(e.prod)) : [];
+    gOpenDay(date, fe, be, te);
   }
 }
 
 function gGenerateDates(plant) {
-  const dates=[];const yearStart=new Date(2026,0,1);const yearEnd=new Date(2026,11,31);
-  plant.schedules.forEach(sched=>{
-    let cursor=new Date(plant.startDate);
-    while(cursor>yearStart)cursor=new Date(cursor-sched.interval*86400000);
-    while(cursor<=yearEnd){
-      const m=cursor.getMonth()+1;
-      if(sched.months.includes(m)&&cursor>=yearStart)dates.push({date:new Date(cursor),note:sched.note||null});
-      cursor=new Date(cursor.getTime()+sched.interval*86400000);
+  const dates = []; const yearStart = new Date(2026, 0, 1); const yearEnd = new Date(2026, 11, 31);
+  plant.schedules.forEach(sched => {
+    let cursor = new Date(plant.startDate);
+    while (cursor > yearStart) cursor = new Date(cursor - sched.interval * 86400000);
+    while (cursor <= yearEnd) {
+      const m = cursor.getMonth() + 1;
+      if (sched.months.includes(m) && cursor >= yearStart) dates.push({ date: new Date(cursor), note: sched.note || null });
+      cursor = new Date(cursor.getTime() + sched.interval * 86400000);
     }
   });
-  const seen=new Set();
-  return dates.filter(d=>{const k=d.date.toDateString();if(seen.has(k))return false;seen.add(k);return true;}).sort((a,b)=>a.date-b.date);
+  const seen = new Set();
+  return dates.filter(d => { const k = d.date.toDateString(); if (seen.has(k)) return false; seen.add(k); return true; }).sort((a, b) => a.date - b.date);
 }
 
 // Filter state: 'all' | 'fert' | 'biobizz'
 let gFilter = 'all';
 
-function gSetFilter(f){
+function gSetFilter(f) {
   gFilter = f;
-  ['all','fert','biobizz','tratt','acqua'].forEach(k=>{
-    const btn=document.getElementById('gf-'+k);
-    if(btn) btn.style.background = k===f ? 'var(--text)' : '';
-    if(btn) btn.style.color = k===f ? '#fff' : '';
-    if(btn) btn.style.borderColor = k===f ? 'var(--text)' : '';
+  ['all', 'fert', 'biobizz', 'tratt', 'acqua'].forEach(k => {
+    const btn = document.getElementById('gf-' + k);
+    if (btn) btn.style.background = k === f ? 'var(--text)' : '';
+    if (btn) btn.style.color = k === f ? '#fff' : '';
+    if (btn) btn.style.borderColor = k === f ? 'var(--text)' : '';
   });
-  const show=(id,vis)=>{const el=document.getElementById(id);if(el)el.style.display=vis?'block':'none';};
-  show('g-legend-wrap',  f==='all'||f==='fert');
-  show('bb-legend-wrap', f==='all'||f==='biobizz');
-  show('tr-legend-wrap', f==='all'||f==='tratt');
-  show('wa-legend-wrap', f==='all'||f==='acqua');
+  const show = (id, vis) => { const el = document.getElementById(id); if (el) el.style.display = vis ? 'block' : 'none'; };
+  show('g-legend-wrap', f === 'all' || f === 'fert');
+  show('bb-legend-wrap', f === 'all' || f === 'biobizz');
+  show('tr-legend-wrap', f === 'all' || f === 'tratt');
+  show('wa-legend-wrap', f === 'all' || f === 'acqua');
   gRenderCalendar();
 }
 
@@ -591,104 +643,104 @@ function gInitGiorni() {
   const _inv = (typeof invLoad === 'function') ? invLoad() : [];
 
   // Build fert date map
-  gPlants.forEach(p=>{
-    p._dates=gGenerateDates(p);
-    p._dates.forEach(d=>{
-      const key=gDateKey(d.date);
-      if(!gDateMap[key])gDateMap[key]=[];
-      const baseEv = {plant:p,note:d.note};
+  gPlants.forEach(p => {
+    p._dates = gGenerateDates(p);
+    p._dates.forEach(d => {
+      const key = gDateKey(d.date);
+      if (!gDateMap[key]) gDateMap[key] = [];
+      const baseEv = { plant: p, note: d.note };
       expandEventByPots(p, baseEv, _inv).forEach(ev => gDateMap[key].push(ev));
     });
   });
   // Build BioBizz date map
-  bbPlants.forEach(p=>{
-    p.schedules.forEach(sched=>{
-      const yearStart=new Date(2026,0,1),yearEnd=new Date(2026,11,31);
-      let cursor=new Date(sched.start);
-      while(cursor>yearStart)cursor=new Date(cursor-sched.interval*86400000);
-      while(cursor<=yearEnd){
-        const m=cursor.getMonth()+1;
-        if(sched.months.includes(m)&&cursor>=yearStart){
-          const k=gDateKey(cursor);
-          if(!bbDateMap[k])bbDateMap[k]=[];
-          const baseEv = {plant:p,sched,prod:sched.prod};
+  bbPlants.forEach(p => {
+    p.schedules.forEach(sched => {
+      const yearStart = new Date(2026, 0, 1), yearEnd = new Date(2026, 11, 31);
+      let cursor = new Date(sched.start);
+      while (cursor > yearStart) cursor = new Date(cursor - sched.interval * 86400000);
+      while (cursor <= yearEnd) {
+        const m = cursor.getMonth() + 1;
+        if (sched.months.includes(m) && cursor >= yearStart) {
+          const k = gDateKey(cursor);
+          if (!bbDateMap[k]) bbDateMap[k] = [];
+          const baseEv = { plant: p, sched, prod: sched.prod };
           expandEventByPots(p, baseEv, _inv).forEach(ev => bbDateMap[k].push(ev));
         }
-        cursor=new Date(cursor.getTime()+sched.interval*86400000);
+        cursor = new Date(cursor.getTime() + sched.interval * 86400000);
       }
     });
-    p._bbDates=Object.entries(bbDateMap)
-      .filter(([,evs])=>evs.some(e=>e.plant._origPlantId===p.id || e.plant.id===p.id))
-      .map(([k])=>{const[y,m,d]=k.split('-');return new Date(+y,+m-1,+d);})
-      .sort((a,b)=>a-b);
+    p._bbDates = Object.entries(bbDateMap)
+      .filter(([, evs]) => evs.some(e => e.plant._origPlantId === p.id || e.plant.id === p.id))
+      .map(([k]) => { const [y, m, d] = k.split('-'); return new Date(+y, +m - 1, +d); })
+      .sort((a, b) => a - b);
   });
   // Plant legend
-  const legend=document.getElementById('g-legend');
-  gPlants.forEach(p=>{
-    const item=document.createElement('div');item.className='g-legend-item';item.id='gl-'+p.id;
-    item.innerHTML=`<div class="g-legend-dot" style="background:${p.color}"></div>${p.icon} ${p.name}`;
-    item.onclick=()=>gTogglePlant(p.id);legend.appendChild(item);
+  const legend = document.getElementById('g-legend');
+  gPlants.forEach(p => {
+    const item = document.createElement('div'); item.className = 'g-legend-item'; item.id = 'gl-' + p.id;
+    item.innerHTML = `<div class="g-legend-dot" style="background:${p.color}"></div>${p.icon} ${p.name}`;
+    item.onclick = () => gTogglePlant(p.id); legend.appendChild(item);
   });
   // BioBizz product legend
-  const pl=document.getElementById('bb-prod-legend');
-  Object.entries(BB_PRODUCTS).forEach(([k,p])=>{
-    const c=document.createElement('div');c.className='bb-prod-chip';c.id='bpc-'+k;
-    c.style.background=p.color;c.textContent=p.label;
-    c.onclick=()=>{if(bbHiddenProds.has(k))bbHiddenProds.delete(k);else bbHiddenProds.add(k);c.classList.toggle('hidden');gRenderCalendar();};
+  const pl = document.getElementById('bb-prod-legend');
+  Object.entries(BB_PRODUCTS).forEach(([k, p]) => {
+    const c = document.createElement('div'); c.className = 'bb-prod-chip'; c.id = 'bpc-' + k;
+    c.style.background = p.color; c.textContent = p.label;
+    c.onclick = () => { if (bbHiddenProds.has(k)) bbHiddenProds.delete(k); else bbHiddenProds.add(k); c.classList.toggle('hidden'); gRenderCalendar(); };
     pl.appendChild(c);
   });
   // Build Treatment date map
-  trPlants.forEach(p=>{
-    p.schedules.forEach(sched=>{
-      const yearStart=new Date(2026,0,1),yearEnd=new Date(2026,11,31);
-      let cursor=new Date(sched.start);
-      while(cursor>yearStart)cursor=new Date(cursor-sched.interval*86400000);
-      while(cursor<=yearEnd){
-        const m=cursor.getMonth()+1;
-        if(sched.months.includes(m)&&cursor>=yearStart){
-          const k=gDateKey(cursor);
-          if(!trDateMap[k])trDateMap[k]=[];
-          const baseEv = {plant:p,sched,prod:sched.prod};
+  trPlants.forEach(p => {
+    p.schedules.forEach(sched => {
+      const yearStart = new Date(2026, 0, 1), yearEnd = new Date(2026, 11, 31);
+      let cursor = new Date(sched.start);
+      while (cursor > yearStart) cursor = new Date(cursor - sched.interval * 86400000);
+      while (cursor <= yearEnd) {
+        const m = cursor.getMonth() + 1;
+        if (sched.months.includes(m) && cursor >= yearStart) {
+          const k = gDateKey(cursor);
+          if (!trDateMap[k]) trDateMap[k] = [];
+          const baseEv = { plant: p, sched, prod: sched.prod };
           expandEventByPots(p, baseEv, _inv).forEach(ev => trDateMap[k].push(ev));
         }
-        cursor=new Date(cursor.getTime()+sched.interval*86400000);
+        cursor = new Date(cursor.getTime() + sched.interval * 86400000);
       }
     });
-    p._trDates=Object.entries(trDateMap)
-      .filter(([,evs])=>evs.some(e=>e.plant._origPlantId===p.id || e.plant.id===p.id))
-      .map(([k])=>{const[y,m,d]=k.split('-');return new Date(+y,+m-1,+d);})
-      .sort((a,b)=>a-b);
+    p._trDates = Object.entries(trDateMap)
+      .filter(([, evs]) => evs.some(e => e.plant._origPlantId === p.id || e.plant.id === p.id))
+      .map(([k]) => { const [y, m, d] = k.split('-'); return new Date(+y, +m - 1, +d); })
+      .sort((a, b) => a - b);
   });
   // Treatment product legend
-  const tl=document.getElementById('tr-prod-legend');
-  Object.entries(TR_PRODUCTS).forEach(([k,p])=>{
-    const c=document.createElement('div');c.className='tr-prod-chip';c.id='tpc-'+k;
-    c.style.background=p.color;c.innerHTML='<div class="tr-diamond"></div>'+p.label;
-    c.onclick=()=>{if(trHiddenProds.has(k))trHiddenProds.delete(k);else trHiddenProds.add(k);c.classList.toggle('hidden');gRenderCalendar();};
+  const tl = document.getElementById('tr-prod-legend');
+  Object.entries(TR_PRODUCTS).forEach(([k, p]) => {
+    const c = document.createElement('div'); c.className = 'tr-prod-chip'; c.id = 'tpc-' + k;
+    c.style.background = p.color; c.innerHTML = '<div class="tr-diamond"></div>' + p.label;
+    c.onclick = () => { if (trHiddenProds.has(k)) trHiddenProds.delete(k); else trHiddenProds.add(k); c.classList.toggle('hidden'); gRenderCalendar(); };
     tl.appendChild(c);
   });
   // Build Watering date map
-  waPlants.forEach(p=>{
-    p.schedules.forEach(sched=>{
-      const yearStart=new Date(2026,0,1),yearEnd=new Date(2026,11,31);
-      const startDate=new Date(2026,sched.months[0]-1,2);
-      let cursor=new Date(startDate);
-      while(cursor>yearStart)cursor=new Date(cursor-sched.interval*86400000);
-      while(cursor<=yearEnd){
-        const m=cursor.getMonth()+1;
-        if(sched.months.includes(m)&&cursor>=yearStart){
-          const k=gDateKey(cursor);
-          if(!waDateMap[k])waDateMap[k]=[];
-          if(!waDateMap[k].some(e=>e.plant.id===p.id))
-            waDateMap[k].push({plant:p,note:sched.note});
+  waPlants.forEach(p => {
+    p.schedules.forEach(sched => {
+      const yearStart = new Date(2026, 0, 1), yearEnd = new Date(2026, 11, 31);
+      const startDate = new Date(2026, sched.months[0] - 1, 2);
+      let cursor = new Date(startDate);
+      while (cursor > yearStart) cursor = new Date(cursor - sched.interval * 86400000);
+      while (cursor <= yearEnd) {
+        const m = cursor.getMonth() + 1;
+        if (sched.months.includes(m) && cursor >= yearStart) {
+          const k = gDateKey(cursor);
+          if (!waDateMap[k]) waDateMap[k] = [];
+          if (!waDateMap[k].some(e => e.plant.id === p.id))
+            waDateMap[k].push({ plant: p, note: sched.note });
         }
-        cursor=new Date(cursor.getTime()+sched.interval*86400000);
+        cursor = new Date(cursor.getTime() + sched.interval * 86400000);
       }
     });
-    p._waDates=Object.entries(waDateMap)
-      .filter(([,evs])=>evs.some(e=>e.plant.id===p.id))
-      .map(([k])=>{const[y,m,d]=k.split('-');return new Date(+y,+m-1,+d);})
-      .sort((a,b)=>a-b);
+    p._waDates = Object.entries(waDateMap)
+      .filter(([, evs]) => evs.some(e => e.plant.id === p.id))
+      .map(([k]) => { const [y, m, d] = k.split('-'); return new Date(+y, +m - 1, +d); })
+      .sort((a, b) => a - b);
   });
 
   // ── Annaffiature predittive da simulazione (per vasi nell'inventario) ──
@@ -696,14 +748,14 @@ function gInitGiorni() {
     buildSimWateringSchedule();
   }
   // Watering plant legend
-  const wl=document.getElementById('wa-legend');
-  waPlants.forEach(p=>{
-    const item=document.createElement('div');item.className='wa-legend-item';item.id='wl-'+p.id;
+  const wl = document.getElementById('wa-legend');
+  waPlants.forEach(p => {
+    const item = document.createElement('div'); item.className = 'wa-legend-item'; item.id = 'wl-' + p.id;
     // Stesso pattern visuale della sezione Mensile: piccolo pallino dorato
     // accanto al nome per le piante custom. Discrete ma riconoscibile.
     const customBadge = p.isCustom ? ' <span style="font-size:0.7em;color:#9a8a30;font-weight:600">●</span>' : '';
-    item.innerHTML='<div class="wa-legend-dot"></div>'+p.icon+' '+p.name+customBadge;
-    item.onclick=()=>{if(waHiddenPlants.has(p.id))waHiddenPlants.delete(p.id);else waHiddenPlants.add(p.id);item.classList.toggle('hidden-plant');gRenderCalendar();};
+    item.innerHTML = '<div class="wa-legend-dot"></div>' + p.icon + ' ' + p.name + customBadge;
+    item.onclick = () => { if (waHiddenPlants.has(p.id)) waHiddenPlants.delete(p.id); else waHiddenPlants.add(p.id); item.classList.toggle('hidden-plant'); gRenderCalendar(); };
     wl.appendChild(item);
   });
   // Build curative events from inventory diseases
@@ -712,237 +764,237 @@ function gInitGiorni() {
   gSetFilter('all');
 }
 
-function gTogglePlant(id){
-  if(gHiddenPlants.has(id))gHiddenPlants.delete(id);else gHiddenPlants.add(id);
-  document.getElementById('gl-'+id).classList.toggle('hidden-plant');
+function gTogglePlant(id) {
+  if (gHiddenPlants.has(id)) gHiddenPlants.delete(id); else gHiddenPlants.add(id);
+  document.getElementById('gl-' + id).classList.toggle('hidden-plant');
   gRenderCalendar();
 }
 
-function gRenderStats(){
-  const daysInMonth=new Date(gCurrentYear,gCurrentMonth+1,0).getDate();
-  let eDays=0,fertTotal=0,bbTotal=0,trTotal=0;
-  for(let d=1;d<=daysInMonth;d++){
-    const date=new Date(gCurrentYear,gCurrentMonth,d);
-    const fe=(gDateMap[gDateKey(date)]||[]).filter(e=>!gIsHiddenEvent(e));
-    const be=(bbDateMap[gDateKey(date)]||[]).filter(e=>!bbHiddenProds.has(e.prod));
-    const te=(trDateMap[gDateKey(date)]||[]).filter(e=>!trHiddenProds.has(e.prod));
-    const showF=gFilter==='all'||gFilter==='fert';
-    const showB=gFilter==='all'||gFilter==='biobizz';
-    const showT=gFilter==='all'||gFilter==='tratt';
-    const hasAny=(showF&&fe.length)||(showB&&be.length)||(showT&&te.length);
-    if(hasAny)eDays++;
-    fertTotal+=fe.length;bbTotal+=be.length;trTotal+=te.length;
+function gRenderStats() {
+  const daysInMonth = new Date(gCurrentYear, gCurrentMonth + 1, 0).getDate();
+  let eDays = 0, fertTotal = 0, bbTotal = 0, trTotal = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(gCurrentYear, gCurrentMonth, d);
+    const fe = (gDateMap[gDateKey(date)] || []).filter(e => !gIsHiddenEvent(e));
+    const be = (bbDateMap[gDateKey(date)] || []).filter(e => !bbHiddenProds.has(e.prod));
+    const te = (trDateMap[gDateKey(date)] || []).filter(e => !trHiddenProds.has(e.prod));
+    const showF = gFilter === 'all' || gFilter === 'fert';
+    const showB = gFilter === 'all' || gFilter === 'biobizz';
+    const showT = gFilter === 'all' || gFilter === 'tratt';
+    const hasAny = (showF && fe.length) || (showB && be.length) || (showT && te.length);
+    if (hasAny) eDays++;
+    fertTotal += fe.length; bbTotal += be.length; trTotal += te.length;
   }
-  let pills=`<div class="stat-pill">Giorni attivi: <strong>${eDays}</strong></div>`;
-  if(gFilter==='all'||gFilter==='fert')pills+=`<div class="stat-pill">Fertilizzazioni: <strong>${fertTotal}</strong></div>`;
-  if(gFilter==='all'||gFilter==='biobizz')pills+=`<div class="stat-pill">BioBizz: <strong>${bbTotal}</strong></div>`;
-  if(gFilter==='all'||gFilter==='tratt')pills+=`<div class="stat-pill">Trattamenti: <strong>${trTotal}</strong></div>`;
-  document.getElementById('g-stats').innerHTML=pills;
+  let pills = `<div class="stat-pill">Giorni attivi: <strong>${eDays}</strong></div>`;
+  if (gFilter === 'all' || gFilter === 'fert') pills += `<div class="stat-pill">Fertilizzazioni: <strong>${fertTotal}</strong></div>`;
+  if (gFilter === 'all' || gFilter === 'biobizz') pills += `<div class="stat-pill">BioBizz: <strong>${bbTotal}</strong></div>`;
+  if (gFilter === 'all' || gFilter === 'tratt') pills += `<div class="stat-pill">Trattamenti: <strong>${trTotal}</strong></div>`;
+  document.getElementById('g-stats').innerHTML = pills;
 }
 
-function gRenderCalendar(){
-  document.getElementById('g-nav-title').textContent=gMonthNames[gCurrentMonth]+' '+gCurrentYear;
+function gRenderCalendar() {
+  document.getElementById('g-nav-title').textContent = gMonthNames[gCurrentMonth] + ' ' + gCurrentYear;
   gRenderStats();
-  const grid=document.getElementById('g-days-grid');grid.innerHTML='';
-  const firstDay=new Date(gCurrentYear,gCurrentMonth,1).getDay();
-  const daysInMonth=new Date(gCurrentYear,gCurrentMonth+1,0).getDate();
-  const prevDays=new Date(gCurrentYear,gCurrentMonth,0).getDate();
-  for(let i=firstDay-1;i>=0;i--){const c=document.createElement('div');c.className='day-cell other-month';c.innerHTML=`<div class="day-num" style="opacity:.3">${prevDays-i}</div>`;grid.appendChild(c);}
-  for(let d=1;d<=daysInMonth;d++){
-    const date=new Date(gCurrentYear,gCurrentMonth,d);
-    const key=gDateKey(date);
-    const fertEvs=(gFilter==='all'||gFilter==='fert')?(gDateMap[key]||[]).filter(e=>!gIsHiddenEvent(e)):[];
-    const bbEvs=(gFilter==='all'||gFilter==='biobizz')?(bbDateMap[key]||[]).filter(e=>!bbHiddenProds.has(e.prod)):[];
-    const trEvs=(gFilter==='all'||gFilter==='tratt')?(trDateMap[key]||[]).filter(e=>!trHiddenProds.has(e.prod)):[];
-    const cureEvs=(gFilter==='all'||gFilter==='tratt')?(cureDateMap[key]||[]):[];
-    const waEvs=(gFilter==='all'||gFilter==='acqua')?(waDateMap[key]||[]).filter(e=>!waHiddenPlants.has(e.plant.id)):[];
-    const hasAny=fertEvs.length||bbEvs.length||trEvs.length||cureEvs.length||waEvs.length;
-    const isToday=date.toDateString()===gTODAY.toDateString();
-    const cell=document.createElement('div');
-    cell.className='day-cell'+(isToday?' today':'')+(hasAny?' has-events':'')+(date.getDay()===0?' sunday':'');
-    const num=document.createElement('div');num.className='day-num';num.textContent=d;cell.appendChild(num);
-    if(hasAny){
-      const fertDone=fertEvs.every(e=>gIsDone(date,e.plant.id));
-      const bbDone=bbEvs.every(e=>bbIsDone(date,e.plant.id,e.prod));
-      const trDone=trEvs.every(e=>trIsDone(date,e.plant.id,e.prod));
-      const cureDone=cureEvs.every(e=>cureIsDone(date,e.invId,e.disease.type));
-      const waDone=waEvs.every(e=>waIsDone(date,e.plant.id));
-      if((!fertEvs.length||fertDone)&&(!bbEvs.length||bbDone)&&(!trEvs.length||trDone)&&(!cureEvs.length||cureDone)&&(!waEvs.length||waDone))cell.classList.add('all-done');
-      const dots=document.createElement('div');dots.className='dots-container';
+  const grid = document.getElementById('g-days-grid'); grid.innerHTML = '';
+  const firstDay = new Date(gCurrentYear, gCurrentMonth, 1).getDay();
+  const daysInMonth = new Date(gCurrentYear, gCurrentMonth + 1, 0).getDate();
+  const prevDays = new Date(gCurrentYear, gCurrentMonth, 0).getDate();
+  for (let i = firstDay - 1; i >= 0; i--) { const c = document.createElement('div'); c.className = 'day-cell other-month'; c.innerHTML = `<div class="day-num" style="opacity:.3">${prevDays - i}</div>`; grid.appendChild(c); }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(gCurrentYear, gCurrentMonth, d);
+    const key = gDateKey(date);
+    const fertEvs = (gFilter === 'all' || gFilter === 'fert') ? (gDateMap[key] || []).filter(e => !gIsHiddenEvent(e)) : [];
+    const bbEvs = (gFilter === 'all' || gFilter === 'biobizz') ? (bbDateMap[key] || []).filter(e => !bbHiddenProds.has(e.prod)) : [];
+    const trEvs = (gFilter === 'all' || gFilter === 'tratt') ? (trDateMap[key] || []).filter(e => !trHiddenProds.has(e.prod)) : [];
+    const cureEvs = (gFilter === 'all' || gFilter === 'tratt') ? (cureDateMap[key] || []) : [];
+    const waEvs = (gFilter === 'all' || gFilter === 'acqua') ? (waDateMap[key] || []).filter(e => !waHiddenPlants.has(e.plant.id)) : [];
+    const hasAny = fertEvs.length || bbEvs.length || trEvs.length || cureEvs.length || waEvs.length;
+    const isToday = date.toDateString() === gTODAY.toDateString();
+    const cell = document.createElement('div');
+    cell.className = 'day-cell' + (isToday ? ' today' : '') + (hasAny ? ' has-events' : '') + (date.getDay() === 0 ? ' sunday' : '');
+    const num = document.createElement('div'); num.className = 'day-num'; num.textContent = d; cell.appendChild(num);
+    if (hasAny) {
+      const fertDone = fertEvs.every(e => gIsDone(date, e.plant.id));
+      const bbDone = bbEvs.every(e => bbIsDone(date, e.plant.id, e.prod));
+      const trDone = trEvs.every(e => trIsDone(date, e.plant.id, e.prod));
+      const cureDone = cureEvs.every(e => cureIsDone(date, e.invId, e.disease.type));
+      const waDone = waEvs.every(e => waIsDone(date, e.plant.id));
+      if ((!fertEvs.length || fertDone) && (!bbEvs.length || bbDone) && (!trEvs.length || trDone) && (!cureEvs.length || cureDone) && (!waEvs.length || waDone)) cell.classList.add('all-done');
+      const dots = document.createElement('div'); dots.className = 'dots-container';
       // Circular dots = fertilizzazioni
-      fertEvs.slice(0,4).forEach(e=>{
-        const done=gIsDone(date,e.plant.id);
-        const dot=document.createElement('div');dot.className='plant-dot'+(done?' done':'');
-        dot.style.background=e.plant.color;dot.title=e.plant.name;dot.textContent=done?'':e.plant.icon;
+      fertEvs.slice(0, 4).forEach(e => {
+        const done = gIsDone(date, e.plant.id);
+        const dot = document.createElement('div'); dot.className = 'plant-dot' + (done ? ' done' : '');
+        dot.style.background = e.plant.color; dot.title = e.plant.name; dot.textContent = done ? '' : e.plant.icon;
         dots.appendChild(dot);
       });
       // Square dots = BioBizz
-      bbEvs.slice(0,4).forEach(e=>{
-        const p=BB_PRODUCTS[e.prod];const done=bbIsDone(date,e.plant.id,e.prod);
-        const dot=document.createElement('div');dot.className='prod-dot'+(done?' done':'');
-        dot.style.background=p.color;dot.textContent=done?'':p.abbr;dot.title=e.plant.name+' '+p.label;
+      bbEvs.slice(0, 4).forEach(e => {
+        const p = BB_PRODUCTS[e.prod]; const done = bbIsDone(date, e.plant.id, e.prod);
+        const dot = document.createElement('div'); dot.className = 'prod-dot' + (done ? ' done' : '');
+        dot.style.background = p.color; dot.textContent = done ? '' : p.abbr; dot.title = e.plant.name + ' ' + p.label;
         dots.appendChild(dot);
       });
       // Diamond dots = trattamenti preventivi
-      trEvs.slice(0,4).forEach(e=>{
-        const p=TR_PRODUCTS[e.prod];const done=trIsDone(date,e.plant.id,e.prod);
-        const dot=document.createElement('div');dot.className='treat-dot'+(done?' done':'');
-        dot.style.background=p.color;dot.innerHTML=done?'':`<span class="treat-abbr">${p.abbr}</span>`;dot.title=e.plant.name+' '+p.label;
+      trEvs.slice(0, 4).forEach(e => {
+        const p = TR_PRODUCTS[e.prod]; const done = trIsDone(date, e.plant.id, e.prod);
+        const dot = document.createElement('div'); dot.className = 'treat-dot' + (done ? ' done' : '');
+        dot.style.background = p.color; dot.innerHTML = done ? '' : `<span class="treat-abbr">${p.abbr}</span>`; dot.title = e.plant.name + ' ' + p.label;
         dots.appendChild(dot);
       });
       // Red diamond dots = trattamenti curativi
-      cureEvs.slice(0,3).forEach(e=>{
-        const done=cureIsDone(date,e.invId,e.disease.type);
-        const dot=document.createElement('div');dot.className='treat-dot'+(done?' done':'');
-        dot.style.background=e.color;dot.innerHTML=done?'':`<span class="treat-abbr">!</span>`;dot.title=e.plant.name+' — '+e.diseaseLabel;
+      cureEvs.slice(0, 3).forEach(e => {
+        const done = cureIsDone(date, e.invId, e.disease.type);
+        const dot = document.createElement('div'); dot.className = 'treat-dot' + (done ? ' done' : '');
+        dot.style.background = e.color; dot.innerHTML = done ? '' : `<span class="treat-abbr">!</span>`; dot.title = e.plant.name + ' — ' + e.diseaseLabel;
         dots.appendChild(dot);
       });
       // Drop dots = annaffiature
-      waEvs.slice(0,3).forEach(e=>{
-        const done=waIsDone(date,e.plant.id);
-        const dot=document.createElement('div');dot.className='water-dot'+(done?' done':'');
-        dot.innerHTML=done?'':'<span class="wa-abbr">'+e.plant.icon+'</span>';dot.title=e.plant.name+' annaffiatura';
+      waEvs.slice(0, 3).forEach(e => {
+        const done = waIsDone(date, e.plant.id);
+        const dot = document.createElement('div'); dot.className = 'water-dot' + (done ? ' done' : '');
+        dot.innerHTML = done ? '' : '<span class="wa-abbr">' + e.plant.icon + '</span>'; dot.title = e.plant.name + ' annaffiatura';
         dots.appendChild(dot);
       });
-      const overflow=(fertEvs.length>4?fertEvs.length-4:0)+(bbEvs.length>4?bbEvs.length-4:0)+(trEvs.length>4?trEvs.length-4:0)+(cureEvs.length>3?cureEvs.length-3:0)+(waEvs.length>3?waEvs.length-3:0);
-      if(overflow){const m=document.createElement('div');m.className='dot-count';m.textContent='+'+overflow;dots.appendChild(m);}
+      const overflow = (fertEvs.length > 4 ? fertEvs.length - 4 : 0) + (bbEvs.length > 4 ? bbEvs.length - 4 : 0) + (trEvs.length > 4 ? trEvs.length - 4 : 0) + (cureEvs.length > 3 ? cureEvs.length - 3 : 0) + (waEvs.length > 3 ? waEvs.length - 3 : 0);
+      if (overflow) { const m = document.createElement('div'); m.className = 'dot-count'; m.textContent = '+' + overflow; dots.appendChild(m); }
       cell.appendChild(dots);
-      cell.onclick=()=>gOpenDay(date,fertEvs,bbEvs,trEvs,waEvs);
+      cell.onclick = () => gOpenDay(date, fertEvs, bbEvs, trEvs, waEvs);
     }
     grid.appendChild(cell);
   }
-  const total=firstDay+daysInMonth;const rem=total%7===0?0:7-(total%7);
-  for(let i=1;i<=rem;i++){const c=document.createElement('div');c.className='day-cell other-month';c.innerHTML=`<div class="day-num" style="opacity:.3">${i}</div>`;grid.appendChild(c);}
+  const total = firstDay + daysInMonth; const rem = total % 7 === 0 ? 0 : 7 - (total % 7);
+  for (let i = 1; i <= rem; i++) { const c = document.createElement('div'); c.className = 'day-cell other-month'; c.innerHTML = `<div class="day-num" style="opacity:.3">${i}</div>`; grid.appendChild(c); }
 }
 
 function gOpenDay(date, fertEvs, bbEvs, trEvs, waEvs) {
-  if(!trEvs) trEvs=(gFilter==='all'||gFilter==='tratt')?(trDateMap[gDateKey(date)]||[]).filter(e=>!trHiddenProds.has(e.prod)):[];
-  if(!waEvs) waEvs=(gFilter==='all'||gFilter==='acqua')?(waDateMap[gDateKey(date)]||[]).filter(e=>!waHiddenPlants.has(e.plant.id)):[];
-  document.getElementById('g-panel-title').textContent=gWeekdays[date.getDay()]+' '+date.getDate()+' '+gMonthNames[date.getMonth()];
+  if (!trEvs) trEvs = (gFilter === 'all' || gFilter === 'tratt') ? (trDateMap[gDateKey(date)] || []).filter(e => !trHiddenProds.has(e.prod)) : [];
+  if (!waEvs) waEvs = (gFilter === 'all' || gFilter === 'acqua') ? (waDateMap[gDateKey(date)] || []).filter(e => !waHiddenPlants.has(e.plant.id)) : [];
+  document.getElementById('g-panel-title').textContent = gWeekdays[date.getDay()] + ' ' + date.getDate() + ' ' + gMonthNames[date.getMonth()];
   const cureEvs2 = (cureDateMap[gDateKey(date)] || []);
-  const allEvs=[...fertEvs,...bbEvs,...trEvs,...cureEvs2,...waEvs];
-  const fertDone=fertEvs.filter(e=>gIsDone(date,e.plant.id)).length;
-  const bbDone=bbEvs.filter(e=>bbIsDone(date,e.plant.id,e.prod)).length;
-  const trDoneCount=trEvs.filter(e=>trIsDone(date,e.plant.id,e.prod)).length;
-  const cureDoneCount=cureEvs2.filter(e=>cureIsDone(date,e.invId,e.disease.type)).length;
-  const waDoneCount=waEvs.filter(e=>waIsDone(date,e.plant.id)).length;
-  const totDone=fertDone+bbDone+trDoneCount+cureDoneCount+waDoneCount;
-  document.getElementById('g-panel-subtitle').textContent=totDone+'/'+allEvs.length+' completate';
-  const pct=allEvs.length?Math.round(totDone/allEvs.length*100):0;
-  let html=`<div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%"></div></div>`;
+  const allEvs = [...fertEvs, ...bbEvs, ...trEvs, ...cureEvs2, ...waEvs];
+  const fertDone = fertEvs.filter(e => gIsDone(date, e.plant.id)).length;
+  const bbDone = bbEvs.filter(e => bbIsDone(date, e.plant.id, e.prod)).length;
+  const trDoneCount = trEvs.filter(e => trIsDone(date, e.plant.id, e.prod)).length;
+  const cureDoneCount = cureEvs2.filter(e => cureIsDone(date, e.invId, e.disease.type)).length;
+  const waDoneCount = waEvs.filter(e => waIsDone(date, e.plant.id)).length;
+  const totDone = fertDone + bbDone + trDoneCount + cureDoneCount + waDoneCount;
+  document.getElementById('g-panel-subtitle').textContent = totDone + '/' + allEvs.length + ' completate';
+  const pct = allEvs.length ? Math.round(totDone / allEvs.length * 100) : 0;
+  let html = `<div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%"></div></div>`;
 
   // ── Sezione fertilizzazioni generali
-  if(fertEvs.length){
-    html+=`<div class="event-group"><div class="event-group-title" style="background:#4a4a4a">📆 Fertilizzazioni</div>`;
-    fertEvs.forEach(e=>{
-      const p=e.plant;const done=gIsDone(date,p.id);
+  if (fertEvs.length) {
+    html += `<div class="event-group"><div class="event-group-title" style="background:#4a4a4a">📆 Fertilizzazioni</div>`;
+    fertEvs.forEach(e => {
+      const p = e.plant; const done = gIsDone(date, p.id);
       const origP = p._origPlantId !== undefined ? gPlants.find(gp => gp.id === p._origPlantId) : null;
       const concimeLabel = (origP && origP.concime) || p.concime;
       const nextSrc = origP ? origP._dates : p._dates;
-      const next = nextSrc && nextSrc.find(d=>d.date>date);
-      const nextStr=next?('Prossima: '+next.date.getDate()+' '+gMonthNames[next.date.getMonth()]):'Fine stagione';
-      const dy=date.getFullYear(),dm=date.getMonth(),dd=date.getDate();
+      const next = nextSrc && nextSrc.find(d => d.date > date);
+      const nextStr = next ? ('Prossima: ' + next.date.getDate() + ' ' + gMonthNames[next.date.getMonth()]) : 'Fine stagione';
+      const dy = date.getFullYear(), dm = date.getMonth(), dd = date.getDate();
       const potInfo = e._potItem
         ? `<div style="font-size:10px;color:#2a5a8a;margin-top:2px">🪴 ${invGetDimsLabel(e._potItem)} · ${invGetVolFromItem(e._potItem).toFixed(1)}L</div>`
         : '';
-      html+=`<div class="event-row${done?' done':''}">
+      html += `<div class="event-row${done ? ' done' : ''}">
         <div class="event-icon">${p.icon}</div>
         <div class="event-content">
           <div class="event-name">${p.name}</div>
-          ${p.latin?`<div class="event-latin">${p.latin}</div>`:''}
+          ${p.latin ? `<div class="event-latin">${p.latin}</div>` : ''}
           ${potInfo}
-          <div class="event-info"><strong>Concime:</strong> ${concimeLabel}<br>${e.note?`<strong>Nota:</strong> ${e.note}<br>`:''}<span style="color:var(--muted)">${nextStr}</span></div>
+          <div class="event-info"><strong>Concime:</strong> ${concimeLabel}<br>${e.note ? `<strong>Nota:</strong> ${e.note}<br>` : ''}<span style="color:var(--muted)">${nextStr}</span></div>
         </div>
-        <button class="check-btn${done?' done':''}" onclick="gToggleDone(${dy},${dm},${dd},${p.id})">✓</button>
+        <button class="check-btn${done ? ' done' : ''}" onclick="gToggleDone(${dy},${dm},${dd},${p.id})">✓</button>
       </div>`;
     });
-    html+=`</div>`;
+    html += `</div>`;
   }
 
   // ── Sezione BioBizz per prodotto
-  if(bbEvs.length){
-    const byProd={};
-    bbEvs.forEach(e=>{if(!byProd[e.prod])byProd[e.prod]=[];byProd[e.prod].push(e);});
-    Object.entries(byProd).forEach(([prod,evs])=>{
-      const p=BB_PRODUCTS[prod];
-      html+=`<div class="event-group"><div class="event-group-title" style="background:${p.color}">💚 ${p.label}</div>`;
-      evs.forEach(e=>{
-        const done=bbIsDone(date,e.plant.id,e.prod);
-        const dy=date.getFullYear(),dm=date.getMonth(),dd=date.getDate();
-        const nextDate=e.plant._bbDates && e.plant._bbDates.find(nd=>nd>date&&(bbDateMap[gDateKey(nd)]||[]).some(ev=>ev.plant.id===e.plant.id&&ev.prod===prod));
-        const nextStr=nextDate?('Prossima: '+nextDate.getDate()+' '+gMonthNames[nextDate.getMonth()]):'Fine stagione';
+  if (bbEvs.length) {
+    const byProd = {};
+    bbEvs.forEach(e => { if (!byProd[e.prod]) byProd[e.prod] = []; byProd[e.prod].push(e); });
+    Object.entries(byProd).forEach(([prod, evs]) => {
+      const p = BB_PRODUCTS[prod];
+      html += `<div class="event-group"><div class="event-group-title" style="background:${p.color}">💚 ${p.label}</div>`;
+      evs.forEach(e => {
+        const done = bbIsDone(date, e.plant.id, e.prod);
+        const dy = date.getFullYear(), dm = date.getMonth(), dd = date.getDate();
+        const nextDate = e.plant._bbDates && e.plant._bbDates.find(nd => nd > date && (bbDateMap[gDateKey(nd)] || []).some(ev => ev.plant.id === e.plant.id && ev.prod === prod));
+        const nextStr = nextDate ? ('Prossima: ' + nextDate.getDate() + ' ' + gMonthNames[nextDate.getMonth()]) : 'Fine stagione';
         // Info vaso se evento espanso da inventario
         const potInfo = e._potItem
           ? `<div style="font-size:10px;color:#2a5a8a;margin-top:2px">🪴 ${invGetDimsLabel(e._potItem)} · ${invGetVolFromItem(e._potItem).toFixed(1)}L</div>`
           : '';
-        html+=`<div class="event-row${done?' done':''}">
+        html += `<div class="event-row${done ? ' done' : ''}">
           <div class="event-icon">${e.plant.icon}</div>
           <div class="event-content">
             <div class="event-name">${e.plant.name}</div>
-            ${e.plant.latin?`<div class="event-latin">${e.plant.latin}</div>`:''}
+            ${e.plant.latin ? `<div class="event-latin">${e.plant.latin}</div>` : ''}
             ${potInfo}
             <div style="margin-bottom:3px"><span class="event-prod" style="background:${p.color}">${p.label}</span></div>
-            <div class="event-info"><strong>Dose:</strong> ${e.sched.dose}${e.sched.note?`<br>${e.sched.note}`:''}
+            <div class="event-info"><strong>Dose:</strong> ${e.sched.dose}${e.sched.note ? `<br>${e.sched.note}` : ''}
             <br><span style="color:var(--muted)">${nextStr}</span></div>
           </div>
-          <button class="check-btn${done?' done':''}" style="${done?'background:'+p.color+';border-color:'+p.color:''}"
+          <button class="check-btn${done ? ' done' : ''}" style="${done ? 'background:' + p.color + ';border-color:' + p.color : ''}"
             onclick="bbToggleDone(${dy},${dm},${dd},${e.plant.id},'${prod}')">✓</button>
         </div>`;
       });
-      html+=`</div>`;
+      html += `</div>`;
     });
   }
 
   // ── Pulsante fertirrigazione
-  if(fertEvs.length || bbEvs.length){
+  if (fertEvs.length || bbEvs.length) {
     // Salva i dati del giorno per il calcolo fertirrigazione
-    window._fiCalEvts = {fertEvs, bbEvs, date};
-    html+=`<div style="text-align:center;margin:12px 0">
+    window._fiCalEvts = { fertEvs, bbEvs, date };
+    html += `<div style="text-align:center;margin:12px 0">
       <button class="ctrl-btn primary" style="padding:10px 20px;font-size:13px;border-radius:10px" onclick="fiOpenFromCalendar()">🧪💧 Calcola fertirrigazione per oggi</button>
     </div>`;
   }
 
   // ── Sezione trattamenti preventivi
-  if(trEvs.length){
-    const byProd={};
-    trEvs.forEach(e=>{if(!byProd[e.prod])byProd[e.prod]=[];byProd[e.prod].push(e);});
-    Object.entries(byProd).forEach(([prod,evs])=>{
-      const p=TR_PRODUCTS[prod];
-      html+=`<div class="event-group"><div class="event-group-title" style="background:${p.color}">🛡️ ${p.label} <span style="font-size:10px;opacity:.8">(preventivo)</span></div>`;
-      evs.forEach(e=>{
-        const done=trIsDone(date,e.plant.id,e.prod);
-        const dy=date.getFullYear(),dm=date.getMonth(),dd=date.getDate();
-        const nextDate=e.plant._trDates && e.plant._trDates.find(nd=>nd>date&&(trDateMap[gDateKey(nd)]||[]).some(ev=>ev.plant.id===e.plant.id&&ev.prod===prod));
-        const nextStr=nextDate?('Prossimo: '+nextDate.getDate()+' '+gMonthNames[nextDate.getMonth()]):'Fine stagione';
+  if (trEvs.length) {
+    const byProd = {};
+    trEvs.forEach(e => { if (!byProd[e.prod]) byProd[e.prod] = []; byProd[e.prod].push(e); });
+    Object.entries(byProd).forEach(([prod, evs]) => {
+      const p = TR_PRODUCTS[prod];
+      html += `<div class="event-group"><div class="event-group-title" style="background:${p.color}">🛡️ ${p.label} <span style="font-size:10px;opacity:.8">(preventivo)</span></div>`;
+      evs.forEach(e => {
+        const done = trIsDone(date, e.plant.id, e.prod);
+        const dy = date.getFullYear(), dm = date.getMonth(), dd = date.getDate();
+        const nextDate = e.plant._trDates && e.plant._trDates.find(nd => nd > date && (trDateMap[gDateKey(nd)] || []).some(ev => ev.plant.id === e.plant.id && ev.prod === prod));
+        const nextStr = nextDate ? ('Prossimo: ' + nextDate.getDate() + ' ' + gMonthNames[nextDate.getMonth()]) : 'Fine stagione';
         const potInfo = e._potItem
           ? `<div style="font-size:10px;color:#2a5a8a;margin-top:2px">🪴 ${invGetDimsLabel(e._potItem)} · ${invGetVolFromItem(e._potItem).toFixed(1)}L</div>`
           : '';
-        html+=`<div class="event-row${done?' done':''}">
+        html += `<div class="event-row${done ? ' done' : ''}">
           <div class="event-icon">${e.plant.icon}</div>
           <div class="event-content">
             <div class="event-name">${e.plant.name}</div>
-            ${e.plant.latin?`<div class="event-latin">${e.plant.latin}</div>`:''}
+            ${e.plant.latin ? `<div class="event-latin">${e.plant.latin}</div>` : ''}
             ${potInfo}
             <div style="margin-bottom:3px"><span class="event-prod" style="background:${p.color}">${p.label}</span></div>
-            <div class="event-info"><strong>Dose:</strong> ${e.sched.dose}${e.sched.note?`<br>${e.sched.note}`:''}
+            <div class="event-info"><strong>Dose:</strong> ${e.sched.dose}${e.sched.note ? `<br>${e.sched.note}` : ''}
             <br><span style="color:var(--muted)">${nextStr}</span></div>
           </div>
-          <button class="check-btn${done?' done':''}" style="${done?'background:'+p.color+';border-color:'+p.color:''}"
+          <button class="check-btn${done ? ' done' : ''}" style="${done ? 'background:' + p.color + ';border-color:' + p.color : ''}"
             onclick="trToggleDone(${dy},${dm},${dd},${e.plant.id},'${prod}')">✓</button>
         </div>`;
       });
-      html+=`</div>`;
+      html += `</div>`;
     });
   }
 
   // ── Sezione trattamenti curativi (da malattie inventario)
   const cureEvs = (cureDateMap[gDateKey(date)] || []);
-  if(cureEvs.length){
+  if (cureEvs.length) {
     // Raggruppa per malattia
     const byDisease = {};
     cureEvs.forEach(e => {
       const key = e.disease.type + '_' + e.invId;
-      if (!byDisease[key]) byDisease[key] = {disease: e.disease, label: e.diseaseLabel, color: e.color, plant: e.plant, invId: e.invId, events: []};
+      if (!byDisease[key]) byDisease[key] = { disease: e.disease, label: e.diseaseLabel, color: e.color, plant: e.plant, invId: e.invId, events: [] };
       byDisease[key].events.push(e);
     });
     Object.values(byDisease).forEach(group => {
@@ -975,76 +1027,76 @@ function gOpenDay(date, fertEvs, bbEvs, trEvs, waEvs) {
   }
 
   // ── Sezione annaffiature con meteo intelligente
-  if(waEvs.length){
-    html+=`<div class="event-group"><div class="event-group-title" style="background:#3a8abf">💧 Annaffiature</div>`;
+  if (waEvs.length) {
+    html += `<div class="event-group"><div class="event-group-title" style="background:#3a8abf">💧 Annaffiature</div>`;
     // Banner meteo (aggiornato async)
-    html+=`<div id="wa-meteo-banner" style="padding:6px 12px;font-size:11px;color:#5a7a9a;background:#edf5ff;border-bottom:1px solid #d0e0f0">⏳ Analisi condizioni meteo...</div>`;
-    waEvs.forEach(e=>{
-      const done=waIsDone(date,e.plant.id);
-      const dy=date.getFullYear(),dm=date.getMonth(),dd=date.getDate();
-      const nextDate=e.plant._waDates?e.plant._waDates.find(nd=>nd>date):null;
-      const nextStr=nextDate?('Prossima: '+nextDate.getDate()+' '+gMonthNames[nextDate.getMonth()]):(e._sim?'Prossima: aggiornata dalla simulazione':'Fine stagione');
+    html += `<div id="wa-meteo-banner" style="padding:6px 12px;font-size:11px;color:#5a7a9a;background:#edf5ff;border-bottom:1px solid #d0e0f0">⏳ Analisi condizioni meteo...</div>`;
+    waEvs.forEach(e => {
+      const done = waIsDone(date, e.plant.id);
+      const dy = date.getFullYear(), dm = date.getMonth(), dd = date.getDate();
+      const nextDate = e.plant._waDates ? e.plant._waDates.find(nd => nd > date) : null;
+      const nextStr = nextDate ? ('Prossima: ' + nextDate.getDate() + ' ' + gMonthNames[nextDate.getMonth()]) : (e._sim ? 'Prossima: aggiornata dalla simulazione' : 'Fine stagione');
       const simBadge = e._sim ? '<span style="font-size:9px;background:#2a7abf;color:#fff;padding:2px 6px;border-radius:10px;margin-left:4px;font-weight:500">🔮 PREDITTIVA</span>' : '';
       const simNote = e._sim && e._liters ? `<div style="margin-top:4px;padding:4px 8px;background:#e6f1fb;border-left:2px solid #2a7abf;border-radius:4px;font-size:10px;color:#2a5a8a"><b>💧 ${e._liters.toFixed(2)}L</b> · calcolati dalla simulazione bilancio idrico</div>` : '';
-      html+=`<div class="event-row${done?' done':''}" id="wa-row-${e.plant.id}">
+      html += `<div class="event-row${done ? ' done' : ''}" id="wa-row-${e.plant.id}">
         <div class="event-icon">${e.plant.icon}</div>
         <div class="event-content">
           <div class="event-name">${e.plant.name}${simBadge}</div>
-          <div class="event-info"><strong>Metodo:</strong> ${e.plant.method}${e.note?`<br>${e.note}`:''}
+          <div class="event-info"><strong>Metodo:</strong> ${e.plant.method}${e.note ? `<br>${e.note}` : ''}
           <br><span style="color:var(--muted)">${nextStr}</span></div>
           ${simNote}
           <div id="wa-badge-${e.plant.id}" style="margin-top:4px"></div>
         </div>
-        <button class="check-btn${done?' done':''}" style="${done?'background:#3a8abf;border-color:#3a8abf':''}"
+        <button class="check-btn${done ? ' done' : ''}" style="${done ? 'background:#3a8abf;border-color:#3a8abf' : ''}"
           onclick="waToggleDone(${dy},${dm},${dd},${e.plant.id})">✓</button>
       </div>`;
     });
-    html+=`</div>`;
+    html += `</div>`;
     // Trigger async meteo analysis after render
-    setTimeout(()=>waAnalyzeMeteo(waEvs, date), 50);
+    setTimeout(() => waAnalyzeMeteo(waEvs, date), 50);
   }
 
   // ── Prossimi 7 giorni
-  const upcoming=[];
-  for(let dd2=1;dd2<=7;dd2++){
-    const nd=new Date(date.getTime()+dd2*86400000);const nk=gDateKey(nd);
-    const nf=(gFilter==='all'||gFilter==='fert')?(gDateMap[nk]||[]).filter(e=>!gIsHiddenEvent(e)):[];
-    const nb=(gFilter==='all'||gFilter==='biobizz')?(bbDateMap[nk]||[]).filter(e=>!bbHiddenProds.has(e.prod)):[];
-    const nt=(gFilter==='all'||gFilter==='tratt')?(trDateMap[nk]||[]).filter(e=>!trHiddenProds.has(e.prod)):[];
-    const nc=(gFilter==='all'||gFilter==='tratt')?(cureDateMap[nk]||[]):[];
-    const nw=(gFilter==='all'||gFilter==='acqua')?(waDateMap[nk]||[]).filter(e=>!waHiddenPlants.has(e.plant.id)):[];
-    if(nf.length||nb.length||nt.length||nc.length||nw.length)upcoming.push({date:nd,fert:nf,bb:nb,tr:nt,cure:nc,wa:nw});
+  const upcoming = [];
+  for (let dd2 = 1; dd2 <= 7; dd2++) {
+    const nd = new Date(date.getTime() + dd2 * 86400000); const nk = gDateKey(nd);
+    const nf = (gFilter === 'all' || gFilter === 'fert') ? (gDateMap[nk] || []).filter(e => !gIsHiddenEvent(e)) : [];
+    const nb = (gFilter === 'all' || gFilter === 'biobizz') ? (bbDateMap[nk] || []).filter(e => !bbHiddenProds.has(e.prod)) : [];
+    const nt = (gFilter === 'all' || gFilter === 'tratt') ? (trDateMap[nk] || []).filter(e => !trHiddenProds.has(e.prod)) : [];
+    const nc = (gFilter === 'all' || gFilter === 'tratt') ? (cureDateMap[nk] || []) : [];
+    const nw = (gFilter === 'all' || gFilter === 'acqua') ? (waDateMap[nk] || []).filter(e => !waHiddenPlants.has(e.plant.id)) : [];
+    if (nf.length || nb.length || nt.length || nc.length || nw.length) upcoming.push({ date: nd, fert: nf, bb: nb, tr: nt, cure: nc, wa: nw });
   }
-  if(upcoming.length){
-    html+=`<div class="next-section"><div class="next-title">Prossimi 7 giorni</div>`;
-    upcoming.forEach(u=>{
-      u.fert.forEach(e=>{html+=`<div class="next-row"><div class="next-icon">${e.plant.icon}</div><div class="next-name">${e.plant.name}</div><div class="next-days">${gWeekdays[u.date.getDay()].slice(0,3)} ${u.date.getDate()}/${u.date.getMonth()+1}</div></div>`;});
-      u.bb.forEach(e=>{const p=BB_PRODUCTS[e.prod];html+=`<div class="next-row"><span class="next-prod-badge" style="background:${p.color}">${p.abbr}</span><span style="font-size:12px">${e.plant.icon}</span><div class="next-name">${e.plant.name}</div><div class="next-days">${gWeekdays[u.date.getDay()].slice(0,3)} ${u.date.getDate()}/${u.date.getMonth()+1}</div></div>`;});
-      u.tr.forEach(e=>{const p=TR_PRODUCTS[e.prod];html+=`<div class="next-row"><span class="next-prod-badge" style="background:${p.color}">${p.abbr}</span><span style="font-size:12px">${e.plant.icon}</span><div class="next-name">${e.plant.name}</div><div class="next-days">${gWeekdays[u.date.getDay()].slice(0,3)} ${u.date.getDate()}/${u.date.getMonth()+1}</div></div>`;});
-      u.cure.forEach(e=>{html+=`<div class="next-row"><span class="next-prod-badge" style="background:${e.color}">!</span><span style="font-size:12px">${e.plant.icon}</span><div class="next-name">${e.plant.name} — ${e.diseaseLabel}</div><div class="next-days">${gWeekdays[u.date.getDay()].slice(0,3)} ${u.date.getDate()}/${u.date.getMonth()+1}</div></div>`;});
-      u.wa.forEach(e=>{html+=`<div class="next-row"><span class="next-prod-badge" style="background:#3a8abf">💧</span><span style="font-size:12px">${e.plant.icon}</span><div class="next-name">${e.plant.name}</div><div class="next-days">${gWeekdays[u.date.getDay()].slice(0,3)} ${u.date.getDate()}/${u.date.getMonth()+1}</div></div>`;});
+  if (upcoming.length) {
+    html += `<div class="next-section"><div class="next-title">Prossimi 7 giorni</div>`;
+    upcoming.forEach(u => {
+      u.fert.forEach(e => { html += `<div class="next-row"><div class="next-icon">${e.plant.icon}</div><div class="next-name">${e.plant.name}</div><div class="next-days">${gWeekdays[u.date.getDay()].slice(0, 3)} ${u.date.getDate()}/${u.date.getMonth() + 1}</div></div>`; });
+      u.bb.forEach(e => { const p = BB_PRODUCTS[e.prod]; html += `<div class="next-row"><span class="next-prod-badge" style="background:${p.color}">${p.abbr}</span><span style="font-size:12px">${e.plant.icon}</span><div class="next-name">${e.plant.name}</div><div class="next-days">${gWeekdays[u.date.getDay()].slice(0, 3)} ${u.date.getDate()}/${u.date.getMonth() + 1}</div></div>`; });
+      u.tr.forEach(e => { const p = TR_PRODUCTS[e.prod]; html += `<div class="next-row"><span class="next-prod-badge" style="background:${p.color}">${p.abbr}</span><span style="font-size:12px">${e.plant.icon}</span><div class="next-name">${e.plant.name}</div><div class="next-days">${gWeekdays[u.date.getDay()].slice(0, 3)} ${u.date.getDate()}/${u.date.getMonth() + 1}</div></div>`; });
+      u.cure.forEach(e => { html += `<div class="next-row"><span class="next-prod-badge" style="background:${e.color}">!</span><span style="font-size:12px">${e.plant.icon}</span><div class="next-name">${e.plant.name} — ${e.diseaseLabel}</div><div class="next-days">${gWeekdays[u.date.getDay()].slice(0, 3)} ${u.date.getDate()}/${u.date.getMonth() + 1}</div></div>`; });
+      u.wa.forEach(e => { html += `<div class="next-row"><span class="next-prod-badge" style="background:#3a8abf">💧</span><span style="font-size:12px">${e.plant.icon}</span><div class="next-name">${e.plant.name}</div><div class="next-days">${gWeekdays[u.date.getDay()].slice(0, 3)} ${u.date.getDate()}/${u.date.getMonth() + 1}</div></div>`; });
     });
-    html+=`</div>`;
+    html += `</div>`;
   }
 
-  document.getElementById('g-panel-body').innerHTML=html;
+  document.getElementById('g-panel-body').innerHTML = html;
   document.getElementById('g-overlay').classList.add('open');
-  document.body.style.overflow='hidden';
+  document.body.style.overflow = 'hidden';
 }
-function gClosePanel(){document.getElementById('g-overlay').classList.remove('open');document.body.style.overflow='';}
-function gCloseOverlay(e){if(e.target===document.getElementById('g-overlay'))gClosePanel();}
-function gChangeMonth(dir){gCurrentMonth+=dir;if(gCurrentMonth>11){gCurrentMonth=0;gCurrentYear++;}if(gCurrentMonth<0){gCurrentMonth=11;gCurrentYear--;}gRenderCalendar();}
-function gGoToday(){gCurrentMonth=gTODAY.getMonth();gCurrentYear=gTODAY.getFullYear();gRenderCalendar();}
+function gClosePanel() { document.getElementById('g-overlay').classList.remove('open'); document.body.style.overflow = ''; }
+function gCloseOverlay(e) { if (e.target === document.getElementById('g-overlay')) gClosePanel(); }
+function gChangeMonth(dir) { gCurrentMonth += dir; if (gCurrentMonth > 11) { gCurrentMonth = 0; gCurrentYear++; } if (gCurrentMonth < 0) { gCurrentMonth = 11; gCurrentYear--; } gRenderCalendar(); }
+function gGoToday() { gCurrentMonth = gTODAY.getMonth(); gCurrentYear = gTODAY.getFullYear(); gRenderCalendar(); }
 
 // ══════════════════════════════════════════════════════════════════════
 // ④ DIARIO  —  API SQLite (con fallback localStorage)
 // ══════════════════════════════════════════════════════════════════════
 const dOpLabels = {
-  concimazione:'💚 Concimazione', annaffiatura:'💧 Annaffiatura',
-  potatura:'✂️ Potatura', rinvaso:'🪴 Rinvaso', trattamento:'🧪 Trattamento',
-  osservazione:'🔍 Osservazione', altro:'📝 Altro'
+  concimazione: '💚 Concimazione', annaffiatura: '💧 Annaffiatura',
+  potatura: '✂️ Potatura', rinvaso: '🪴 Rinvaso', trattamento: '🧪 Trattamento',
+  osservazione: '🔍 Osservazione', altro: '📝 Altro'
 };
-const dMonths = ["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"];
+const dMonths = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
 const API = '/api/diary';
 let dUseAPI = false;  // verrà impostato al primo ping
 
@@ -1065,7 +1117,7 @@ function dSetMode(isAPI) {
 // Ping al server per capire se è attivo
 async function dPingServer() {
   try {
-    const res = await apiFetch(API + '?_ping=1', {signal: AbortSignal.timeout(1200)});
+    const res = await apiFetch(API + '?_ping=1', { signal: AbortSignal.timeout(1200) });
     dSetMode(res.ok);
   } catch {
     dSetMode(false);
@@ -1074,20 +1126,20 @@ async function dPingServer() {
 
 // ── localStorage fallback ─────────────────────────────────────────
 function dLSLoad() {
-  try { return JSON.parse(localStorage.getItem('diary_entries')||'[]'); } catch { return []; }
+  try { return JSON.parse(localStorage.getItem('diary_entries') || '[]'); } catch { return []; }
 }
 function dLSSave(entries) {
-  try { localStorage.setItem('diary_entries', JSON.stringify(entries)); } catch {}
+  try { localStorage.setItem('diary_entries', JSON.stringify(entries)); } catch { }
 }
 
 // ── Operazioni CRUD ───────────────────────────────────────────────
-async function dLoadEntries(plant='', op='') {
+async function dLoadEntries(plant = '', op = '') {
   if (dUseAPI) {
     try {
       let url = API;
       const params = [];
-      if (plant) params.push('plant='+encodeURIComponent(plant));
-      if (op)    params.push('op='+encodeURIComponent(op));
+      if (plant) params.push('plant=' + encodeURIComponent(plant));
+      if (op) params.push('op=' + encodeURIComponent(op));
       if (params.length) url += '?' + params.join('&');
       const res = await fetch(url);
       const data = await res.json();
@@ -1096,17 +1148,17 @@ async function dLoadEntries(plant='', op='') {
   }
   // fallback localStorage
   let entries = dLSLoad();
-  if (plant) entries = entries.filter(e=>e.plant===plant);
-  if (op)    entries = entries.filter(e=>e.op===op);
-  return entries.sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
+  if (plant) entries = entries.filter(e => e.plant === plant);
+  if (op) entries = entries.filter(e => e.op === op);
+  return entries.sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
 }
 
 async function dAddEntry(entry) {
   if (dUseAPI) {
     try {
       const res = await apiFetch(API, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(entry)
       });
       if (res.ok) return true;
@@ -1114,7 +1166,7 @@ async function dAddEntry(entry) {
   }
   // fallback localStorage
   const entries = dLSLoad();
-  entries.unshift({...entry, id: Date.now(), auto: entry.auto||false});
+  entries.unshift({ ...entry, id: Date.now(), auto: entry.auto || false });
   dLSSave(entries);
   return true;
 }
@@ -1123,10 +1175,10 @@ async function dDeleteEntry(id) {
   if (!confirm('Eliminare questa voce?')) return;
   if (dUseAPI) {
     try {
-      await apiFetch(API+'/'+id, {method:'DELETE'});
+      await apiFetch(API + '/' + id, { method: 'DELETE' });
     } catch { dSetMode(false); }
   } else {
-    const entries = dLSLoad().filter(e=>e.id!==id);
+    const entries = dLSLoad().filter(e => e.id !== id);
     dLSSave(entries);
   }
   dRender();
@@ -1135,9 +1187,9 @@ async function dDeleteEntry(id) {
 async function dUpdateEntry(id, data) {
   if (dUseAPI) {
     try {
-      const res = await apiFetch(API+'/'+id, {
-        method:'PUT',
-        headers:{'Content-Type':'application/json'},
+      const res = await apiFetch(API + '/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
       if (res.ok) return true;
@@ -1145,8 +1197,8 @@ async function dUpdateEntry(id, data) {
   }
   // fallback localStorage
   const entries = dLSLoad();
-  const idx = entries.findIndex(e=>e.id===id);
-  if (idx>=0) { Object.assign(entries[idx], data); dLSSave(entries); }
+  const idx = entries.findIndex(e => e.id === id);
+  if (idx >= 0) { Object.assign(entries[idx], data); dLSSave(entries); }
   return true;
 }
 
@@ -1175,18 +1227,18 @@ async function dSaveEdit() {
 
   const btn = document.getElementById('de-save-btn');
   btn.disabled = true;
-  await dUpdateEntry(id, {date, plant, op, note});
+  await dUpdateEntry(id, { date, plant, op, note });
   btn.textContent = '✓ Salvato!';
   btn.style.background = '#3a6a2c';
-  setTimeout(()=>{ btn.textContent='Salva modifiche'; btn.style.background=''; btn.disabled=false; dCloseEdit(); dRender(); }, 800);
+  setTimeout(() => { btn.textContent = 'Salva modifiche'; btn.style.background = ''; btn.disabled = false; dCloseEdit(); dRender(); }, 800);
 }
 
 // ── Init & UI ─────────────────────────────────────────────────────
 function dInitDiario() {
   const today = new Date();
   const yyyy = today.getFullYear();
-  const mm = String(today.getMonth()+1).padStart(2,'0');
-  const dd = String(today.getDate()).padStart(2,'0');
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
   document.getElementById('d-date').value = `${yyyy}-${mm}-${dd}`;
   // Popolo dinamicamente i dropdown delle piante con sPlants completo,
   // che include sia le 26 native sia le piante custom dell'utente.
@@ -1194,7 +1246,7 @@ function dInitDiario() {
   // appaiono automaticamente quando l'utente apre il diario.
   // Le opzioni HTML hardcoded preesistenti vengono sostituite completamente.
   dPopulatePlantDropdowns();
-  dPingServer().then(()=>dRender());
+  dPingServer().then(() => dRender());
 }
 
 // Popola i due dropdown del diario (selettore voce + filtro) con la lista
@@ -1231,62 +1283,62 @@ function dPopulatePlantDropdowns() {
 }
 
 async function dSaveEntry() {
-  const date  = document.getElementById('d-date').value;
+  const date = document.getElementById('d-date').value;
   const plant = document.getElementById('d-plant').value;
-  const op    = document.getElementById('d-op').value;
-  const note  = document.getElementById('d-note').value.trim();
+  const op = document.getElementById('d-op').value;
+  const note = document.getElementById('d-note').value.trim();
   if (!date || !plant) { alert('Seleziona data e pianta!'); return; }
 
   const btn = document.querySelector('.save-btn');
   btn.disabled = true;
-  await dAddEntry({date, plant, op, note});
+  await dAddEntry({ date, plant, op, note });
   document.getElementById('d-note').value = '';
   dInitDiario();
   await dRender();
 
   btn.textContent = '✓ Salvato!';
   btn.style.background = '#3a6a2c';
-  setTimeout(()=>{ btn.textContent='Salva voce'; btn.style.background=''; btn.disabled=false; }, 1400);
+  setTimeout(() => { btn.textContent = 'Salva voce'; btn.style.background = ''; btn.disabled = false; }, 1400);
 }
 
 function dFormatDate(dateStr) {
-  const [y,m,d] = dateStr.split('-');
-  const dt = new Date(+y,+m-1,+d);
-  const wds = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
-  return wds[dt.getDay()]+' '+(+d)+' '+dMonths[+m-1]+' '+y;
+  const [y, m, d] = dateStr.split('-');
+  const dt = new Date(+y, +m - 1, +d);
+  const wds = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+  return wds[dt.getDay()] + ' ' + (+d) + ' ' + dMonths[+m - 1] + ' ' + y;
 }
 
 async function dRender() {
   const filterPlant = document.getElementById('d-filter-plant').value;
-  const filterOp    = document.getElementById('d-filter-op').value;
+  const filterOp = document.getElementById('d-filter-op').value;
   const entries = await dLoadEntries(filterPlant, filterOp);
 
-  document.getElementById('d-count').textContent = entries.length+(entries.length===1?' voce':' voci');
+  document.getElementById('d-count').textContent = entries.length + (entries.length === 1 ? ' voce' : ' voci');
 
   const list = document.getElementById('d-list');
   if (!entries.length) {
-    list.innerHTML = `<div class="diary-empty"><span class="empty-icon">📓</span>${filterPlant||filterOp?'Nessuna voce trovata con questi filtri.':'Nessuna voce ancora.<br>Inizia ad annotare le tue operazioni!'}</div>`;
+    list.innerHTML = `<div class="diary-empty"><span class="empty-icon">📓</span>${filterPlant || filterOp ? 'Nessuna voce trovata con questi filtri.' : 'Nessuna voce ancora.<br>Inizia ad annotare le tue operazioni!'}</div>`;
     return;
   }
 
   // Raggruppa per data
   const grouped = {};
-  entries.forEach(e=>{ if(!grouped[e.date]) grouped[e.date]=[]; grouped[e.date].push(e); });
+  entries.forEach(e => { if (!grouped[e.date]) grouped[e.date] = []; grouped[e.date].push(e); });
 
-  list.innerHTML = Object.keys(grouped).sort((a,b)=>b.localeCompare(a)).map(date=>{
+  list.innerHTML = Object.keys(grouped).sort((a, b) => b.localeCompare(a)).map(date => {
     const dayEntries = grouped[date];
-    const html = dayEntries.map(e=>{
-      const safeNote=(e.note||'').replace(/'/g,"\\'").replace(/\n/g,"\\n");
+    const html = dayEntries.map(e => {
+      const safeNote = (e.note || '').replace(/'/g, "\\'").replace(/\n/g, "\\n");
       return `
       <div class="diary-entry">
         <div class="entry-header">
           <span class="entry-plant">${e.plant}</span>
-          <span class="entry-op op-${e.op}">${dOpLabels[e.op]||e.op}</span>
-          ${e.auto?'<span class="entry-auto">auto</span>':''}
+          <span class="entry-op op-${e.op}">${dOpLabels[e.op] || e.op}</span>
+          ${e.auto ? '<span class="entry-auto">auto</span>' : ''}
         </div>
-        ${e.note?`<div class="entry-note">${e.note.replace(/\n/g,'<br>')}</div>`:''}
+        ${e.note ? `<div class="entry-note">${e.note.replace(/\n/g, '<br>')}</div>` : ''}
         <div class="entry-actions">
-          <button class="entry-btn edit" onclick="dEditEntry(${e.id},'${e.date}','${e.plant.replace(/'/g,"\\'")}','${e.op}','${safeNote}')" title="Modifica">✏️</button>
+          <button class="entry-btn edit" onclick="dEditEntry(${e.id},'${e.date}','${e.plant.replace(/'/g, "\\'")}','${e.op}','${safeNote}')" title="Modifica">✏️</button>
           <button class="entry-btn del" onclick="dDeleteEntry(${e.id})" title="Elimina">✕</button>
         </div>
       </div>`}).join('');
@@ -1302,24 +1354,24 @@ async function dRender() {
 
 // Ritenzione idrica per tipo di substrato (% del volume trattenuta)
 const wSubstrates = [
-  { id:'universale',  name:'Terriccio universale',   whc: 0.52, color:'#8b6914' },
-  { id:'perlite',     name:'Perlite',                whc: 0.08, color:'#c0b090' },
-  { id:'pomice',      name:'Pomice',                 whc: 0.18, color:'#a0a090' },
-  { id:'akadama',     name:'Akadama',                whc: 0.44, color:'#c07030' },
-  { id:'sabbia',      name:'Sabbia grossa',          whc: 0.06, color:'#d4b870' },
-  { id:'corteccia',   name:'Corteccia / Bark',       whc: 0.28, color:'#7a5030' },
-  { id:'cocco',       name:'Fibra di cocco',         whc: 0.56, color:'#a07840' },
-  { id:'humus',       name:'Humus di lombrico',      whc: 0.62, color:'#4a3020' },
-  { id:'succulente',  name:'Mix succulente/cactus',  whc: 0.22, color:'#c0a060' },
-  { id:'argilla',     name:'Argilla espansa (leca)', whc: 0.15, color:'#c06030' },
-  { id:'kanuma',      name:'Kanuma',                 whc: 0.50, color:'#d4a850' },
-  { id:'kiryu',       name:'Kiryu',                  whc: 0.25, color:'#8a8a70' },
-  { id:'lapillo',     name:'Lapillo vulcanico',      whc: 0.12, color:'#6a3030' },
-  { id:'sfagno',      name:'Sfagno',                 whc: 0.80, color:'#7aa050' },
-  { id:'zeolite',     name:'Zeolite',                whc: 0.35, color:'#8090a0' },
-  { id:'kyodama',     name:'Kyodama',                whc: 0.40, color:'#b0905a' },
-  { id:'torba',       name:'Torba',                  whc: 0.65, color:'#5a3818' },
-  { id:'vermiculite', name:'Vermiculite',            whc: 0.55, color:'#c0a868' },
+  { id: 'universale', name: 'Terriccio universale', whc: 0.52, color: '#8b6914' },
+  { id: 'perlite', name: 'Perlite', whc: 0.08, color: '#c0b090' },
+  { id: 'pomice', name: 'Pomice', whc: 0.18, color: '#a0a090' },
+  { id: 'akadama', name: 'Akadama', whc: 0.44, color: '#c07030' },
+  { id: 'sabbia', name: 'Sabbia grossa', whc: 0.06, color: '#d4b870' },
+  { id: 'corteccia', name: 'Corteccia / Bark', whc: 0.28, color: '#7a5030' },
+  { id: 'cocco', name: 'Fibra di cocco', whc: 0.56, color: '#a07840' },
+  { id: 'humus', name: 'Humus di lombrico', whc: 0.62, color: '#4a3020' },
+  { id: 'succulente', name: 'Mix succulente/cactus', whc: 0.22, color: '#c0a060' },
+  { id: 'argilla', name: 'Argilla espansa (leca)', whc: 0.15, color: '#c06030' },
+  { id: 'kanuma', name: 'Kanuma', whc: 0.50, color: '#d4a850' },
+  { id: 'kiryu', name: 'Kiryu', whc: 0.25, color: '#8a8a70' },
+  { id: 'lapillo', name: 'Lapillo vulcanico', whc: 0.12, color: '#6a3030' },
+  { id: 'sfagno', name: 'Sfagno', whc: 0.80, color: '#7aa050' },
+  { id: 'zeolite', name: 'Zeolite', whc: 0.35, color: '#8090a0' },
+  { id: 'kyodama', name: 'Kyodama', whc: 0.40, color: '#b0905a' },
+  { id: 'torba', name: 'Torba', whc: 0.65, color: '#5a3818' },
+  { id: 'vermiculite', name: 'Vermiculite', whc: 0.55, color: '#c0a868' },
 ];
 
 // WHC media per preset substrato (globale: usata sia dal calcolatore acqua che dal simulatore)
@@ -1329,14 +1381,14 @@ const SUBSTRATE_WHC = {
   tropicali_mix: 0.40, acidofile_mix: 0.38, arbusti_mix: 0.36, custom: 0.30
 };
 // Fattore materiale vaso (globale)
-const POT_MAT_FACTOR = {plastica:1.0, ceramica:1.0, terracotta:0.88, bonsai:1.0};
+const POT_MAT_FACTOR = { plastica: 1.0, ceramica: 1.0, terracotta: 0.88, bonsai: 1.0 };
 // Fattore pianta (globale)
 const PLANT_WATER_FACTOR = {
-  0:0.55, 12:0.55, 24:0.55,
-  5:0.65, 19:0.65, 25:0.65,
-  4:0.75, 6:0.75, 9:0.75, 21:0.75, 22:0.75,
-  8:0.85, 10:0.85, 11:0.85,
-  1:1.15,
+  0: 0.55, 12: 0.55, 24: 0.55,
+  5: 0.65, 19: 0.65, 25: 0.65,
+  4: 0.75, 6: 0.75, 9: 0.75, 21: 0.75, 22: 0.75,
+  8: 0.85, 10: 0.85, 11: 0.85,
+  1: 1.15,
 };
 
 let wVolMode = 'dim'; // 'dim' o 'lit'
@@ -1344,44 +1396,64 @@ let wVolLiters = 5;   // volume corrente calcolato
 let wActivePreset = 'universale_mix';
 
 const wPresets = [
-  {id:'universale_mix', icon:'🌱', label:'Universale', desc:'Piante verdi',
-    mix:{universale:50, perlite:30, pomice:20}},
-  {id:'succulente_mix', icon:'🌵', label:'Succulente/Cactus', desc:'Aloe, Crassula',
-    mix:{succulente:50, sabbia:20, pomice:20, perlite:10}},
-  {id:'orchidee_mix', icon:'🌸', label:'Orchidee', desc:'Epifite',
-    mix:{corteccia:60, perlite:15, pomice:15, argilla:10}},
-  {id:'agrumi_mix', icon:'🍋', label:'Agrumi', desc:'Limone, Arancio',
-    mix:{universale:35, perlite:20, humus:20, sabbia:15, pomice:10}},
-  {id:'bonsai_mix', icon:'💜', label:'Bonsai', desc:'Glicine, Gelso',
-    mix:{akadama:60, pomice:20, humus:20}},
-  {id:'mediterranee_mix', icon:'🌿', label:'Mediterranee', desc:'Rosmarino, Salvia',
-    mix:{universale:30, sabbia:30, perlite:20, pomice:20}},
-  {id:'tropicali_mix', icon:'🌳', label:'Tropicali', desc:'Ficus, Pilea',
-    mix:{universale:45, perlite:20, humus:20, cocco:15}},
-  {id:'acidofile_mix', icon:'🍂', label:'Acidofile', desc:'Liquidambar, Betulla',
-    mix:{universale:35, humus:25, corteccia:20, perlite:10, pomice:10}},
-  {id:'arbusti_mix', icon:'🌺', label:'Arbusti da fiore', desc:'Oleandro, Vinca',
-    mix:{universale:45, humus:20, perlite:20, pomice:15}},
-  {id:'custom', icon:'⚙️', label:'Personalizzato', desc:'Regola gli slider',
-    mix:null},
+  {
+    id: 'universale_mix', icon: '🌱', label: 'Universale', desc: 'Piante verdi',
+    mix: { universale: 50, perlite: 30, pomice: 20 }
+  },
+  {
+    id: 'succulente_mix', icon: '🌵', label: 'Succulente/Cactus', desc: 'Aloe, Crassula',
+    mix: { succulente: 50, sabbia: 20, pomice: 20, perlite: 10 }
+  },
+  {
+    id: 'orchidee_mix', icon: '🌸', label: 'Orchidee', desc: 'Epifite',
+    mix: { corteccia: 60, perlite: 15, pomice: 15, argilla: 10 }
+  },
+  {
+    id: 'agrumi_mix', icon: '🍋', label: 'Agrumi', desc: 'Limone, Arancio',
+    mix: { universale: 35, perlite: 20, humus: 20, sabbia: 15, pomice: 10 }
+  },
+  {
+    id: 'bonsai_mix', icon: '💜', label: 'Bonsai', desc: 'Glicine, Gelso',
+    mix: { akadama: 60, pomice: 20, humus: 20 }
+  },
+  {
+    id: 'mediterranee_mix', icon: '🌿', label: 'Mediterranee', desc: 'Rosmarino, Salvia',
+    mix: { universale: 30, sabbia: 30, perlite: 20, pomice: 20 }
+  },
+  {
+    id: 'tropicali_mix', icon: '🌳', label: 'Tropicali', desc: 'Ficus, Pilea',
+    mix: { universale: 45, perlite: 20, humus: 20, cocco: 15 }
+  },
+  {
+    id: 'acidofile_mix', icon: '🍂', label: 'Acidofile', desc: 'Liquidambar, Betulla',
+    mix: { universale: 35, humus: 25, corteccia: 20, perlite: 10, pomice: 10 }
+  },
+  {
+    id: 'arbusti_mix', icon: '🌺', label: 'Arbusti da fiore', desc: 'Oleandro, Vinca',
+    mix: { universale: 45, humus: 20, perlite: 20, pomice: 15 }
+  },
+  {
+    id: 'custom', icon: '⚙️', label: 'Personalizzato', desc: 'Regola gli slider',
+    mix: null
+  },
 ];
 
 function wApplyPreset(presetId) {
   wActivePreset = presetId;
-  document.querySelectorAll('.preset-btn').forEach(b=>b.classList.toggle('active', b.dataset.preset===presetId));
-  const preset = wPresets.find(p=>p.id===presetId);
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.toggle('active', b.dataset.preset === presetId));
+  const preset = wPresets.find(p => p.id === presetId);
   if (!preset || !preset.mix) return;
   // Reset all to 0
-  wSubstrates.forEach(s=>wSetSlider(s.id, 0));
+  wSubstrates.forEach(s => wSetSlider(s.id, 0));
   // Apply preset values
-  Object.entries(preset.mix).forEach(([id,val])=>wSetSlider(id, val));
+  Object.entries(preset.mix).forEach(([id, val]) => wSetSlider(id, val));
   wUpdateTotal();
 }
 
 function wInitCalc() {
   // Render presets
   const presetsEl = document.getElementById('w-presets');
-  presetsEl.innerHTML = wPresets.map(p=>`<button class="preset-btn${p.id===wActivePreset?' active':''}" data-preset="${p.id}" onclick="wApplyPreset('${p.id}')"><span class="preset-icon">${p.icon}</span><span>${p.label}<br><span style="font-size:9px;opacity:.65">${p.desc}</span></span></button>`).join('');
+  presetsEl.innerHTML = wPresets.map(p => `<button class="preset-btn${p.id === wActivePreset ? ' active' : ''}" data-preset="${p.id}" onclick="wApplyPreset('${p.id}')"><span class="preset-icon">${p.icon}</span><span>${p.label}<br><span style="font-size:9px;opacity:.65">${p.desc}</span></span></button>`).join('');
   // Costruisci slider substrato
   const grid = document.getElementById('w-substrate-grid');
   grid.innerHTML = wSubstrates.map(s => `
@@ -1401,35 +1473,35 @@ function wOnSliderChange(id) {
   // Quando l'utente muove uno slider manualmente, passa a "Personalizzato"
   if (wActivePreset !== 'custom') {
     wActivePreset = 'custom';
-    document.querySelectorAll('.preset-btn').forEach(b=>b.classList.toggle('active', b.dataset.preset==='custom'));
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.toggle('active', b.dataset.preset === 'custom'));
   }
 }
 
 function wSetSlider(id, val) {
-  document.getElementById('ws-'+id).value = val;
-  document.getElementById('wsv-'+id).textContent = val + '%';
+  document.getElementById('ws-' + id).value = val;
+  document.getElementById('wsv-' + id).textContent = val + '%';
 }
 
 function wUpdateSlider(id) {
-  const val = +document.getElementById('ws-'+id).value;
-  document.getElementById('wsv-'+id).textContent = val + '%';
+  const val = +document.getElementById('ws-' + id).value;
+  document.getElementById('wsv-' + id).textContent = val + '%';
   wUpdateTotal();
 }
 
 function wUpdateTotal() {
-  const total = wSubstrates.reduce((s, sub) => s + (+document.getElementById('ws-'+sub.id).value), 0);
+  const total = wSubstrates.reduce((s, sub) => s + (+document.getElementById('ws-' + sub.id).value), 0);
   const el = document.getElementById('w-sub-total');
   el.textContent = 'Totale: ' + total + '%';
-  el.className = 'sub-total ' + (Math.abs(total-100) <= 2 ? 'ok' : 'warn');
-  if (Math.abs(total-100) > 2) el.textContent += ' ⚠️ deve essere 100%';
+  el.className = 'sub-total ' + (Math.abs(total - 100) <= 2 ? 'ok' : 'warn');
+  if (Math.abs(total - 100) > 2) el.textContent += ' ⚠️ deve essere 100%';
 }
 
 function wToggleVol(mode) {
   wVolMode = mode;
-  document.getElementById('v-dim').style.display = mode==='dim'?'block':'none';
-  document.getElementById('v-lit').style.display  = mode==='lit'?'block':'none';
-  document.getElementById('v-btn-dim').classList.toggle('active', mode==='dim');
-  document.getElementById('v-btn-lit').classList.toggle('active', mode==='lit');
+  document.getElementById('v-dim').style.display = mode === 'dim' ? 'block' : 'none';
+  document.getElementById('v-lit').style.display = mode === 'lit' ? 'block' : 'none';
+  document.getElementById('v-btn-dim').classList.toggle('active', mode === 'dim');
+  document.getElementById('v-btn-lit').classList.toggle('active', mode === 'lit');
   wCalcVol();
 }
 
@@ -1445,7 +1517,7 @@ function wCalcVol() {
     const isSq = shape === 'square';
     const isTrunc = shape === 'truncated';
     document.getElementById('v-cylinder').style.display = isSq ? 'none' : 'flex';
-    document.getElementById('v-square').style.display   = isSq ? 'flex' : 'none';
+    document.getElementById('v-square').style.display = isSq ? 'flex' : 'none';
     document.getElementById('v-diam-bot-wrap').style.display = isTrunc ? 'flex' : 'none';
     if (isSq) {
       const w = +document.getElementById('w-width').value || 0;
@@ -1455,7 +1527,7 @@ function wCalcVol() {
       const r1 = (+document.getElementById('w-diam-top').value || 0) / 2;
       const r2 = (+document.getElementById('w-diam-bot').value || 0) / 2;
       // Volume tronco di cono: π/3 × h × (r1²+r1×r2+r2²)
-      liters = (Math.PI / 3 * h * (r1*r1 + r1*r2 + r2*r2)) / 1000;
+      liters = (Math.PI / 3 * h * (r1 * r1 + r1 * r2 + r2 * r2)) / 1000;
     } else {
       const r = (+document.getElementById('w-diam-top').value || 0) / 2;
       liters = (Math.PI * r * r * h) / 1000;
@@ -1465,7 +1537,7 @@ function wCalcVol() {
   }
   wVolLiters = Math.max(0.1, liters);
   const preview = document.getElementById('w-vol-preview');
-  if (preview) preview.textContent = wVolLiters.toFixed(1) + ' L (' + Math.round(wVolLiters*1000) + ' ml)';
+  if (preview) preview.textContent = wVolLiters.toFixed(1) + ' L (' + Math.round(wVolLiters * 1000) + ' ml)';
 }
 
 // ── ET₀ Penman-Monteith ──────────────────────────────────────────────
@@ -1485,14 +1557,14 @@ function wToggleET0() {
     knob.style.left = '20px';
     panel.style.display = 'block';
     seasSel.disabled = true; seasSel.style.opacity = '0.4';
-    expSel.disabled = true;  expSel.style.opacity = '0.4';
+    expSel.disabled = true; expSel.style.opacity = '0.4';
     wFetchET0();
   } else {
     sw.style.background = 'var(--border)';
     knob.style.left = '2px';
     panel.style.display = 'none';
     seasSel.disabled = false; seasSel.style.opacity = '1';
-    expSel.disabled = false;  expSel.style.opacity = '1';
+    expSel.disabled = false; expSel.style.opacity = '1';
     wET0Data = null;
   }
 }
@@ -1555,7 +1627,7 @@ async function wFetchET0() {
 
     loading.style.display = 'none';
     dataDiv.style.display = 'block';
-  } catch(e) {
+  } catch (e) {
     loading.innerHTML = '❌ Server non raggiungibile — avvia server.py';
   }
 }
@@ -1629,21 +1701,21 @@ function wCalculate() {
   wCalcVol();
 
   // Calcola WHC pesato del substrato
-  const total = wSubstrates.reduce((s,sub)=>s+(+document.getElementById('ws-'+sub.id).value),0);
-  if (Math.abs(total-100) > 5) {
+  const total = wSubstrates.reduce((s, sub) => s + (+document.getElementById('ws-' + sub.id).value), 0);
+  if (Math.abs(total - 100) > 5) {
     alert('La composizione del substrato deve sommare a 100%.\nAttualmente è ' + total + '%.');
     return;
   }
-  const whc = wSubstrates.reduce((s,sub)=>{
-    const pct = +document.getElementById('ws-'+sub.id).value / 100;
+  const whc = wSubstrates.reduce((s, sub) => {
+    const pct = +document.getElementById('ws-' + sub.id).value / 100;
     return s + pct * sub.whc;
   }, 0);
 
-  const potFactor  = +document.getElementById('w-pot-mat').value;
+  const potFactor = +document.getElementById('w-pot-mat').value;
   let seasFactor = +document.getElementById('w-season').value;
-  const plantFactor= +document.getElementById('w-plant-cat').value;
-  let expFactor  = +document.getElementById('w-exposure').value;
-  const stageFactor= +document.getElementById('w-stage').value;
+  const plantFactor = +document.getElementById('w-plant-cat').value;
+  let expFactor = +document.getElementById('w-exposure').value;
+  const stageFactor = +document.getElementById('w-stage').value;
 
   // Se ET₀ live è attivo, sostituisci stagione × esposizione con il fattore calcolato
   let usingET0 = false;
@@ -1667,23 +1739,23 @@ function wCalculate() {
   // Frequenza stimata (giorni tra una annaffiatura e l'altra)
   const subRetentionFactor = whc / 0.45; // normalizzato su terriccio standard
   const freqBase = PARAMS.freqBase;
-  const freqDays = Math.round(freqBase * (1/seasFactor) * (1/expFactor) * (1/stageFactor) * subRetentionFactor * potFactor);
+  const freqDays = Math.round(freqBase * (1 / seasFactor) * (1 / expFactor) * (1 / stageFactor) * subRetentionFactor * potFactor);
   const freqClamped = Math.max(1, Math.min(60, freqDays));
 
   // Aggiorna risultato
   document.getElementById('r-qty').textContent = waterMl >= 1000
-    ? (waterMl/1000).toFixed(1) + ' L'
+    ? (waterMl / 1000).toFixed(1) + ' L'
     : waterMl;
   document.getElementById('r-unit') && (document.getElementById('r-unit').textContent = waterMl >= 1000 ? '' : 'ml');
   document.getElementById('r-label').textContent =
     'per ogni annaffiatura · vaso da ' + wVolLiters.toFixed(1) + ' L';
-  document.getElementById('r-vol').textContent  = wVolLiters.toFixed(1) + ' L (' + Math.round(wVolLiters*1000) + ' ml)';
-  document.getElementById('r-ret').textContent  = Math.round(whc*100) + '% ritenzione idrica';
-  document.getElementById('r-cap').textContent  = Math.round(waterCapacity) + ' ml capacità massima';
+  document.getElementById('r-vol').textContent = wVolLiters.toFixed(1) + ' L (' + Math.round(wVolLiters * 1000) + ' ml)';
+  document.getElementById('r-ret').textContent = Math.round(whc * 100) + '% ritenzione idrica';
+  document.getElementById('r-cap').textContent = Math.round(waterCapacity) + ' ml capacità massima';
   document.getElementById('r-freq').textContent = freqClamped === 1 ? 'Ogni giorno' :
     freqClamped <= 3 ? 'Ogni ' + freqClamped + ' giorni' :
-    freqClamped <= 7 ? 'Ogni ' + freqClamped + ' giorni (~' + Math.round(freqClamped/7*10)/10 + ' settimane)' :
-    'Ogni ~' + Math.round(freqClamped/7) + (Math.round(freqClamped/7)===1?' settimana':' settimane');
+      freqClamped <= 7 ? 'Ogni ' + freqClamped + ' giorni (~' + Math.round(freqClamped / 7 * 10) / 10 + ' settimane)' :
+        'Ogni ~' + Math.round(freqClamped / 7) + (Math.round(freqClamped / 7) === 1 ? ' settimana' : ' settimane');
 
   // Tips personalizzati
   const tips = [];
@@ -1709,7 +1781,7 @@ function wCalculate() {
   document.getElementById('r-tips').innerHTML = tips.join('<br>');
 
   document.getElementById('w-result').classList.add('visible');
-  document.getElementById('w-result').scrollIntoView({behavior:'smooth', block:'nearest'});
+  document.getElementById('w-result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1718,15 +1790,15 @@ function wCalculate() {
 
 // Fattore di conversione → ml (o g) per 1 L d'acqua
 const F_UNIT_CONV = {
-  ml_l:   {factor: 1,      type:'ml', label:'ml/L'},
-  g_l:    {factor: 1,      type:'g',  label:'g/L'},
-  ml_10l: {factor: 0.1,    type:'ml', label:'ml/10L'},
-  g_10l:  {factor: 0.1,    type:'g',  label:'g/10L'},
-  ml_100l:{factor: 0.01,   type:'ml', label:'ml/100L'},
-  g_100l: {factor: 0.01,   type:'g',  label:'g/100L'},
-  pct:    {factor: 10,     type:'ml', label:'%'},       // 1% = 10 ml/L
-  tsp_l:  {factor: 5,      type:'ml', label:'cucchiaini/L'},
-  tbsp_l: {factor: 15,     type:'ml', label:'cucchiai/L'},
+  ml_l: { factor: 1, type: 'ml', label: 'ml/L' },
+  g_l: { factor: 1, type: 'g', label: 'g/L' },
+  ml_10l: { factor: 0.1, type: 'ml', label: 'ml/10L' },
+  g_10l: { factor: 0.1, type: 'g', label: 'g/10L' },
+  ml_100l: { factor: 0.01, type: 'ml', label: 'ml/100L' },
+  g_100l: { factor: 0.01, type: 'g', label: 'g/100L' },
+  pct: { factor: 10, type: 'ml', label: '%' },       // 1% = 10 ml/L
+  tsp_l: { factor: 5, type: 'ml', label: 'cucchiaini/L' },
+  tbsp_l: { factor: 15, type: 'ml', label: 'cucchiai/L' },
 };
 
 let fDoseFactor = 0.75;  // default: ¾ dose (valore prudente)
@@ -1757,8 +1829,8 @@ function fUseWaterFromCalc() {
 
 function fSetDoseFactor(f) {
   fDoseFactor = f;
-  document.querySelectorAll('[id^="f-dose-"]').forEach(b=>b.classList.remove('active'));
-  const id = f===1?'f-dose-100':f===0.75?'f-dose-75':f===0.5?'f-dose-50':'f-dose-25';
+  document.querySelectorAll('[id^="f-dose-"]').forEach(b => b.classList.remove('active'));
+  const id = f === 1 ? 'f-dose-100' : f === 0.75 ? 'f-dose-75' : f === 0.5 ? 'f-dose-50' : 'f-dose-25';
   document.getElementById(id).classList.add('active');
   fCalculate();
 }
@@ -1804,9 +1876,9 @@ function fCalculate() {
 
   // Dettagli
   document.getElementById('fr-prod').textContent = dose + ' ' + conv.label;
-  const factorText = fDoseFactor===1?'100% (piena)':fDoseFactor===0.75?'75% (¾)':fDoseFactor===0.5?'50% (½)':'25% (¼)';
+  const factorText = fDoseFactor === 1 ? '100% (piena)' : fDoseFactor === 0.75 ? '75% (¾)' : fDoseFactor === 0.5 ? '50% (½)' : '25% (¼)';
   document.getElementById('fr-applied').textContent = factorText;
-  document.getElementById('fr-water').textContent = water >= 1 ? water + ' L' : Math.round(water*1000) + ' ml';
+  document.getElementById('fr-water').textContent = water >= 1 ? water + ' L' : Math.round(water * 1000) + ' ml';
   document.getElementById('fr-conc').textContent = finalConcentration.toFixed(2) + ' ' + unitType + '/L';
 
   // Tips contestuali
@@ -1834,7 +1906,7 @@ function fCalculate() {
 
 // Inizializza il calcolatore fertilizzante quando si apre la sezione acqua
 const _wInitCalc_orig = wInitCalc;
-wInitCalc = function() {
+wInitCalc = function () {
   _wInitCalc_orig();
   fCalculate();
   fiInit();
@@ -1849,32 +1921,32 @@ wInitCalc = function() {
 // dedotti dal gruppo simulazione, e loc dedotta dal primo vaso registrato
 // (se esistente). Le 26 native restano hard-coded qui sotto.
 let FI_PLANTS = [
-  {id:0,  name:'Sanseviera',      icon:'🌿', loc:'indoor',  waterMl:150, doseFactor:0.25},
-  {id:1,  name:'Orchidea',        icon:'🌸', loc:'indoor',  waterMl:200, doseFactor:0.25},
-  {id:2,  name:'Ficus Benjamina', icon:'🌳', loc:'indoor',  waterMl:400, doseFactor:0.5},
-  {id:3,  name:'Ficus Elastica',  icon:'🌱', loc:'indoor',  waterMl:500, doseFactor:0.5},
-  {id:4,  name:'Oleandro',        icon:'🌺', loc:'outdoor', waterMl:1500,doseFactor:1.0},
-  {id:5,  name:'Glicine Bonsai',  icon:'💜', loc:'outdoor', waterMl:300, doseFactor:0.5},
-  {id:6,  name:'Limone',          icon:'🍋', loc:'outdoor', waterMl:2000,doseFactor:1.0},
-  {id:7,  name:'Moneta Cinese',   icon:'🪙', loc:'indoor',  waterMl:250, doseFactor:0.25},
-  {id:8,  name:'Vinca',           icon:'🔵', loc:'outdoor', waterMl:400, doseFactor:0.5},
-  {id:9,  name:'Mimosa',          icon:'🌼', loc:'outdoor', waterMl:800, doseFactor:0.5},
-  {id:10, name:'Melograno',       icon:'🍎', loc:'outdoor', waterMl:1500,doseFactor:1.0},
-  {id:11, name:'Stella di Natale',icon:'🌟', loc:'indoor',  waterMl:300, doseFactor:1.0},
-  {id:12, name:'Aloe Vera',       icon:'🌵', loc:'indoor',  waterMl:200, doseFactor:0.25},
-  {id:13, name:'Liquidambar',     icon:'🍂', loc:'outdoor', waterMl:2000,doseFactor:1.0},
-  {id:14, name:'Ippocastano',     icon:'🌰', loc:'outdoor', waterMl:3000,doseFactor:1.0},
-  {id:15, name:'Betulla',         icon:'🌿', loc:'outdoor', waterMl:2000,doseFactor:0.5},
-  {id:16, name:'Acero Campestre', icon:'🍁', loc:'outdoor', waterMl:1500,doseFactor:0.5},
-  {id:17, name:'Pitosforo',       icon:'🌿', loc:'outdoor', waterMl:1000,doseFactor:1.0},
-  {id:18, name:'Spino di Giuda',  icon:'🌿', loc:'outdoor', waterMl:2000,doseFactor:1.0},
-  {id:19, name:'Gelso Bonsai',    icon:'🍃', loc:'outdoor', waterMl:300, doseFactor:0.5},
-  {id:20, name:'Tradescantia',    icon:'💜', loc:'indoor',  waterMl:250, doseFactor:0.25},
-  {id:21, name:'Rosmarino',       icon:'🌿', loc:'outdoor', waterMl:300, doseFactor:0.5},
-  {id:22, name:'Salvia',          icon:'🍃', loc:'outdoor', waterMl:300, doseFactor:0.5},
-  {id:23, name:'Paulownia',       icon:'🌸', loc:'outdoor', waterMl:3000,doseFactor:1.0},
-  {id:24, name:'Crassula Ovata',  icon:'🪴', loc:'indoor',  waterMl:150, doseFactor:0.25},
-  {id:25, name:'Carmona Bonsai',  icon:'🌳', loc:'indoor',  waterMl:200, doseFactor:0.5},
+  { id: 0, name: 'Sanseviera', icon: '🌿', loc: 'indoor', waterMl: 150, doseFactor: 0.25 },
+  { id: 1, name: 'Orchidea', icon: '🌸', loc: 'indoor', waterMl: 200, doseFactor: 0.25 },
+  { id: 2, name: 'Ficus Benjamina', icon: '🌳', loc: 'indoor', waterMl: 400, doseFactor: 0.5 },
+  { id: 3, name: 'Ficus Elastica', icon: '🌱', loc: 'indoor', waterMl: 500, doseFactor: 0.5 },
+  { id: 4, name: 'Oleandro', icon: '🌺', loc: 'outdoor', waterMl: 1500, doseFactor: 1.0 },
+  { id: 5, name: 'Glicine Bonsai', icon: '💜', loc: 'outdoor', waterMl: 300, doseFactor: 0.5 },
+  { id: 6, name: 'Limone', icon: '🍋', loc: 'outdoor', waterMl: 2000, doseFactor: 1.0 },
+  { id: 7, name: 'Moneta Cinese', icon: '🪙', loc: 'indoor', waterMl: 250, doseFactor: 0.25 },
+  { id: 8, name: 'Vinca', icon: '🔵', loc: 'outdoor', waterMl: 400, doseFactor: 0.5 },
+  { id: 9, name: 'Mimosa', icon: '🌼', loc: 'outdoor', waterMl: 800, doseFactor: 0.5 },
+  { id: 10, name: 'Melograno', icon: '🍎', loc: 'outdoor', waterMl: 1500, doseFactor: 1.0 },
+  { id: 11, name: 'Stella di Natale', icon: '🌟', loc: 'indoor', waterMl: 300, doseFactor: 1.0 },
+  { id: 12, name: 'Aloe Vera', icon: '🌵', loc: 'indoor', waterMl: 200, doseFactor: 0.25 },
+  { id: 13, name: 'Liquidambar', icon: '🍂', loc: 'outdoor', waterMl: 2000, doseFactor: 1.0 },
+  { id: 14, name: 'Ippocastano', icon: '🌰', loc: 'outdoor', waterMl: 3000, doseFactor: 1.0 },
+  { id: 15, name: 'Betulla', icon: '🌿', loc: 'outdoor', waterMl: 2000, doseFactor: 0.5 },
+  { id: 16, name: 'Acero Campestre', icon: '🍁', loc: 'outdoor', waterMl: 1500, doseFactor: 0.5 },
+  { id: 17, name: 'Pitosforo', icon: '🌿', loc: 'outdoor', waterMl: 1000, doseFactor: 1.0 },
+  { id: 18, name: 'Spino di Giuda', icon: '🌿', loc: 'outdoor', waterMl: 2000, doseFactor: 1.0 },
+  { id: 19, name: 'Gelso Bonsai', icon: '🍃', loc: 'outdoor', waterMl: 300, doseFactor: 0.5 },
+  { id: 20, name: 'Tradescantia', icon: '💜', loc: 'indoor', waterMl: 250, doseFactor: 0.25 },
+  { id: 21, name: 'Rosmarino', icon: '🌿', loc: 'outdoor', waterMl: 300, doseFactor: 0.5 },
+  { id: 22, name: 'Salvia', icon: '🍃', loc: 'outdoor', waterMl: 300, doseFactor: 0.5 },
+  { id: 23, name: 'Paulownia', icon: '🌸', loc: 'outdoor', waterMl: 3000, doseFactor: 1.0 },
+  { id: 24, name: 'Crassula Ovata', icon: '🪴', loc: 'indoor', waterMl: 150, doseFactor: 0.25 },
+  { id: 25, name: 'Carmona Bonsai', icon: '🌳', loc: 'indoor', waterMl: 200, doseFactor: 0.5 },
 ];
 
 let fiInited = false;
@@ -1892,24 +1964,24 @@ function fiInit() {
         <div class="fi-mini-field">🪴<input type="number" id="fin-${p.id}" value="1" min="1" max="50" style="width:38px" onchange="fiUpdate()" title="N° vasi"></div>
         <div class="fi-mini-field">💧<input type="number" id="fiw-${p.id}" value="${p.waterMl}" min="10" step="10" onchange="fiUpdate()" title="Acqua per vaso (ml)"><span>ml</span></div>
         <div class="fi-mini-field">⚖️<select id="fid-${p.id}" onchange="fiUpdate()" title="Dose">
-          <option value="1"${p.doseFactor===1?' selected':''}>Piena</option>
-          <option value="0.75"${p.doseFactor===0.75?' selected':''}>¾</option>
-          <option value="0.5"${p.doseFactor===0.5?' selected':''}>½</option>
-          <option value="0.25"${p.doseFactor===0.25?' selected':''}>¼</option>
+          <option value="1"${p.doseFactor === 1 ? ' selected' : ''}>Piena</option>
+          <option value="0.75"${p.doseFactor === 0.75 ? ' selected' : ''}>¾</option>
+          <option value="0.5"${p.doseFactor === 0.5 ? ' selected' : ''}>½</option>
+          <option value="0.25"${p.doseFactor === 0.25 ? ' selected' : ''}>¼</option>
         </select></div>
       </div>
     </div>`).join('');
 }
 
-function fiSelectAll()  { FI_PLANTS.forEach(p=>{document.getElementById('fic-'+p.id).checked=true;}); fiUpdate(); }
-function fiSelectNone() { FI_PLANTS.forEach(p=>{document.getElementById('fic-'+p.id).checked=false;}); fiUpdate(); }
-function fiSelectIndoor(){ FI_PLANTS.forEach(p=>{document.getElementById('fic-'+p.id).checked=(p.loc==='indoor');}); fiUpdate(); }
-function fiSelectOutdoor(){FI_PLANTS.forEach(p=>{document.getElementById('fic-'+p.id).checked=(p.loc==='outdoor');}); fiUpdate(); }
+function fiSelectAll() { FI_PLANTS.forEach(p => { document.getElementById('fic-' + p.id).checked = true; }); fiUpdate(); }
+function fiSelectNone() { FI_PLANTS.forEach(p => { document.getElementById('fic-' + p.id).checked = false; }); fiUpdate(); }
+function fiSelectIndoor() { FI_PLANTS.forEach(p => { document.getElementById('fic-' + p.id).checked = (p.loc === 'indoor'); }); fiUpdate(); }
+function fiSelectOutdoor() { FI_PLANTS.forEach(p => { document.getElementById('fic-' + p.id).checked = (p.loc === 'outdoor'); }); fiUpdate(); }
 
 async function fiOpenFromCalendar() {
   const evtData = window._fiCalEvts;
   if (!evtData) return;
-  const {fertEvs, bbEvs, date} = evtData;
+  const { fertEvs, bbEvs, date } = evtData;
 
   gClosePanel();
   showSection('acqua');
@@ -1923,12 +1995,12 @@ async function fiOpenFromCalendar() {
     const res = await apiFetch('/api/ecowitt/realtime');
     const json = await res.json();
     if (json.configured && json.code === 0) {
-      for (let ch=1; ch<=16; ch++) {
+      for (let ch = 1; ch <= 16; ch++) {
         const d = meteoGetSoilData(json, ch);
         if (d.moisture !== null || d.temp !== null || d.ec !== null) soilByCh[ch] = d;
       }
     }
-  } catch {}
+  } catch { }
   window._fiSoilByCh = soilByCh;
 
   // Raccogli piante del giorno con i loro prodotti
@@ -1938,19 +2010,19 @@ async function fiOpenFromCalendar() {
   // Da eventi BioBizz: sappiamo quale prodotto specifico
   bbEvs.forEach(e => {
     const pid = e.plant.id;
-    if (!plantMap[pid]) plantMap[pid] = {id:pid, name:e.plant.name, icon:e.plant.icon||'🌿', pots:1, waterMl:500, products:[]};
+    if (!plantMap[pid]) plantMap[pid] = { id: pid, name: e.plant.name, icon: e.plant.icon || '🌿', pots: 1, waterMl: 500, products: [] };
     const bbProd = BB_PRODUCTS[e.prod];
-    const dbEntry = FERT_DB.find(f => f.id === 'bb-'+e.prod);
+    const dbEntry = FERT_DB.find(f => f.id === 'bb-' + e.prod);
     const dosePerL = dbEntry ? dbEntry.dose : 2;
     // Evita duplicati prodotto per la stessa pianta
     if (!plantMap[pid].products.find(p => p.prod === e.prod)) {
       plantMap[pid].products.push({
         prod: e.prod,
-        prodId: 'bb-'+e.prod,
+        prodId: 'bb-' + e.prod,
         label: bbProd ? bbProd.label : e.prod,
         color: bbProd ? bbProd.color : '#4a8a3a',
         dosePerL: dosePerL,
-        doseFactor: e.sched && e.sched.dose ? (e.sched.dose.includes('¼')?0.25 : e.sched.dose.includes('½')?0.5 : e.sched.dose.includes('¾')?0.75 : 1) : 0.5,
+        doseFactor: e.sched && e.sched.dose ? (e.sched.dose.includes('¼') ? 0.25 : e.sched.dose.includes('½') ? 0.5 : e.sched.dose.includes('¾') ? 0.75 : 1) : 0.5,
         doseLabel: e.sched ? e.sched.dose : '½ dose',
       });
     }
@@ -1960,7 +2032,7 @@ async function fiOpenFromCalendar() {
   // Cerchiamo nel inventario quali concimi usa la pianta
   fertEvs.forEach(e => {
     const pid = e.plant.id;
-    if (!plantMap[pid]) plantMap[pid] = {id:pid, name:e.plant.name, icon:e.plant.icon||'🌿', pots:1, waterMl:500, products:[]};
+    if (!plantMap[pid]) plantMap[pid] = { id: pid, name: e.plant.name, icon: e.plant.icon || '🌿', pots: 1, waterMl: 500, products: [] };
     // Se non ha già prodotti da bbEvs, cerca nell'inventario
     if (!plantMap[pid].products.length) {
       const invItems = inv.filter(it => {
@@ -1968,12 +2040,12 @@ async function fiOpenFromCalendar() {
         return p && p.name === e.plant.name;
       });
       invItems.forEach(it => {
-        (it.fertilizers||[]).forEach(fid => {
-          const f = FERT_DB.find(x=>x.id===fid);
-          if (f && f.type === 'liquido' && !plantMap[pid].products.find(p=>p.prodId===fid)) {
+        (it.fertilizers || []).forEach(fid => {
+          const f = FERT_DB.find(x => x.id === fid);
+          if (f && f.type === 'liquido' && !plantMap[pid].products.find(p => p.prodId === fid)) {
             plantMap[pid].products.push({
               prod: fid, prodId: fid,
-              label: f.brand+' '+f.name, color: '#5a7a4a',
+              label: f.brand + ' ' + f.name, color: '#5a7a4a',
               dosePerL: f.dose, doseFactor: 0.5, doseLabel: '½ dose',
             });
           }
@@ -2008,12 +2080,12 @@ async function fiOpenFromCalendar() {
         const normalWater = vol * 1000 * whc * PARAMS.drenaggio * potFactor * plantFactor;
         const waterMl = Math.round(normalWater * (PARAMS.fertiReduction / 100));
         const pots = it.qty || 1;
-        const label = it.nickname || (invItems.length > 1 ? pm.name + ' #' + (idx+1) : pm.name);
+        const label = it.nickname || (invItems.length > 1 ? pm.name + ' #' + (idx + 1) : pm.name);
         const dimsStr = it.potShape === 'square'
-          ? `${it.potW||25}×${it.potD||25}×${it.potHSq||22}cm`
+          ? `${it.potW || 25}×${it.potD || 25}×${it.potHSq || 22}cm`
           : it.potShape === 'truncated'
-          ? `Ø${it.potDiamTop||25}/${it.potDiamBot||18}×${it.potHTrunc||22}cm`
-          : `Ø${it.potDiam||25}×${it.potH||22}cm`;
+            ? `Ø${it.potDiamTop || 25}/${it.potDiamBot || 18}×${it.potHTrunc || 22}cm`
+            : `Ø${it.potDiam || 25}×${it.potH || 22}cm`;
 
         potEntries.push({
           id: pm.id, name: label, icon: pm.icon,
@@ -2069,7 +2141,7 @@ async function fiOpenFromCalendar() {
       groupFert += fert;
       groupPots += pl.pots;
       if (!seenPots.has(pl.name)) { grandTotalPots += pl.pots; seenPots.add(pl.name); }
-      const waterStr = totalWater >= 1000 ? (totalWater/1000).toFixed(1)+' L' : totalWater+' ml';
+      const waterStr = totalWater >= 1000 ? (totalWater / 1000).toFixed(1) + ' L' : totalWater + ' ml';
       const fertStr = fert < 1 ? fert.toFixed(2) : fert < 10 ? fert.toFixed(1) : Math.round(fert);
       const perPot = pl.pots > 1 ? ` <span style="font-size:9px;color:var(--muted)">(${pl.pots}×${pl.waterMl}ml)</span>` : '';
       const dimsInfo = pl.dimsStr ? `<span style="font-size:9px;color:var(--muted)">${pl.dimsStr} · ${pl.vol}L</span>` : '';
@@ -2081,7 +2153,7 @@ async function fiOpenFromCalendar() {
         const sd = soilByCh[parseInt(pl.invItem.wh51Ch)];
         if (sd) {
           const cat = pl.invItem.wh51Cat || 'universale';
-          const ecThresh = (PARAMS.sogliEC || {})[cat] || {min:400, target:800, max:2000};
+          const ecThresh = (PARAMS.sogliEC || {})[cat] || { min: 400, target: 800, max: 2000 };
           const warns = [];
           if (sd.temp !== null && sd.temp < PARAMS.tempRadiciMin) {
             warns.push(`🌡️ Radici ${sd.temp.toFixed(1)}°C (salta fertirrigazione, radici inattive)`);
@@ -2102,8 +2174,8 @@ async function fiOpenFromCalendar() {
       return `<div style="display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;background:#fff;font-size:11px;flex-wrap:wrap">
         <span>${pl.icon}</span>
         <span style="flex:1">
-          <span style="font-weight:500">${pl.name}</span>${pl.pots>1?' <span style="font-size:9px;background:#e0ecff;color:#2a5a8a;padding:1px 5px;border-radius:10px">×'+pl.pots+'</span>':''}
-          ${dimsInfo?'<br>'+dimsInfo:''}
+          <span style="font-weight:500">${pl.name}</span>${pl.pots > 1 ? ' <span style="font-size:9px;background:#e0ecff;color:#2a5a8a;padding:1px 5px;border-radius:10px">×' + pl.pots + '</span>' : ''}
+          ${dimsInfo ? '<br>' + dimsInfo : ''}
         </span>
         <span style="color:var(--muted);text-align:right;min-width:55px">${waterStr}${perPot}</span>
         <span style="color:#2a5a8a;font-weight:500">→</span>
@@ -2114,7 +2186,7 @@ async function fiOpenFromCalendar() {
     }).join('');
 
     grandTotalWater += groupWater;
-    const groupWaterStr = groupWater >= 1000 ? (groupWater/1000).toFixed(1)+' L' : groupWater+' ml';
+    const groupWaterStr = groupWater >= 1000 ? (groupWater / 1000).toFixed(1) + ' L' : groupWater + ' ml';
     const groupFertStr = groupFert < 1 ? groupFert.toFixed(2) : groupFert < 10 ? groupFert.toFixed(1) : Math.round(groupFert);
 
     groupsHtml += `<div style="margin-bottom:14px;border:1px solid #b0c8e8;border-radius:10px;overflow:hidden">
@@ -2131,15 +2203,15 @@ async function fiOpenFromCalendar() {
 
   // Mostra il risultato
   const calResult = document.getElementById('fi-cal-result');
-  const dayStr = date.getDate()+' '+gMonthNames[date.getMonth()]+' '+date.getFullYear();
-  document.getElementById('fi-cal-title').textContent = 'Fertirrigazione · '+dayStr;
+  const dayStr = date.getDate() + ' ' + gMonthNames[date.getMonth()] + ' ' + date.getFullYear();
+  document.getElementById('fi-cal-title').textContent = 'Fertirrigazione · ' + dayStr;
   const prodCount = Object.keys(productGroups).length;
   document.getElementById('fi-cal-subtitle').textContent = prodCount > 1
     ? `${prodCount} prodotti diversi — prepara le soluzioni separatamente`
     : 'Soluzione unica';
   document.getElementById('fi-cal-groups').innerHTML = groupsHtml;
-  document.getElementById('fi-cal-total-water').textContent = (grandTotalWater/1000) >= 10
-    ? Math.round(grandTotalWater/1000) : (grandTotalWater/1000).toFixed(1);
+  document.getElementById('fi-cal-total-water').textContent = (grandTotalWater / 1000) >= 10
+    ? Math.round(grandTotalWater / 1000) : (grandTotalWater / 1000).toFixed(1);
   document.getElementById('fi-cal-total-pots').textContent = grandTotalPots;
 
   // Tips
@@ -2160,7 +2232,7 @@ async function fiOpenFromCalendar() {
   document.getElementById('fi-result').style.display = 'none';
 
   // Scrolla al risultato
-  setTimeout(() => calResult.scrollIntoView({behavior:'smooth', block:'center'}), 200);
+  setTimeout(() => calResult.scrollIntoView({ behavior: 'smooth', block: 'center' }), 200);
 }
 
 function fiUpdate() {
@@ -2186,16 +2258,16 @@ function fiUpdate() {
 
   // Toggle row highlight
   FI_PLANTS.forEach(p => {
-    const checked = document.getElementById('fic-'+p.id).checked;
-    document.getElementById('fir-'+p.id).classList.toggle('selected', checked);
+    const checked = document.getElementById('fic-' + p.id).checked;
+    document.getElementById('fir-' + p.id).classList.toggle('selected', checked);
   });
 
   // Gather selected plants
-  const selected = FI_PLANTS.filter(p => document.getElementById('fic-'+p.id).checked).map(p => ({
+  const selected = FI_PLANTS.filter(p => document.getElementById('fic-' + p.id).checked).map(p => ({
     ...p,
-    pots: +(document.getElementById('fin-'+p.id).value) || 1,
-    waterMl: +(document.getElementById('fiw-'+p.id).value) || 0,
-    doseFactor: +(document.getElementById('fid-'+p.id).value) || 1,
+    pots: +(document.getElementById('fin-' + p.id).value) || 1,
+    waterMl: +(document.getElementById('fiw-' + p.id).value) || 0,
+    doseFactor: +(document.getElementById('fid-' + p.id).value) || 1,
   }));
 
   const resultEl = document.getElementById('fi-result');
@@ -2206,9 +2278,9 @@ function fiUpdate() {
   resultEl.style.display = 'block';
 
   // Calculate totals
-  const totalWaterMl = selected.reduce((s,p) => s + p.waterMl * p.pots, 0);
+  const totalWaterMl = selected.reduce((s, p) => s + p.waterMl * p.pots, 0);
   const totalWaterL = totalWaterMl / 1000;
-  const totalPots = selected.reduce((s,p) => s + p.pots, 0);
+  const totalPots = selected.reduce((s, p) => s + p.pots, 0);
 
   // Per-plant fertilizer
   const breakdown = selected.map(p => {
@@ -2216,10 +2288,10 @@ function fiUpdate() {
     const fertMl = (totalPlantWater / 1000) * dosePerLiter * p.doseFactor;
     return { ...p, totalPlantWater, fertMl };
   });
-  const totalFert = breakdown.reduce((s,p) => s + p.fertMl, 0);
+  const totalFert = breakdown.reduce((s, p) => s + p.fertMl, 0);
 
   // Weighted average dose factor
-  const avgDose = totalWaterMl > 0 ? breakdown.reduce((s,p) => s + p.doseFactor * p.totalPlantWater, 0) / totalWaterMl : 0;
+  const avgDose = totalWaterMl > 0 ? breakdown.reduce((s, p) => s + p.doseFactor * p.totalPlantWater, 0) / totalWaterMl : 0;
   // Effective concentration
   const effectiveConc = totalWaterL > 0 ? totalFert / totalWaterL : 0;
 
@@ -2245,18 +2317,18 @@ function fiUpdate() {
     <div class="result-item" style="border-color:#b0c8e8"><div class="result-item-label">Piante</div><div class="result-item-val">${selected.length} specie · ${totalPots} vasi</div></div>
     <div class="result-item" style="border-color:#b0c8e8"><div class="result-item-label">Prodotto</div><div class="result-item-val">${prodName}</div></div>
     <div class="result-item" style="border-color:#b0c8e8"><div class="result-item-label">Concentrazione media</div><div class="result-item-val">${effectiveConc.toFixed(2)} ${unitType}/L</div></div>
-    <div class="result-item" style="border-color:#b0c8e8"><div class="result-item-label">Risparmio vs dose piena</div><div class="result-item-val">${avgDose<1 ? Math.round((1-avgDose)*100)+'% risparmiato' : 'Dose piena'}</div></div>`;
+    <div class="result-item" style="border-color:#b0c8e8"><div class="result-item-label">Risparmio vs dose piena</div><div class="result-item-val">${avgDose < 1 ? Math.round((1 - avgDose) * 100) + '% risparmiato' : 'Dose piena'}</div></div>`;
 
   // Breakdown
   document.getElementById('fi-breakdown').innerHTML = breakdown.map(p => {
-    const doseLabel = p.doseFactor===1?'piena':p.doseFactor===0.75?'¾':p.doseFactor===0.5?'½':'¼';
-    const totalWStr = p.totalPlantWater >= 1000 ? (p.totalPlantWater/1000).toFixed(1)+' L' : p.totalPlantWater+' ml';
-    const perPotStr = p.waterMl >= 1000 ? (p.waterMl/1000).toFixed(1)+' L' : p.waterMl+' ml';
+    const doseLabel = p.doseFactor === 1 ? 'piena' : p.doseFactor === 0.75 ? '¾' : p.doseFactor === 0.5 ? '½' : '¼';
+    const totalWStr = p.totalPlantWater >= 1000 ? (p.totalPlantWater / 1000).toFixed(1) + ' L' : p.totalPlantWater + ' ml';
+    const perPotStr = p.waterMl >= 1000 ? (p.waterMl / 1000).toFixed(1) + ' L' : p.waterMl + ' ml';
     const fertStr = p.fertMl < 1 ? p.fertMl.toFixed(2) : p.fertMl < 10 ? p.fertMl.toFixed(1) : Math.round(p.fertMl);
     const potsInfo = p.pots > 1 ? `<span style="font-size:9px;color:var(--muted)"> (${p.pots}×${perPotStr})</span>` : '';
     return `<div style="display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;background:#f8faff;font-size:11px">
       <span>${p.icon}</span>
-      <span style="flex:1;font-weight:500">${p.name}${p.pots>1?' <span style=\"font-size:9px;background:#e0ecff;color:#2a5a8a;padding:1px 5px;border-radius:10px\">×'+p.pots+'</span>':''}</span>
+      <span style="flex:1;font-weight:500">${p.name}${p.pots > 1 ? ' <span style=\"font-size:9px;background:#e0ecff;color:#2a5a8a;padding:1px 5px;border-radius:10px\">×' + p.pots + '</span>' : ''}</span>
       <span style="color:var(--muted)">${totalWStr}${potsInfo}</span>
       <span style="color:#2a5a8a;font-weight:500">→</span>
       <span style="color:#2d7a3a;font-weight:600;min-width:50px;text-align:right">${fertStr} ${unitType}</span>
@@ -2267,7 +2339,7 @@ function fiUpdate() {
   // Tips
   const tips = [];
   if (allSameDose) {
-    tips.push(`<b>Soluzione unica possibile!</b> Tutte le piante selezionate usano la stessa dose (${breakdown[0].doseFactor===1?'piena':breakdown[0].doseFactor===0.75?'¾':breakdown[0].doseFactor===0.5?'½':'¼'}). Prepara ${totalWaterL.toFixed(1)} L di acqua con ${fertDisplay} ${unitType} di ${prodName} e distribuisci ai ${totalPots} vasi.`);
+    tips.push(`<b>Soluzione unica possibile!</b> Tutte le piante selezionate usano la stessa dose (${breakdown[0].doseFactor === 1 ? 'piena' : breakdown[0].doseFactor === 0.75 ? '¾' : breakdown[0].doseFactor === 0.5 ? '½' : '¼'}). Prepara ${totalWaterL.toFixed(1)} L di acqua con ${fertDisplay} ${unitType} di ${prodName} e distribuisci ai ${totalPots} vasi.`);
   } else {
     tips.push('<b>Dosi diverse tra piante</b>: hai selezionato piante con fattori di dose diversi. Due opzioni:');
     tips.push('&nbsp;&nbsp;① <b>Metodo semplice</b>: prepara la soluzione alla dose più bassa (¼) e dai più passate alle piante che richiedono dosi maggiori.');
@@ -2285,53 +2357,53 @@ function fiUpdate() {
 
 const FERT_DB = [
   // BioBizz
-  {id:'bb-grow',    brand:'BioBizz',  name:'Bio·Grow',      npk:'4-3-6',   type:'liquido', dose:2,   unit:'ml/L', cat:'crescita'},
-  {id:'bb-bloom',   brand:'BioBizz',  name:'Bio·Bloom',     npk:'2-7-4',   type:'liquido', dose:2,   unit:'ml/L', cat:'fioritura'},
-  {id:'bb-topmax',  brand:'BioBizz',  name:'Top·Max',       npk:'0.1-0.01-0.1',type:'liquido',dose:1,unit:'ml/L', cat:'fioritura'},
-  {id:'bb-alg',     brand:'BioBizz',  name:'Alg·A·Mic',     npk:'0.1-0.1-0.1', type:'liquido',dose:1,unit:'ml/L', cat:'rinvigorente'},
-  {id:'bb-fish',    brand:'BioBizz',  name:'Fish·Mix',      npk:'5-1-4',   type:'liquido', dose:2,   unit:'ml/L', cat:'crescita'},
-  {id:'bb-calmag',  brand:'BioBizz',  name:'CalMag',        npk:'0-0-0',   type:'liquido', dose:1,   unit:'ml/L', cat:'integratore'},
-  {id:'bb-root',    brand:'BioBizz',  name:'Root·Juice',    npk:'0.1-0.1-0.1', type:'liquido',dose:1,unit:'ml/L', cat:'radicante'},
-  {id:'bb-worm',    brand:'BioBizz',  name:'Worm·Humus',    npk:'1-0-0',   type:'solido',  dose:0,   unit:'% substrato', cat:'ammendante'},
+  { id: 'bb-grow', brand: 'BioBizz', name: 'Bio·Grow', npk: '4-3-6', type: 'liquido', dose: 2, unit: 'ml/L', cat: 'crescita' },
+  { id: 'bb-bloom', brand: 'BioBizz', name: 'Bio·Bloom', npk: '2-7-4', type: 'liquido', dose: 2, unit: 'ml/L', cat: 'fioritura' },
+  { id: 'bb-topmax', brand: 'BioBizz', name: 'Top·Max', npk: '0.1-0.01-0.1', type: 'liquido', dose: 1, unit: 'ml/L', cat: 'fioritura' },
+  { id: 'bb-alg', brand: 'BioBizz', name: 'Alg·A·Mic', npk: '0.1-0.1-0.1', type: 'liquido', dose: 1, unit: 'ml/L', cat: 'rinvigorente' },
+  { id: 'bb-fish', brand: 'BioBizz', name: 'Fish·Mix', npk: '5-1-4', type: 'liquido', dose: 2, unit: 'ml/L', cat: 'crescita' },
+  { id: 'bb-calmag', brand: 'BioBizz', name: 'CalMag', npk: '0-0-0', type: 'liquido', dose: 1, unit: 'ml/L', cat: 'integratore' },
+  { id: 'bb-root', brand: 'BioBizz', name: 'Root·Juice', npk: '0.1-0.1-0.1', type: 'liquido', dose: 1, unit: 'ml/L', cat: 'radicante' },
+  { id: 'bb-worm', brand: 'BioBizz', name: 'Worm·Humus', npk: '1-0-0', type: 'solido', dose: 0, unit: '% substrato', cat: 'ammendante' },
   // COMPO
-  {id:'compo-univ',  brand:'COMPO',   name:'Universale',    npk:'7-5-6',   type:'liquido', dose:7,  unit:'ml/L', cat:'universale'},
-  {id:'compo-green', brand:'COMPO',   name:'Piante verdi',  npk:'7-3-6',   type:'liquido', dose:7,  unit:'ml/L', cat:'crescita'},
-  {id:'compo-fior',  brand:'COMPO',   name:'Piante fiorite',npk:'3-5-7',   type:'liquido', dose:7,  unit:'ml/L', cat:'fioritura'},
-  {id:'compo-agru',  brand:'COMPO',   name:'Agrumi e mediterranee',npk:'6-3-6',type:'liquido',dose:7,unit:'ml/L',cat:'agrumi'},
-  {id:'compo-cact',  brand:'COMPO',   name:'Cactus',        npk:'4-5-7',   type:'liquido', dose:7,  unit:'ml/L', cat:'succulente'},
-  {id:'compo-bons',  brand:'COMPO',   name:'Bonsai',        npk:'6-3-6',   type:'liquido', dose:7,  unit:'ml/L', cat:'bonsai'},
-  {id:'compo-orch',  brand:'COMPO',   name:'Orchidee',      npk:'3-6-6',   type:'liquido', dose:7,  unit:'ml/L', cat:'orchidee'},
-  {id:'compo-osmo',  brand:'COMPO',   name:'Osmocote universale',npk:'14-13-13',type:'granulare',dose:3,unit:'g/L substrato',cat:'lento rilascio'},
+  { id: 'compo-univ', brand: 'COMPO', name: 'Universale', npk: '7-5-6', type: 'liquido', dose: 7, unit: 'ml/L', cat: 'universale' },
+  { id: 'compo-green', brand: 'COMPO', name: 'Piante verdi', npk: '7-3-6', type: 'liquido', dose: 7, unit: 'ml/L', cat: 'crescita' },
+  { id: 'compo-fior', brand: 'COMPO', name: 'Piante fiorite', npk: '3-5-7', type: 'liquido', dose: 7, unit: 'ml/L', cat: 'fioritura' },
+  { id: 'compo-agru', brand: 'COMPO', name: 'Agrumi e mediterranee', npk: '6-3-6', type: 'liquido', dose: 7, unit: 'ml/L', cat: 'agrumi' },
+  { id: 'compo-cact', brand: 'COMPO', name: 'Cactus', npk: '4-5-7', type: 'liquido', dose: 7, unit: 'ml/L', cat: 'succulente' },
+  { id: 'compo-bons', brand: 'COMPO', name: 'Bonsai', npk: '6-3-6', type: 'liquido', dose: 7, unit: 'ml/L', cat: 'bonsai' },
+  { id: 'compo-orch', brand: 'COMPO', name: 'Orchidee', npk: '3-6-6', type: 'liquido', dose: 7, unit: 'ml/L', cat: 'orchidee' },
+  { id: 'compo-osmo', brand: 'COMPO', name: 'Osmocote universale', npk: '14-13-13', type: 'granulare', dose: 3, unit: 'g/L substrato', cat: 'lento rilascio' },
   // Cifo
-  {id:'cifo-gran',   brand:'Cifo',    name:'Granverde universale',npk:'6-5-7',type:'liquido',dose:5,unit:'ml/L', cat:'universale'},
-  {id:'cifo-fior',   brand:'Cifo',    name:'Granverde fioritura', npk:'4-6-8',type:'liquido',dose:5,unit:'ml/L', cat:'fioritura'},
-  {id:'cifo-agru',   brand:'Cifo',    name:'Sinergon agrumi',npk:'6-5-5',  type:'liquido', dose:5,  unit:'ml/L', cat:'agrumi'},
-  {id:'cifo-orch',   brand:'Cifo',    name:'Orchidee',      npk:'4-6-6',   type:'liquido', dose:5,  unit:'ml/L', cat:'orchidee'},
-  {id:'cifo-ferro',  brand:'Cifo',    name:'Ferro chelato', npk:'0-0-0',   type:'liquido', dose:2,  unit:'ml/L', cat:'integratore'},
+  { id: 'cifo-gran', brand: 'Cifo', name: 'Granverde universale', npk: '6-5-7', type: 'liquido', dose: 5, unit: 'ml/L', cat: 'universale' },
+  { id: 'cifo-fior', brand: 'Cifo', name: 'Granverde fioritura', npk: '4-6-8', type: 'liquido', dose: 5, unit: 'ml/L', cat: 'fioritura' },
+  { id: 'cifo-agru', brand: 'Cifo', name: 'Sinergon agrumi', npk: '6-5-5', type: 'liquido', dose: 5, unit: 'ml/L', cat: 'agrumi' },
+  { id: 'cifo-orch', brand: 'Cifo', name: 'Orchidee', npk: '4-6-6', type: 'liquido', dose: 5, unit: 'ml/L', cat: 'orchidee' },
+  { id: 'cifo-ferro', brand: 'Cifo', name: 'Ferro chelato', npk: '0-0-0', type: 'liquido', dose: 2, unit: 'ml/L', cat: 'integratore' },
   // KB / Scotts
-  {id:'kb-osmo',     brand:'KB/Scotts',name:'Osmocote Smart',npk:'11-11-18',type:'granulare',dose:3,unit:'g/L substrato',cat:'lento rilascio'},
-  {id:'kb-univ',     brand:'KB/Scotts',name:'Universale liquido',npk:'7-7-7',type:'liquido',dose:7,unit:'ml/L',cat:'universale'},
+  { id: 'kb-osmo', brand: 'KB/Scotts', name: 'Osmocote Smart', npk: '11-11-18', type: 'granulare', dose: 3, unit: 'g/L substrato', cat: 'lento rilascio' },
+  { id: 'kb-univ', brand: 'KB/Scotts', name: 'Universale liquido', npk: '7-7-7', type: 'liquido', dose: 7, unit: 'ml/L', cat: 'universale' },
   // Biogold
-  {id:'bio-orig',    brand:'Biogold',  name:'Original',     npk:'5.5-6.5-3.5',type:'granulare organico',dose:0,unit:'pallini/vaso',cat:'bonsai'},
-  {id:'bio-vital',   brand:'Biogold',  name:'Vital',        npk:'0-0-0',   type:'liquido', dose:2,  unit:'ml/L', cat:'rinvigorente'},
+  { id: 'bio-orig', brand: 'Biogold', name: 'Original', npk: '5.5-6.5-3.5', type: 'granulare organico', dose: 0, unit: 'pallini/vaso', cat: 'bonsai' },
+  { id: 'bio-vital', brand: 'Biogold', name: 'Vital', npk: '0-0-0', type: 'liquido', dose: 2, unit: 'ml/L', cat: 'rinvigorente' },
   // Flortis
-  {id:'flor-univ',   brand:'Flortis',  name:'Universale Bio',npk:'5-5-5',  type:'liquido', dose:5,  unit:'ml/L', cat:'universale'},
-  {id:'flor-agru',   brand:'Flortis',  name:'Agrumi Bio',   npk:'6-4-5',   type:'liquido', dose:5,  unit:'ml/L', cat:'agrumi'},
-  {id:'flor-orch',   brand:'Flortis',  name:'Orchidee',     npk:'3-5-6',   type:'liquido', dose:5,  unit:'ml/L', cat:'orchidee'},
+  { id: 'flor-univ', brand: 'Flortis', name: 'Universale Bio', npk: '5-5-5', type: 'liquido', dose: 5, unit: 'ml/L', cat: 'universale' },
+  { id: 'flor-agru', brand: 'Flortis', name: 'Agrumi Bio', npk: '6-4-5', type: 'liquido', dose: 5, unit: 'ml/L', cat: 'agrumi' },
+  { id: 'flor-orch', brand: 'Flortis', name: 'Orchidee', npk: '3-5-6', type: 'liquido', dose: 5, unit: 'ml/L', cat: 'orchidee' },
   // Vigorplant
-  {id:'vigo-univ',   brand:'Vigorplant',name:'Fito universale',npk:'7-5-6',type:'liquido',dose:6,  unit:'ml/L', cat:'universale'},
-  {id:'vigo-acid',   brand:'Vigorplant',name:'Acidofile',    npk:'5-3-7',   type:'liquido', dose:6,  unit:'ml/L', cat:'acidofile'},
+  { id: 'vigo-univ', brand: 'Vigorplant', name: 'Fito universale', npk: '7-5-6', type: 'liquido', dose: 6, unit: 'ml/L', cat: 'universale' },
+  { id: 'vigo-acid', brand: 'Vigorplant', name: 'Acidofile', npk: '5-3-7', type: 'liquido', dose: 6, unit: 'ml/L', cat: 'acidofile' },
   // Lupini
-  {id:'lupini',      brand:'Naturale', name:'Lupini macinati',npk:'5-0-0',  type:'granulare organico',dose:0,unit:'g/vaso',cat:'agrumi'},
+  { id: 'lupini', brand: 'Naturale', name: 'Lupini macinati', npk: '5-0-0', type: 'granulare organico', dose: 0, unit: 'g/vaso', cat: 'agrumi' },
   // Stallatico
-  {id:'stallatico',  brand:'Naturale', name:'Stallatico pellettato',npk:'3-3-3',type:'granulare organico',dose:0,unit:'g/vaso',cat:'universale'},
+  { id: 'stallatico', brand: 'Naturale', name: 'Stallatico pellettato', npk: '3-3-3', type: 'granulare organico', dose: 0, unit: 'g/vaso', cat: 'universale' },
 ];
 
 const INV_DISEASE_LABELS = {
-  cocciniglia:'Cocciniglia',cocciniglia_cotonosa:'Cocciniglia cotonosa',ragnetto_rosso:'Ragnetto rosso',
-  afidi:'Afidi',mosca_bianca:'Mosca bianca',oidio:'Oidio',marciume_radicale:'Marciume radicale',
-  fumaggine:'Fumaggine',clorosi_ferrica:'Clorosi ferrica',minatore_fogliare:'Minatore fogliare',
-  alternaria:'Alternaria',altro:'Altro'
+  cocciniglia: 'Cocciniglia', cocciniglia_cotonosa: 'Cocciniglia cotonosa', ragnetto_rosso: 'Ragnetto rosso',
+  afidi: 'Afidi', mosca_bianca: 'Mosca bianca', oidio: 'Oidio', marciume_radicale: 'Marciume radicale',
+  fumaggine: 'Fumaggine', clorosi_ferrica: 'Clorosi ferrica', minatore_fogliare: 'Minatore fogliare',
+  alternaria: 'Alternaria', altro: 'Altro'
 };
 
 // Inventory persistence — API SQLite con fallback localStorage
@@ -2339,8 +2411,8 @@ const INV_API = '/api/inventory';
 let invUseAPI = false;
 let invCache = null;
 
-function invLSLoad(){ try { return JSON.parse(localStorage.getItem('inv_plants')||'[]'); } catch { return []; } }
-function invLSSave(data){ try { localStorage.setItem('inv_plants', JSON.stringify(data)); } catch {} }
+function invLSLoad() { try { return JSON.parse(localStorage.getItem('inv_plants') || '[]'); } catch { return []; } }
+function invLSSave(data) { try { localStorage.setItem('inv_plants', JSON.stringify(data)); } catch { } }
 
 function invDbToJs(row) {
   // Defensive parse: se un campo JSON arriva come stringa (ad es. da una versione
@@ -2353,7 +2425,7 @@ function invDbToJs(row) {
     return v;
   };
   return {
-    id: row.id, plantTypeIdx: row.plant_type_idx, qty: row.qty, nickname: row.nickname||'',
+    id: row.id, plantTypeIdx: row.plant_type_idx, qty: row.qty, nickname: row.nickname || '',
     location: row.location, potShape: row.pot_shape, potMat: row.pot_mat,
     potDiam: row.pot_diam, potH: row.pot_h, potVol: row.pot_vol,
     potDiamTop: row.pot_diam_top, potDiamBot: row.pot_diam_bot,
@@ -2375,7 +2447,7 @@ function invDbToJs(row) {
 
 async function invPingAPI() {
   try {
-    const res = await apiFetch(INV_API, {signal: AbortSignal.timeout(1200)});
+    const res = await apiFetch(INV_API, { signal: AbortSignal.timeout(1200) });
     invUseAPI = res.ok;
   } catch { invUseAPI = false; }
 }
@@ -2390,7 +2462,7 @@ async function invLoadFromAPI() {
     try {
       const res = await apiFetch(INV_API);
       const data = await res.json();
-      const items = (data.items||[]).map(invDbToJs);
+      const items = (data.items || []).map(invDbToJs);
       invCache = items;
       invLSSave(items);
       return items;
@@ -2404,7 +2476,7 @@ async function invAPIAdd(entry) {
   if (invUseAPI) {
     try {
       const res = await apiFetch(INV_API, {
-        method:'POST', headers:{'Content-Type':'application/json'},
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(entry)
       });
       if (res.ok) {
@@ -2423,24 +2495,24 @@ async function invAPIAdd(entry) {
 async function invAPIUpdate(id, entry) {
   if (invUseAPI) {
     try {
-      const res = await apiFetch(INV_API+'/'+id, {
-        method:'PUT', headers:{'Content-Type':'application/json'},
+      const res = await apiFetch(INV_API + '/' + id, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(entry)
       });
       if (res.ok) return true;
     } catch { invUseAPI = false; }
   }
   const items = invLSLoad();
-  const idx = items.findIndex(i=>i.id===id);
-  if (idx>=0) { Object.assign(items[idx], entry); invLSSave(items); }
+  const idx = items.findIndex(i => i.id === id);
+  if (idx >= 0) { Object.assign(items[idx], entry); invLSSave(items); }
   return true;
 }
 
 async function invAPIDelete(id) {
   if (invUseAPI) {
-    try { await apiFetch(INV_API+'/'+id, {method:'DELETE'}); } catch { invUseAPI = false; }
+    try { await apiFetch(INV_API + '/' + id, { method: 'DELETE' }); } catch { invUseAPI = false; }
   } else {
-    const items = invLSLoad().filter(i=>i.id!==id);
+    const items = invLSLoad().filter(i => i.id !== id);
     invLSSave(items);
   }
 }
@@ -2449,9 +2521,9 @@ let invTempDiseases = [];
 
 function invShapeChange() {
   const shape = document.getElementById('inv-pot-shape').value;
-  document.getElementById('inv-dims-cyl').style.display   = shape==='cylinder'  ? 'flex' : 'none';
-  document.getElementById('inv-dims-trunc').style.display  = shape==='truncated' ? 'flex' : 'none';
-  document.getElementById('inv-dims-sq').style.display     = shape==='square'    ? 'flex' : 'none';
+  document.getElementById('inv-dims-cyl').style.display = shape === 'cylinder' ? 'flex' : 'none';
+  document.getElementById('inv-dims-trunc').style.display = shape === 'truncated' ? 'flex' : 'none';
+  document.getElementById('inv-dims-sq').style.display = shape === 'square' ? 'flex' : 'none';
 }
 
 function invSubstrateChange() {
@@ -2477,24 +2549,24 @@ function invBuildSubSliders() {
 }
 
 function invSubSliderChange(id) {
-  document.getElementById('invsv-'+id).textContent = document.getElementById('invs-'+id).value + '%';
+  document.getElementById('invsv-' + id).textContent = document.getElementById('invs-' + id).value + '%';
   invSubUpdateTotal();
 }
 
 function invSubUpdateTotal() {
   const total = wSubstrates.reduce((s, sub) => {
-    const el = document.getElementById('invs-'+sub.id);
+    const el = document.getElementById('invs-' + sub.id);
     return s + (el ? +el.value : 0);
   }, 0);
   const el = document.getElementById('inv-sub-total');
   el.textContent = 'Totale: ' + total + '%';
-  el.className = 'sub-total ' + (Math.abs(total-100) <= 2 ? 'ok' : 'warn');
-  if (Math.abs(total-100) > 2) el.textContent += ' ⚠️ deve essere 100%';
+  el.className = 'sub-total ' + (Math.abs(total - 100) <= 2 ? 'ok' : 'warn');
+  if (Math.abs(total - 100) > 2) el.textContent += ' ⚠️ deve essere 100%';
 }
 
 function invSubSetSlider(id, val) {
-  const slider = document.getElementById('invs-'+id);
-  const label = document.getElementById('invsv-'+id);
+  const slider = document.getElementById('invs-' + id);
+  const label = document.getElementById('invsv-' + id);
   if (slider) { slider.value = val; }
   if (label) { label.textContent = val + '%'; }
 }
@@ -2502,7 +2574,7 @@ function invSubSetSlider(id, val) {
 function invSubGetMix() {
   const mix = {};
   wSubstrates.forEach(s => {
-    const el = document.getElementById('invs-'+s.id);
+    const el = document.getElementById('invs-' + s.id);
     const val = el ? +el.value : 0;
     if (val > 0) mix[s.id] = val;
   });
@@ -2544,13 +2616,13 @@ async function invInit() {
   invRender();
 }
 
-function invRenderFertGrid(filter='') {
+function invRenderFertGrid(filter = '') {
   const grid = document.getElementById('inv-fert-grid');
   const fl = filter.toLowerCase();
   grid.innerHTML = FERT_DB.filter(f =>
     !fl || f.name.toLowerCase().includes(fl) || f.brand.toLowerCase().includes(fl) || f.cat.toLowerCase().includes(fl)
   ).map(f => {
-    const info = f.type==='liquido' ? f.dose+' '+f.unit : f.type;
+    const info = f.type === 'liquido' ? f.dose + ' ' + f.unit : f.type;
     return `<div class="inv-fert-opt" id="invf-${f.id}" onclick="invToggleFert('${f.id}')">
       <span>${f.name}</span><span class="fert-brand">${f.brand} · NPK ${f.npk}</span>
     </div>`;
@@ -2562,16 +2634,16 @@ function invFilterFerts() {
   invRenderFertGrid(q);
   // Re-highlight selected
   const selFerts = invGetSelectedFerts();
-  selFerts.forEach(id => { const el=document.getElementById('invf-'+id); if(el) el.classList.add('selected'); });
+  selFerts.forEach(id => { const el = document.getElementById('invf-' + id); if (el) el.classList.add('selected'); });
 }
 
 function invToggleFert(id) {
-  const el = document.getElementById('invf-'+id);
+  const el = document.getElementById('invf-' + id);
   if (el) el.classList.toggle('selected');
 }
 
 function invGetSelectedFerts() {
-  return [...document.querySelectorAll('.inv-fert-opt.selected')].map(el => el.id.replace('invf-',''));
+  return [...document.querySelectorAll('.inv-fert-opt.selected')].map(el => el.id.replace('invf-', ''));
 }
 
 function invAddDisease() {
@@ -2579,15 +2651,15 @@ function invAddDisease() {
   if (!type) return;
   const note = document.getElementById('inv-disease-note').value.trim();
   const today = new Date();
-  const dateStr = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
-  invTempDiseases.push({type, note, date:dateStr, resolved:false});
+  const dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  invTempDiseases.push({ type, note, date: dateStr, resolved: false });
   document.getElementById('inv-disease-type').value = '';
   document.getElementById('inv-disease-note').value = '';
   invRenderDiseaseList();
 }
 
 function invRemoveDisease(idx) {
-  invTempDiseases.splice(idx,1);
+  invTempDiseases.splice(idx, 1);
   invRenderDiseaseList();
 }
 
@@ -2599,14 +2671,14 @@ function invToggleResolved(idx) {
 function invRenderDiseaseList() {
   const list = document.getElementById('inv-disease-list');
   if (!invTempDiseases.length) { list.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0">Nessuna malattia registrata</div>'; return; }
-  list.innerHTML = invTempDiseases.map((d,i) => {
-    const label = INV_DISEASE_LABELS[d.type]||d.type;
+  list.innerHTML = invTempDiseases.map((d, i) => {
+    const label = INV_DISEASE_LABELS[d.type] || d.type;
     const cls = d.resolved ? 'resolved' : 'active';
     return `<div class="inv-disease-row">
-      <span class="inv-disease-chip ${cls}">${d.resolved?'✅':'⚠️'} ${label}</span>
+      <span class="inv-disease-chip ${cls}">${d.resolved ? '✅' : '⚠️'} ${label}</span>
       <span style="font-size:10px;color:var(--muted)">${d.date}</span>
-      <span style="flex:1;font-size:10px;color:var(--text)">${d.note||''}</span>
-      <button class="ctrl-btn" onclick="invToggleResolved(${i})" style="font-size:9px;padding:2px 6px">${d.resolved?'Riapri':'Risolto'}</button>
+      <span style="flex:1;font-size:10px;color:var(--text)">${d.note || ''}</span>
+      <button class="ctrl-btn" onclick="invToggleResolved(${i})" style="font-size:9px;padding:2px 6px">${d.resolved ? 'Riapri' : 'Risolto'}</button>
       <button class="ctrl-btn" onclick="invRemoveDisease(${i})" style="font-size:9px;padding:2px 6px;color:#b04040">✕</button>
     </div>`;
   }).join('');
@@ -2647,7 +2719,7 @@ function invOpenAdd() {
   document.getElementById('inv-has-saucer').checked = false;
   document.getElementById('inv-del-btn').style.display = 'none';
   // Reset ferts
-  document.querySelectorAll('.inv-fert-opt.selected').forEach(el=>el.classList.remove('selected'));
+  document.querySelectorAll('.inv-fert-opt.selected').forEach(el => el.classList.remove('selected'));
   document.getElementById('inv-fert-search').value = '';
   invRenderFertGrid();
   // Reset diseases
@@ -2660,39 +2732,39 @@ function invOpenAdd() {
 
 function invOpenEdit(id) {
   const items = invLoad();
-  const item = items.find(i=>i.id===id);
+  const item = items.find(i => i.id === id);
   if (!item) return;
   document.getElementById('inv-form-title').textContent = 'Modifica vaso';
   document.getElementById('inv-edit-id').value = id;
   document.getElementById('inv-plant-type').value = item.plantTypeIdx;
-  document.getElementById('inv-qty').value = item.qty||1;
-  document.getElementById('inv-nickname').value = item.nickname||'';
-  document.getElementById('inv-location').value = item.location||'indoor';
-  document.getElementById('inv-pot-shape').value = item.potShape||'cylinder';
-  document.getElementById('inv-pot-mat').value = item.potMat||'plastica';
+  document.getElementById('inv-qty').value = item.qty || 1;
+  document.getElementById('inv-nickname').value = item.nickname || '';
+  document.getElementById('inv-location').value = item.location || 'indoor';
+  document.getElementById('inv-pot-shape').value = item.potShape || 'cylinder';
+  document.getElementById('inv-pot-mat').value = item.potMat || 'plastica';
   // Cylinder fields
-  document.getElementById('inv-pot-diam').value = item.potDiam||25;
-  document.getElementById('inv-pot-h').value = item.potH||22;
-  document.getElementById('inv-pot-vol').value = item.potVol||'';
+  document.getElementById('inv-pot-diam').value = item.potDiam || 25;
+  document.getElementById('inv-pot-h').value = item.potH || 22;
+  document.getElementById('inv-pot-vol').value = item.potVol || '';
   // Truncated fields
-  document.getElementById('inv-pot-diam-top').value = item.potDiamTop||item.potDiam||25;
-  document.getElementById('inv-pot-diam-bot').value = item.potDiamBot||18;
-  document.getElementById('inv-pot-h-trunc').value = item.potHTrunc||item.potH||22;
-  document.getElementById('inv-pot-vol-trunc').value = item.potVolTrunc||'';
+  document.getElementById('inv-pot-diam-top').value = item.potDiamTop || item.potDiam || 25;
+  document.getElementById('inv-pot-diam-bot').value = item.potDiamBot || 18;
+  document.getElementById('inv-pot-h-trunc').value = item.potHTrunc || item.potH || 22;
+  document.getElementById('inv-pot-vol-trunc').value = item.potVolTrunc || '';
   // Square fields
-  document.getElementById('inv-pot-w').value = item.potW||25;
-  document.getElementById('inv-pot-d').value = item.potD||25;
-  document.getElementById('inv-pot-h-sq').value = item.potHSq||item.potH||22;
-  document.getElementById('inv-pot-vol-sq').value = item.potVolSq||'';
+  document.getElementById('inv-pot-w').value = item.potW || 25;
+  document.getElementById('inv-pot-d').value = item.potD || 25;
+  document.getElementById('inv-pot-h-sq').value = item.potHSq || item.potH || 22;
+  document.getElementById('inv-pot-vol-sq').value = item.potVolSq || '';
   invShapeChange();
-  document.getElementById('inv-substrate').value = item.substrate||'universale_mix';
+  document.getElementById('inv-substrate').value = item.substrate || 'universale_mix';
   invSubstrateChange();
   if (item.substrate === 'custom' && item.customSubstrate) {
     invSubLoadMix(item.customSubstrate);
   }
-  document.getElementById('inv-wh51-ch').value = item.wh51Ch||'';
-  document.getElementById('inv-wh51-cat').value = item.wh51Cat||'universale';
-  document.getElementById('inv-sensor-type').value = item.sensorType||'wh51';
+  document.getElementById('inv-wh51-ch').value = item.wh51Ch || '';
+  document.getElementById('inv-wh51-cat').value = item.wh51Cat || 'universale';
+  document.getElementById('inv-sensor-type').value = item.sensorType || 'wh51';
   // Nuovi campi monitoraggio idrico
   document.getElementById('inv-last-watered').value = item.lastWatered || '';
   document.getElementById('inv-has-mulch').checked = !!item.hasMulch;
@@ -2701,9 +2773,9 @@ function invOpenEdit(id) {
   // Ferts
   document.getElementById('inv-fert-search').value = '';
   invRenderFertGrid();
-  (item.fertilizers||[]).forEach(fid => { const el=document.getElementById('invf-'+fid); if(el) el.classList.add('selected'); });
+  (item.fertilizers || []).forEach(fid => { const el = document.getElementById('invf-' + fid); if (el) el.classList.add('selected'); });
   // Diseases
-  invTempDiseases = JSON.parse(JSON.stringify(item.diseases||[]));
+  invTempDiseases = JSON.parse(JSON.stringify(item.diseases || []));
   invRenderDiseaseList();
   // Open
   document.getElementById('inv-overlay').classList.add('open');
@@ -2722,21 +2794,21 @@ async function invSave() {
   const shape = document.getElementById('inv-pot-shape').value;
   const entry = {
     plantTypeIdx: +plantIdx,
-    qty: +(document.getElementById('inv-qty').value)||1,
+    qty: +(document.getElementById('inv-qty').value) || 1,
     nickname: document.getElementById('inv-nickname').value.trim(),
     location: document.getElementById('inv-location').value,
     potShape: shape,
     potMat: document.getElementById('inv-pot-mat').value,
-    potDiam: +(document.getElementById('inv-pot-diam').value)||25,
-    potH: +(document.getElementById('inv-pot-h').value)||22,
+    potDiam: +(document.getElementById('inv-pot-diam').value) || 25,
+    potH: +(document.getElementById('inv-pot-h').value) || 22,
     potVol: document.getElementById('inv-pot-vol').value ? +(document.getElementById('inv-pot-vol').value) : null,
-    potDiamTop: +(document.getElementById('inv-pot-diam-top').value)||25,
-    potDiamBot: +(document.getElementById('inv-pot-diam-bot').value)||18,
-    potHTrunc: +(document.getElementById('inv-pot-h-trunc').value)||22,
+    potDiamTop: +(document.getElementById('inv-pot-diam-top').value) || 25,
+    potDiamBot: +(document.getElementById('inv-pot-diam-bot').value) || 18,
+    potHTrunc: +(document.getElementById('inv-pot-h-trunc').value) || 22,
     potVolTrunc: document.getElementById('inv-pot-vol-trunc').value ? +(document.getElementById('inv-pot-vol-trunc').value) : null,
-    potW: +(document.getElementById('inv-pot-w').value)||25,
-    potD: +(document.getElementById('inv-pot-d').value)||25,
-    potHSq: +(document.getElementById('inv-pot-h-sq').value)||22,
+    potW: +(document.getElementById('inv-pot-w').value) || 25,
+    potD: +(document.getElementById('inv-pot-d').value) || 25,
+    potHSq: +(document.getElementById('inv-pot-h-sq').value) || 22,
     potVolSq: document.getElementById('inv-pot-vol-sq').value ? +(document.getElementById('inv-pot-vol-sq').value) : null,
     substrate: document.getElementById('inv-substrate').value,
     customSubstrate: document.getElementById('inv-substrate').value === 'custom' ? invSubGetMix() : null,
@@ -2794,9 +2866,9 @@ async function invDelete() {
 }
 
 function invCalcVol(shape, diam, h) {
-  const r = diam/2;
-  if (shape==='square') return (diam*diam*h)/1000*0.85;
-  return (Math.PI*r*r*h)/1000*0.85;
+  const r = diam / 2;
+  if (shape === 'square') return (diam * diam * h) / 1000 * 0.85;
+  return (Math.PI * r * r * h) / 1000 * 0.85;
 }
 
 function invGetVolFromItem(it) {
@@ -2809,7 +2881,7 @@ function invGetVolFromItem(it) {
   if (shape === 'truncated') {
     if (it.potVolTrunc) return it.potVolTrunc;
     const r1 = (it.potDiamTop || 25) / 2, r2 = (it.potDiamBot || 18) / 2, h = it.potHTrunc || 22;
-    return (Math.PI / 3 * h * (r1*r1 + r1*r2 + r2*r2)) / 1000 * 0.85;
+    return (Math.PI / 3 * h * (r1 * r1 + r1 * r2 + r2 * r2)) / 1000 * 0.85;
   }
   // cylinder
   if (it.potVol) return it.potVol;
@@ -2819,31 +2891,31 @@ function invGetVolFromItem(it) {
 function invGetDimsLabel(it) {
   const shape = it.potShape || 'cylinder';
   if (shape === 'square') {
-    return `${it.potW||25}×${it.potD||25}×${it.potHSq||22} cm`;
+    return `${it.potW || 25}×${it.potD || 25}×${it.potHSq || 22} cm`;
   }
   if (shape === 'truncated') {
-    return `Ø${it.potDiamTop||25}/${it.potDiamBot||18}×${it.potHTrunc||22} cm`;
+    return `Ø${it.potDiamTop || 25}/${it.potDiamBot || 18}×${it.potHTrunc || 22} cm`;
   }
-  return `Ø${it.potDiam||25}×${it.potH||22} cm`;
+  return `Ø${it.potDiam || 25}×${it.potH || 22} cm`;
 }
 
-const INV_LOC_LABELS = {indoor:'🏠 Interno',outdoor:'☀️ Esterno',balcone:'🏗️ Balcone'};
-const INV_SUB_LABELS = {universale_mix:'Universale',succulente_mix:'Succulente',orchidee_mix:'Orchidee',agrumi_mix:'Agrumi',bonsai_mix:'Bonsai',mediterranee_mix:'Mediterranee',tropicali_mix:'Tropicali',acidofile_mix:'Acidofile',arbusti_mix:'Arbusti',custom:'Personalizzato'};
+const INV_LOC_LABELS = { indoor: '🏠 Interno', outdoor: '☀️ Esterno', balcone: '🏗️ Balcone' };
+const INV_SUB_LABELS = { universale_mix: 'Universale', succulente_mix: 'Succulente', orchidee_mix: 'Orchidee', agrumi_mix: 'Agrumi', bonsai_mix: 'Bonsai', mediterranee_mix: 'Mediterranee', tropicali_mix: 'Tropicali', acidofile_mix: 'Acidofile', arbusti_mix: 'Arbusti', custom: 'Personalizzato' };
 
 function invRender() {
   const items = invLoad();
-  const search = (document.getElementById('inv-search')?.value||'').toLowerCase();
-  const locFilter = document.getElementById('inv-filter-loc')?.value||'';
+  const search = (document.getElementById('inv-search')?.value || '').toLowerCase();
+  const locFilter = document.getElementById('inv-filter-loc')?.value || '';
   const filtered = items.filter(it => {
     const p = getPlantById(it.plantTypeIdx);
     if (!p) return false;
-    const nameMatch = !search || p.name.toLowerCase().includes(search) || (it.nickname||'').toLowerCase().includes(search);
+    const nameMatch = !search || p.name.toLowerCase().includes(search) || (it.nickname || '').toLowerCase().includes(search);
     const locMatch = !locFilter || it.location === locFilter;
     return nameMatch && locMatch;
   });
   const countEl = document.getElementById('inv-count');
-  const totalPots = filtered.reduce((s,it)=>s+(it.qty||1),0);
-  if (countEl) countEl.textContent = filtered.length+' piante · '+totalPots+' vasi';
+  const totalPots = filtered.reduce((s, it) => s + (it.qty || 1), 0);
+  if (countEl) countEl.textContent = filtered.length + ' piante · ' + totalPots + ' vasi';
   const grid = document.getElementById('inv-grid');
   let html = '';
   filtered.forEach(it => {
@@ -2851,27 +2923,27 @@ function invRender() {
     if (!p) return;
     const vol = invGetVolFromItem(it);
     const dimsLabel = invGetDimsLabel(it);
-    const activeDiseases = (it.diseases||[]).filter(d=>!d.resolved);
-    const ferts = (it.fertilizers||[]).slice(0,4).map(fid => {
-      const f = FERT_DB.find(x=>x.id===fid);
+    const activeDiseases = (it.diseases || []).filter(d => !d.resolved);
+    const ferts = (it.fertilizers || []).slice(0, 4).map(fid => {
+      const f = FERT_DB.find(x => x.id === fid);
       return f ? `<span class="inv-fert-chip">${f.name}</span>` : '';
     }).join('');
-    const moreFerts = (it.fertilizers||[]).length > 4 ? `<span class="inv-fert-chip">+${it.fertilizers.length-4}</span>` : '';
+    const moreFerts = (it.fertilizers || []).length > 4 ? `<span class="inv-fert-chip">+${it.fertilizers.length - 4}</span>` : '';
     html += `<div class="inv-card" onclick="invOpenEdit(${it.id})">
       <div class="inv-card-head">
         <div class="inv-card-icon">${p.icon}</div>
         <div>
           <div class="inv-card-title">${it.nickname || p.name}</div>
-          <div class="inv-card-sub">${p.name}${p.latin?' · '+p.latin:''}</div>
+          <div class="inv-card-sub">${p.name}${p.latin ? ' · ' + p.latin : ''}</div>
         </div>
       </div>
-      ${it.qty>1?`<div class="inv-card-qty">×${it.qty} vasi</div>`:''}
-      <div class="inv-detail-row"><span class="inv-lbl">Posizione</span><span class="inv-val">${INV_LOC_LABELS[it.location]||it.location}</span></div>
+      ${it.qty > 1 ? `<div class="inv-card-qty">×${it.qty} vasi</div>` : ''}
+      <div class="inv-detail-row"><span class="inv-lbl">Posizione</span><span class="inv-val">${INV_LOC_LABELS[it.location] || it.location}</span></div>
       <div class="inv-detail-row"><span class="inv-lbl">Vaso</span><span class="inv-val">${dimsLabel} · ${vol.toFixed(1)} L · ${it.potMat}</span></div>
-      <div class="inv-detail-row"><span class="inv-lbl">Substrato</span><span class="inv-val">${it.substrate==='custom'&&it.customSubstrate ? 'Personalizzato: '+Object.entries(it.customSubstrate).map(([k,v])=>{const s=wSubstrates.find(x=>x.id===k);return (s?s.name:k)+' '+v+'%';}).join(', ') : INV_SUB_LABELS[it.substrate]||it.substrate}</span></div>
-      ${ferts?`<div style="margin-top:4px">${ferts}${moreFerts}</div>`:''}
-      ${activeDiseases.length?`<div style="margin-top:4px">${activeDiseases.map(d=>`<span class="inv-disease-chip active">⚠️ ${INV_DISEASE_LABELS[d.type]||d.type}</span>`).join(' ')}</div>`:''}
-      ${it.wh51Ch?`<div class="inv-soil-badge offline" id="inv-soil-${it.id}">📡 CH${it.wh51Ch} · in attesa dati...</div>`:''}
+      <div class="inv-detail-row"><span class="inv-lbl">Substrato</span><span class="inv-val">${it.substrate === 'custom' && it.customSubstrate ? 'Personalizzato: ' + Object.entries(it.customSubstrate).map(([k, v]) => { const s = wSubstrates.find(x => x.id === k); return (s ? s.name : k) + ' ' + v + '%'; }).join(', ') : INV_SUB_LABELS[it.substrate] || it.substrate}</span></div>
+      ${ferts ? `<div style="margin-top:4px">${ferts}${moreFerts}</div>` : ''}
+      ${activeDiseases.length ? `<div style="margin-top:4px">${activeDiseases.map(d => `<span class="inv-disease-chip active">⚠️ ${INV_DISEASE_LABELS[d.type] || d.type}</span>`).join(' ')}</div>` : ''}
+      ${it.wh51Ch ? `<div class="inv-soil-badge offline" id="inv-soil-${it.id}">📡 CH${it.wh51Ch} · in attesa dati...</div>` : ''}
       <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap" onclick="event.stopPropagation()">
         <button class="ctrl-btn" style="flex:1;padding:6px 10px;font-size:11px;background:#edf5ff;border-color:#b0c8e8;color:#2a5a8a;border-radius:8px;cursor:pointer" onclick="event.stopPropagation();simOpen(${it.id})">🔮 Simula bilancio idrico</button>
       </div>
@@ -2900,21 +2972,21 @@ let meteoConfig = null;
 let meteoTimer = null;
 
 const SOGLIE_DEFAULT = {
-  succulente:   {secco:10, ok_min:10, ok_max:35, umido:40},
-  tropicali:    {secco:25, ok_min:25, ok_max:55, umido:65},
-  mediterranee: {secco:15, ok_min:15, ok_max:40, umido:50},
-  agrumi:       {secco:20, ok_min:20, ok_max:50, umido:60},
-  bonsai:       {secco:20, ok_min:20, ok_max:50, umido:60},
-  orchidee:     {secco:15, ok_min:15, ok_max:40, umido:50},
-  aromatiche:   {secco:8,  ok_min:8,  ok_max:30, umido:35},
-  universale:   {secco:20, ok_min:20, ok_max:50, umido:60},
+  succulente: { secco: 10, ok_min: 10, ok_max: 35, umido: 40 },
+  tropicali: { secco: 25, ok_min: 25, ok_max: 55, umido: 65 },
+  mediterranee: { secco: 15, ok_min: 15, ok_max: 40, umido: 50 },
+  agrumi: { secco: 20, ok_min: 20, ok_max: 50, umido: 60 },
+  bonsai: { secco: 20, ok_min: 20, ok_max: 50, umido: 60 },
+  orchidee: { secco: 15, ok_min: 15, ok_max: 40, umido: 50 },
+  aromatiche: { secco: 8, ok_min: 8, ok_max: 30, umido: 35 },
+  universale: { secco: 20, ok_min: 20, ok_max: 50, umido: 60 },
 };
 
 async function meteoInit() {
   try {
-    const res = await apiFetch(METEO_API+'/config');
+    const res = await apiFetch(METEO_API + '/config');
     meteoConfig = await res.json();
-  } catch { meteoConfig = {configured:false, soglie:SOGLIE_DEFAULT}; }
+  } catch { meteoConfig = { configured: false, soglie: SOGLIE_DEFAULT }; }
 }
 
 async function meteoRefresh() {
@@ -2930,14 +3002,14 @@ async function meteoRefresh() {
   }
   statusEl.textContent = '⏳ Caricamento dati...';
   try {
-    const res = await apiFetch(METEO_API+'/realtime');
+    const res = await apiFetch(METEO_API + '/realtime');
     meteoData = await res.json();
     if (meteoData.code !== 0 && meteoData.code !== undefined) {
-      statusEl.textContent = '❌ Errore API: '+(meteoData.msg||meteoData.message||'sconosciuto');
+      statusEl.textContent = '❌ Errore API: ' + (meteoData.msg || meteoData.message || 'sconosciuto');
       return;
     }
     const now = new Date();
-    statusEl.textContent = '🟢 Ultimo aggiornamento: '+now.toLocaleTimeString('it-IT');
+    statusEl.textContent = '🟢 Ultimo aggiornamento: ' + now.toLocaleTimeString('it-IT');
     meteoRenderWeather();
     meteoRenderSoil();
     meteoRenderAlerts();
@@ -2947,21 +3019,21 @@ async function meteoRefresh() {
     // Auto-refresh ogni 5 minuti
     if (meteoTimer) clearInterval(meteoTimer);
     meteoTimer = setInterval(meteoRefresh, 300000);
-  } catch(e) {
+  } catch (e) {
     statusEl.textContent = '❌ Server non raggiungibile — avvia server.py';
   }
 }
 
 function meteoPlaceholderWidgets() {
   const items = [
-    {icon:'🌡️',label:'Temperatura',val:'--°C'},
-    {icon:'💧',label:'Umidità',val:'--%'},
-    {icon:'🌧️',label:'Pioggia oggi',val:'-- mm'},
-    {icon:'☀️',label:'Radiazione',val:'-- W/m²'},
-    {icon:'💨',label:'Vento',val:'-- km/h'},
-    {icon:'🏠',label:'Temp. interna',val:'--°C'},
+    { icon: '🌡️', label: 'Temperatura', val: '--°C' },
+    { icon: '💧', label: 'Umidità', val: '--%' },
+    { icon: '🌧️', label: 'Pioggia oggi', val: '-- mm' },
+    { icon: '☀️', label: 'Radiazione', val: '-- W/m²' },
+    { icon: '💨', label: 'Vento', val: '-- km/h' },
+    { icon: '🏠', label: 'Temp. interna', val: '--°C' },
   ];
-  return items.map(i=>`<div class="meteo-widget"><div class="mw-icon">${i.icon}</div><div class="mw-val">${i.val}</div><div class="mw-label">${i.label}</div></div>`).join('');
+  return items.map(i => `<div class="meteo-widget"><div class="mw-icon">${i.icon}</div><div class="mw-val">${i.val}</div><div class="mw-label">${i.label}</div></div>`).join('');
 }
 
 function meteoGetVal(data, section, key) {
@@ -2980,7 +3052,7 @@ function meteoGetVal(data, section, key) {
 // - tf_ch<ch> oppure soil_temperature<ch> → °C
 // - soilad<ch> oppure ec_ch<ch> → µS/cm
 function meteoGetSoilData(data, ch) {
-  const result = {moisture: null, temp: null, ec: null};
+  const result = { moisture: null, temp: null, ec: null };
   if (!data || !data.data) return result;
 
   // Moisture: cerca in section 'soil'
@@ -2993,13 +3065,13 @@ function meteoGetSoilData(data, ch) {
     } catch { return null; }
   };
 
-  result.moisture = getV('soil', 'soilmoisture'+ch) || getV('soil_ch'+ch, 'soilmoisture') || getV('soil', 'soil_ch'+ch);
+  result.moisture = getV('soil', 'soilmoisture' + ch) || getV('soil_ch' + ch, 'soilmoisture') || getV('soil', 'soil_ch' + ch);
 
   // Temp: il WH52 usa tf_ch<N> nella sezione temp_and_humidity_ch<N> oppure soil section
-  result.temp = getV('soil', 'soiltemp'+ch) || getV('soil', 'tf_ch'+ch) || getV('tf_ch'+ch, 'temperature') || getV('temp_and_humidity_ch'+ch, 'temperature');
+  result.temp = getV('soil', 'soiltemp' + ch) || getV('soil', 'tf_ch' + ch) || getV('tf_ch' + ch, 'temperature') || getV('temp_and_humidity_ch' + ch, 'temperature');
 
   // EC: soilad<N> o ec_ch<N>
-  result.ec = getV('soil', 'soilad'+ch) || getV('soil', 'ec_ch'+ch) || getV('soil', 'soilec'+ch) || getV('soil_ch'+ch, 'ec');
+  result.ec = getV('soil', 'soilad' + ch) || getV('soil', 'ec_ch' + ch) || getV('soil', 'soilec' + ch) || getV('soil_ch' + ch, 'ec');
 
   return result;
 }
@@ -3010,7 +3082,7 @@ function meteoGetSoilData(data, ch) {
 // stazione base principale (HP2551/GW2000 integrati).
 function meteoGetIndoorData(data, ch) {
   ch = ch || 1;  // Default CH1
-  const result = {temp: null, humidity: null};
+  const result = { temp: null, humidity: null };
   if (!data || !data.data) return result;
   const getV = (sec, key) => {
     try {
@@ -3022,8 +3094,8 @@ function meteoGetIndoorData(data, ch) {
   };
 
   // Prima prova il canale WN31 specifico
-  result.temp = getV('temp_and_humidity_ch'+ch, 'temperature');
-  result.humidity = getV('temp_and_humidity_ch'+ch, 'humidity');
+  result.temp = getV('temp_and_humidity_ch' + ch, 'temperature');
+  result.humidity = getV('temp_and_humidity_ch' + ch, 'humidity');
 
   // Fallback: sensore 'indoor' della stazione base
   if (result.temp === null) result.temp = getV('indoor', 'temperature');
@@ -3077,40 +3149,40 @@ function meteoRenderWeather() {
   const widgets = [];
 
   // Temperatura esterna
-  const tempOut = meteoGetVal(meteoData,'outdoor','temperature');
-  const feelsLike = meteoGetVal(meteoData,'outdoor','feels_like');
-  widgets.push({icon:'🌡️', val:tempOut!==null?parseFloat(tempOut).toFixed(1)+'°C':'--', label:'Temperatura', sub:feelsLike?'Percepita: '+parseFloat(feelsLike).toFixed(1)+'°C':''});
+  const tempOut = meteoGetVal(meteoData, 'outdoor', 'temperature');
+  const feelsLike = meteoGetVal(meteoData, 'outdoor', 'feels_like');
+  widgets.push({ icon: '🌡️', val: tempOut !== null ? parseFloat(tempOut).toFixed(1) + '°C' : '--', label: 'Temperatura', sub: feelsLike ? 'Percepita: ' + parseFloat(feelsLike).toFixed(1) + '°C' : '' });
 
   // Umidità esterna
-  const humOut = meteoGetVal(meteoData,'outdoor','humidity');
-  widgets.push({icon:'💧', val:humOut!==null?humOut+'%':'--', label:'Umidità'});
+  const humOut = meteoGetVal(meteoData, 'outdoor', 'humidity');
+  widgets.push({ icon: '💧', val: humOut !== null ? humOut + '%' : '--', label: 'Umidità' });
 
   // Pioggia
-  const rainDay = meteoGetVal(meteoData,'rainfall','daily');
-  const rainRate = meteoGetVal(meteoData,'rainfall','rain_rate');
-  widgets.push({icon:'🌧️', val:rainDay!==null?parseFloat(rainDay).toFixed(1)+' mm':'--', label:'Pioggia oggi', sub:rainRate&&parseFloat(rainRate)>0?'In corso: '+rainRate+' mm/h':''});
+  const rainDay = meteoGetVal(meteoData, 'rainfall', 'daily');
+  const rainRate = meteoGetVal(meteoData, 'rainfall', 'rain_rate');
+  widgets.push({ icon: '🌧️', val: rainDay !== null ? parseFloat(rainDay).toFixed(1) + ' mm' : '--', label: 'Pioggia oggi', sub: rainRate && parseFloat(rainRate) > 0 ? 'In corso: ' + rainRate + ' mm/h' : '' });
 
   // Solare
-  const solar = meteoGetVal(meteoData,'solar_and_uvi','solar');
-  const uvi = meteoGetVal(meteoData,'solar_and_uvi','uvi');
-  widgets.push({icon:'☀️', val:solar!==null?parseFloat(solar).toFixed(0)+' W/m²':'--', label:'Radiazione solare', sub:uvi?'UV: '+uvi:''});
+  const solar = meteoGetVal(meteoData, 'solar_and_uvi', 'solar');
+  const uvi = meteoGetVal(meteoData, 'solar_and_uvi', 'uvi');
+  widgets.push({ icon: '☀️', val: solar !== null ? parseFloat(solar).toFixed(0) + ' W/m²' : '--', label: 'Radiazione solare', sub: uvi ? 'UV: ' + uvi : '' });
 
   // Vento
-  const wind = meteoGetVal(meteoData,'wind','wind_speed');
-  const gust = meteoGetVal(meteoData,'wind','wind_gust');
-  widgets.push({icon:'💨', val:wind!==null?parseFloat(wind).toFixed(1)+' km/h':'--', label:'Vento', sub:gust?'Raffica: '+parseFloat(gust).toFixed(1)+' km/h':''});
+  const wind = meteoGetVal(meteoData, 'wind', 'wind_speed');
+  const gust = meteoGetVal(meteoData, 'wind', 'wind_gust');
+  widgets.push({ icon: '💨', val: wind !== null ? parseFloat(wind).toFixed(1) + ' km/h' : '--', label: 'Vento', sub: gust ? 'Raffica: ' + parseFloat(gust).toFixed(1) + ' km/h' : '' });
 
   // Temperatura interna
-  const tempIn = meteoGetVal(meteoData,'indoor','temperature');
-  const humIn = meteoGetVal(meteoData,'indoor','humidity');
-  widgets.push({icon:'🏠', val:tempIn!==null?parseFloat(tempIn).toFixed(1)+'°C':'--', label:'Temp. interna', sub:humIn?'Umidità: '+humIn+'%':''});
+  const tempIn = meteoGetVal(meteoData, 'indoor', 'temperature');
+  const humIn = meteoGetVal(meteoData, 'indoor', 'humidity');
+  widgets.push({ icon: '🏠', val: tempIn !== null ? parseFloat(tempIn).toFixed(1) + '°C' : '--', label: 'Temp. interna', sub: humIn ? 'Umidità: ' + humIn + '%' : '' });
 
   // Pressione
-  const press = meteoGetVal(meteoData,'pressure','relative');
-  widgets.push({icon:'🌀', val:press!==null?parseFloat(press).toFixed(1)+' hPa':'--', label:'Pressione'});
+  const press = meteoGetVal(meteoData, 'pressure', 'relative');
+  widgets.push({ icon: '🌀', val: press !== null ? parseFloat(press).toFixed(1) + ' hPa' : '--', label: 'Pressione' });
 
   document.getElementById('meteo-weather').innerHTML = widgets.map(w =>
-    `<div class="meteo-widget"><div class="mw-icon">${w.icon}</div><div class="mw-val">${w.val}</div><div class="mw-label">${w.label}</div>${w.sub?`<div style="font-size:9px;color:var(--muted);margin-top:2px">${w.sub}</div>`:''}</div>`
+    `<div class="meteo-widget"><div class="mw-icon">${w.icon}</div><div class="mw-val">${w.val}</div><div class="mw-label">${w.label}</div>${w.sub ? `<div style="font-size:9px;color:var(--muted);margin-top:2px">${w.sub}</div>` : ''}</div>`
   ).join('');
 }
 
@@ -3122,7 +3194,7 @@ function meteoRenderSoil() {
 
   // Raccogli tutti i dati soil (moisture + temp + EC) per canale
   const soilByCh = {};
-  for (let ch=1; ch<=16; ch++) {
+  for (let ch = 1; ch <= 16; ch++) {
     const d = meteoGetSoilData(meteoData, ch);
     if (d.moisture !== null || d.temp !== null || d.ec !== null) {
       soilByCh[ch] = d;
@@ -3134,12 +3206,12 @@ function meteoRenderSoil() {
   inv.forEach(it => {
     if (!it.wh51Ch) return;
     const ch = parseInt(it.wh51Ch);
-    const data = soilByCh[ch] || {moisture:null, temp:null, ec:null};
+    const data = soilByCh[ch] || { moisture: null, temp: null, ec: null };
     const p = getPlantById(it.plantTypeIdx);
     if (!p) return;
     const cat = it.wh51Cat || 'universale';
     const thresh = soglie[cat] || SOGLIE_DEFAULT.universale;
-    const ecThresh = sogliEC[cat] || sogliEC.universale || {min:400, target:800, max:2000};
+    const ecThresh = sogliEC[cat] || sogliEC.universale || { min: 400, target: 800, max: 2000 };
     const isWH52 = it.sensorType === 'wh52';
 
     let status, statusText, barColor;
@@ -3153,13 +3225,13 @@ function meteoRenderSoil() {
       status = 'wet'; statusText = '🔵 Troppo umido — aspetta'; barColor = '#3a6abf';
     }
 
-    cards.push({it, p, ch, data, status, statusText, barColor, thresh, ecThresh, isWH52, cat});
+    cards.push({ it, p, ch, data, status, statusText, barColor, thresh, ecThresh, isWH52, cat });
   });
 
   // Aggiungi anche i canali attivi senza associazione
   Object.entries(soilByCh).forEach(([ch, data]) => {
     if (!cards.find(c => c.ch === parseInt(ch))) {
-      cards.push({it:null, p:null, ch:parseInt(ch), data, status:'ok', statusText:'Non associato a un vaso', barColor:'#aaa', thresh:SOGLIE_DEFAULT.universale, isWH52: data.temp !== null || data.ec !== null});
+      cards.push({ it: null, p: null, ch: parseInt(ch), data, status: 'ok', statusText: 'Non associato a un vaso', barColor: '#aaa', thresh: SOGLIE_DEFAULT.universale, isWH52: data.temp !== null || data.ec !== null });
     }
   });
 
@@ -3169,9 +3241,9 @@ function meteoRenderSoil() {
   }
 
   document.getElementById('meteo-soil').innerHTML = cards.map(c => {
-    const name = c.p ? (c.it.nickname || c.p.name) : 'Canale '+c.ch;
+    const name = c.p ? (c.it.nickname || c.p.name) : 'Canale ' + c.ch;
     const icon = c.p ? c.p.icon : '📡';
-    const mVal = c.data.moisture !== null ? c.data.moisture.toFixed(0)+'%' : '--';
+    const mVal = c.data.moisture !== null ? c.data.moisture.toFixed(0) + '%' : '--';
     const barW = c.data.moisture !== null ? Math.min(100, c.data.moisture) : 0;
     const sensorBadge = c.isWH52 ? '<span style="font-size:8px;background:#6a4a9a;color:#fff;padding:1px 5px;border-radius:8px;font-weight:600;margin-left:4px">WH52</span>' : '';
 
@@ -3181,9 +3253,9 @@ function meteoRenderSoil() {
       const parts = [];
       if (c.data.temp !== null) {
         const tempColor = c.data.temp < PARAMS.tempRadiciMin ? '#3a6abf' :
-                          c.data.temp > PARAMS.tempRadiciMax ? '#c04040' : '#5a7a4a';
+          c.data.temp > PARAMS.tempRadiciMax ? '#c04040' : '#5a7a4a';
         const tempIcon = c.data.temp < PARAMS.tempRadiciMin ? '❄️' :
-                          c.data.temp > PARAMS.tempRadiciMax ? '🔥' : '🌡️';
+          c.data.temp > PARAMS.tempRadiciMax ? '🔥' : '🌡️';
         parts.push(`<span style="font-size:10px;color:${tempColor};font-weight:600">${tempIcon} ${c.data.temp.toFixed(1)}°C</span>`);
       }
       if (c.data.ec !== null) {
@@ -3212,7 +3284,7 @@ function meteoRenderSoil() {
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span class="soil-status ${c.status}">${c.statusText}</span>
-        ${c.thresh?`<span style="font-size:9px;color:var(--muted)">Soglie: ${c.thresh.secco}% – ${c.thresh.ok_max}%</span>`:''}
+        ${c.thresh ? `<span style="font-size:9px;color:var(--muted)">Soglie: ${c.thresh.secco}% – ${c.thresh.ok_max}%</span>` : ''}
       </div>
       ${extraInfo}
     </div>`;
@@ -3226,37 +3298,37 @@ function meteoRenderAlerts() {
   const alerts = [];
 
   // Temp esterna
-  const tempOut = meteoGetVal(meteoData,'outdoor','temperature');
+  const tempOut = meteoGetVal(meteoData, 'outdoor', 'temperature');
   if (tempOut !== null) {
     const t = parseFloat(tempOut);
-    if (t < PARAMS.alertFrost) alerts.push({type:'danger', icon:'🥶', text:`<b>Temperatura ${t.toFixed(1)}°C!</b> Porta dentro Carmona (<12°C), Stella di Natale, Tradescantia, e proteggi il Limone (<5°C).`});
-    else if (t < PARAMS.alertFrost + 5) alerts.push({type:'warn', icon:'❄️', text:`<b>Temperatura ${t.toFixed(1)}°C</b> — il Carmona Bonsai e la Stella di Natale non devono stare fuori sotto i 12°C.`});
-    else if (t > PARAMS.alertHeat) alerts.push({type:'warn', icon:'🔥', text:`<b>Temperatura ${t.toFixed(1)}°C!</b> Sposta le piante in ombra e aumenta le annaffiature. Nebulizza le foglie la sera.`});
+    if (t < PARAMS.alertFrost) alerts.push({ type: 'danger', icon: '🥶', text: `<b>Temperatura ${t.toFixed(1)}°C!</b> Porta dentro Carmona (<12°C), Stella di Natale, Tradescantia, e proteggi il Limone (<5°C).` });
+    else if (t < PARAMS.alertFrost + 5) alerts.push({ type: 'warn', icon: '❄️', text: `<b>Temperatura ${t.toFixed(1)}°C</b> — il Carmona Bonsai e la Stella di Natale non devono stare fuori sotto i 12°C.` });
+    else if (t > PARAMS.alertHeat) alerts.push({ type: 'warn', icon: '🔥', text: `<b>Temperatura ${t.toFixed(1)}°C!</b> Sposta le piante in ombra e aumenta le annaffiature. Nebulizza le foglie la sera.` });
   }
 
   // Pioggia
-  const rainDay = meteoGetVal(meteoData,'rainfall','daily');
+  const rainDay = meteoGetVal(meteoData, 'rainfall', 'daily');
   if (rainDay !== null && parseFloat(rainDay) > PARAMS.rainSkip) {
-    alerts.push({type:'info', icon:'🌧️', text:`<b>Pioggia oggi: ${parseFloat(rainDay).toFixed(1)} mm</b> — puoi saltare l'annaffiatura delle piante all'esterno.`});
+    alerts.push({ type: 'info', icon: '🌧️', text: `<b>Pioggia oggi: ${parseFloat(rainDay).toFixed(1)} mm</b> — puoi saltare l'annaffiatura delle piante all'esterno.` });
   }
 
   // Vento forte
-  const gust = meteoGetVal(meteoData,'wind','wind_gust');
+  const gust = meteoGetVal(meteoData, 'wind', 'wind_gust');
   if (gust !== null && parseFloat(gust) > PARAMS.alertWind) {
-    alerts.push({type:'warn', icon:'💨', text:`<b>Raffiche a ${parseFloat(gust).toFixed(0)} km/h!</b> Proteggi i bonsai e le piante alte. Ripara i vasi leggeri.`});
+    alerts.push({ type: 'warn', icon: '💨', text: `<b>Raffiche a ${parseFloat(gust).toFixed(0)} km/h!</b> Proteggi i bonsai e le piante alte. Ripara i vasi leggeri.` });
   }
 
   // Umidità interna bassa
-  const humIn = meteoGetVal(meteoData,'indoor','humidity');
+  const humIn = meteoGetVal(meteoData, 'indoor', 'humidity');
   if (humIn !== null && parseInt(humIn) < PARAMS.alertHumIn) {
-    alerts.push({type:'info', icon:'🏠', text:`<b>Umidità interna ${humIn}%</b> — bassa per orchidee e Carmona (ideale >50%). Nebulizza o usa un vassoio con argilla espansa.`});
+    alerts.push({ type: 'info', icon: '🏠', text: `<b>Umidità interna ${humIn}%</b> — bassa per orchidee e Carmona (ideale >50%). Nebulizza o usa un vassoio con argilla espansa.` });
   }
 
   // Suolo secco per piante con sensore
   const soilData = {};
-  for (let ch=1; ch<=16; ch++) {
-    let val = meteoGetVal(meteoData,'soil','soilmoisture'+ch);
-    if (val === null) val = meteoGetVal(meteoData,'soil','soil_ch'+ch);
+  for (let ch = 1; ch <= 16; ch++) {
+    let val = meteoGetVal(meteoData, 'soil', 'soilmoisture' + ch);
+    if (val === null) val = meteoGetVal(meteoData, 'soil', 'soil_ch' + ch);
     if (val !== null) soilData[ch] = parseFloat(val);
   }
 
@@ -3277,14 +3349,14 @@ function meteoRenderAlerts() {
   });
 
   if (dryPlants.length) {
-    alerts.push({type:'danger', icon:'🏜️', text:`<b>Terreno troppo secco!</b> Annaffia: ${dryPlants.join(', ')}`});
+    alerts.push({ type: 'danger', icon: '🏜️', text: `<b>Terreno troppo secco!</b> Annaffia: ${dryPlants.join(', ')}` });
   }
   if (wetPlants.length) {
-    alerts.push({type:'info', icon:'💦', text:`<b>Terreno troppo umido</b> — aspetta prima di annaffiare: ${wetPlants.join(', ')}`});
+    alerts.push({ type: 'info', icon: '💦', text: `<b>Terreno troppo umido</b> — aspetta prima di annaffiare: ${wetPlants.join(', ')}` });
   }
 
   if (!alerts.length) {
-    alerts.push({type:'good', icon:'✅', text:'Tutto nella norma — nessuna allerta attiva.'});
+    alerts.push({ type: 'good', icon: '✅', text: 'Tutto nella norma — nessuna allerta attiva.' });
   }
 
   document.getElementById('meteo-alerts').innerHTML = alerts.map(a =>
@@ -3298,14 +3370,14 @@ function meteoUpdateInvBadges() {
   const soglie = PARAMS.soglie || SOGLIE_DEFAULT;
 
   const soilData = {};
-  for (let ch=1; ch<=16; ch++) {
-    let val = meteoGetVal(meteoData,'soil','soilmoisture'+ch);
-    if (val === null) val = meteoGetVal(meteoData,'soil','soil_ch'+ch);
+  for (let ch = 1; ch <= 16; ch++) {
+    let val = meteoGetVal(meteoData, 'soil', 'soilmoisture' + ch);
+    if (val === null) val = meteoGetVal(meteoData, 'soil', 'soil_ch' + ch);
     if (val !== null) soilData[ch] = parseFloat(val);
   }
 
   inv.forEach(it => {
-    const badge = document.getElementById('inv-soil-'+it.id);
+    const badge = document.getElementById('inv-soil-' + it.id);
     if (!badge || !it.wh51Ch) return;
     const ch = parseInt(it.wh51Ch);
     const m = soilData[ch];
@@ -3314,23 +3386,23 @@ function meteoUpdateInvBadges() {
 
     if (m === undefined) {
       badge.className = 'inv-soil-badge offline';
-      badge.textContent = '📡 CH'+ch+' · sensore offline';
+      badge.textContent = '📡 CH' + ch + ' · sensore offline';
       return;
     }
 
     let cls, text;
-    if (m < thresh.secco) { cls='dry'; text=`🔴 ${m}% — annaffia!`; }
-    else if (m <= thresh.ok_max) { cls='ok'; text=`🟢 ${m}% — OK`; }
-    else { cls='wet'; text=`🔵 ${m}% — troppo umido`; }
-    badge.className = 'inv-soil-badge '+cls;
-    badge.textContent = '📡 CH'+ch+' · '+text;
+    if (m < thresh.secco) { cls = 'dry'; text = `🔴 ${m}% — annaffia!`; }
+    else if (m <= thresh.ok_max) { cls = 'ok'; text = `🟢 ${m}% — OK`; }
+    else { cls = 'wet'; text = `🔵 ${m}% — troppo umido`; }
+    badge.className = 'inv-soil-badge ' + cls;
+    badge.textContent = '📡 CH' + ch + ' · ' + text;
   });
 }
 
 // ── Previsioni 7 giorni (Open-Meteo) ─────────────────────────────────
-const WMO_ICONS = {0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌧️',55:'🌧️',56:'🌨️',57:'🌨️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌨️',67:'🌨️',71:'🌨️',73:'❄️',75:'❄️',77:'❄️',80:'🌦️',81:'🌧️',82:'⛈️',85:'❄️',86:'❄️',95:'⛈️',96:'⛈️',99:'⛈️'};
-const WMO_LABELS = {0:'Sereno',1:'Prev. sereno',2:'Parz. nuvoloso',3:'Coperto',45:'Nebbia',48:'Nebbia gelata',51:'Pioggerella',53:'Pioggia leggera',55:'Pioggia',61:'Pioggia leggera',63:'Pioggia moderata',65:'Pioggia forte',66:'Pioggia gelata',71:'Neve leggera',73:'Neve',75:'Neve forte',80:'Rovesci',81:'Rovesci forti',82:'Temporale',85:'Neve a rovesci',95:'Temporale',96:'Temporale con grandine',99:'Temporale violento'};
-const FC_DAYS_IT = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+const WMO_ICONS = { 0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️', 45: '🌫️', 48: '🌫️', 51: '🌦️', 53: '🌧️', 55: '🌧️', 56: '🌨️', 57: '🌨️', 61: '🌧️', 63: '🌧️', 65: '🌧️', 66: '🌨️', 67: '🌨️', 71: '🌨️', 73: '❄️', 75: '❄️', 77: '❄️', 80: '🌦️', 81: '🌧️', 82: '⛈️', 85: '❄️', 86: '❄️', 95: '⛈️', 96: '⛈️', 99: '⛈️' };
+const WMO_LABELS = { 0: 'Sereno', 1: 'Prev. sereno', 2: 'Parz. nuvoloso', 3: 'Coperto', 45: 'Nebbia', 48: 'Nebbia gelata', 51: 'Pioggerella', 53: 'Pioggia leggera', 55: 'Pioggia', 61: 'Pioggia leggera', 63: 'Pioggia moderata', 65: 'Pioggia forte', 66: 'Pioggia gelata', 71: 'Neve leggera', 73: 'Neve', 75: 'Neve forte', 80: 'Rovesci', 81: 'Rovesci forti', 82: 'Temporale', 85: 'Neve a rovesci', 95: 'Temporale', 96: 'Temporale con grandine', 99: 'Temporale violento' };
+const FC_DAYS_IT = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
 
 // ── Trend grafici WH52 (EC + temp radici, ultime 24h) ───────────────
 async function meteoRenderHistory() {
@@ -3350,7 +3422,7 @@ async function meteoRenderHistory() {
   // Fetch dati storici ultime 24h
   const today = new Date();
   const yesterday = new Date(today.getTime() - 86400000);
-  const dateStr = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const dateStr = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 
   try {
     const res = await apiFetch(`/api/ecowitt/history?start_date=${dateStr(yesterday)}&end_date=${dateStr(today)}&call_back=soil`);
@@ -3370,7 +3442,7 @@ async function meteoRenderHistory() {
       if (!p) return;
       const name = it.nickname || p.name;
       const cat = it.wh51Cat || 'universale';
-      const ecThresh = (PARAMS.sogliEC || {})[cat] || {min:400, target:800, max:2000};
+      const ecThresh = (PARAMS.sogliEC || {})[cat] || { min: 400, target: 800, max: 2000 };
 
       // Cerca le serie nei dati: possibili chiavi
       const ecKeys = [`soilad${ch}`, `ec_ch${ch}`, `soilec${ch}`];
@@ -3396,13 +3468,13 @@ async function meteoRenderHistory() {
           <span class="soil-card-ch">CH${ch}</span>
         </div>
         ${renderTrendChart(ecSeries, moistSeries, ecThresh, 'EC', 'µS/cm', '#9a7a20')}
-        ${renderTrendChart(tempSeries, null, {min:PARAMS.tempRadiciMin, max:PARAMS.tempRadiciMax}, 'Temp radici', '°C', '#c06040')}
+        ${renderTrendChart(tempSeries, null, { min: PARAMS.tempRadiciMin, max: PARAMS.tempRadiciMax }, 'Temp radici', '°C', '#c06040')}
       </div>`;
     });
 
     el.innerHTML = html || '<div style="text-align:center;color:var(--muted);padding:1rem;font-size:11px">Dati storici in attesa — i sensori devono aver trasmesso per almeno 1-2 ore</div>';
 
-  } catch(e) {
+  } catch (e) {
     el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:1rem;font-size:11px">Errore caricamento storico: server non raggiungibile</div>';
   }
 }
@@ -3417,9 +3489,9 @@ function renderTrendChart(series, moistSeries, thresh, label, unit, color) {
   const listObj = series.list || series;
   if (typeof listObj === 'object') {
     entries = Object.entries(listObj)
-      .map(([ts, v]) => ({ts: parseInt(ts), val: parseFloat(v)}))
+      .map(([ts, v]) => ({ ts: parseInt(ts), val: parseFloat(v) }))
       .filter(e => !isNaN(e.val) && !isNaN(e.ts))
-      .sort((a,b) => a.ts - b.ts);
+      .sort((a, b) => a.ts - b.ts);
   }
 
   if (!entries.length) return `<div style="font-size:10px;color:var(--muted);padding:6px 0">${label}: nessun dato</div>`;
@@ -3454,21 +3526,21 @@ function renderTrendChart(series, moistSeries, thresh, label, unit, color) {
     if (thresh.min !== undefined) {
       const y = padT + plotH - ((thresh.min - min) / range) * plotH;
       if (y >= padT && y <= padT + plotH) {
-        threshLines += `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#c08040" stroke-width="1" stroke-dasharray="3,2" opacity="0.5"/>`;
-        threshLines += `<text x="${W-padR-2}" y="${y-2}" font-size="8" fill="#c08040" text-anchor="end">min ${thresh.min}</text>`;
+        threshLines += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#c08040" stroke-width="1" stroke-dasharray="3,2" opacity="0.5"/>`;
+        threshLines += `<text x="${W - padR - 2}" y="${y - 2}" font-size="8" fill="#c08040" text-anchor="end">min ${thresh.min}</text>`;
       }
     }
     if (thresh.max !== undefined) {
       const y = padT + plotH - ((thresh.max - min) / range) * plotH;
       if (y >= padT && y <= padT + plotH) {
-        threshLines += `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#c04040" stroke-width="1" stroke-dasharray="3,2" opacity="0.5"/>`;
-        threshLines += `<text x="${W-padR-2}" y="${y-2}" font-size="8" fill="#c04040" text-anchor="end">max ${thresh.max}</text>`;
+        threshLines += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#c04040" stroke-width="1" stroke-dasharray="3,2" opacity="0.5"/>`;
+        threshLines += `<text x="${W - padR - 2}" y="${y - 2}" font-size="8" fill="#c04040" text-anchor="end">max ${thresh.max}</text>`;
       }
     }
     if (thresh.target !== undefined) {
       const y = padT + plotH - ((thresh.target - min) / range) * plotH;
       if (y >= padT && y <= padT + plotH) {
-        threshLines += `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#5a7a4a" stroke-width="1" stroke-dasharray="2,3" opacity="0.4"/>`;
+        threshLines += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#5a7a4a" stroke-width="1" stroke-dasharray="2,3" opacity="0.4"/>`;
       }
     }
   }
@@ -3477,7 +3549,7 @@ function renderTrendChart(series, moistSeries, thresh, label, unit, color) {
   const points = entries.map(e => {
     const x = padL + ((e.ts - tsMin) / tsRange) * plotW;
     const y = padT + plotH - ((e.val - min) / range) * plotH;
-    return {x, y, val: e.val, ts: e.ts, moist: moistMap[e.ts]};
+    return { x, y, val: e.val, ts: e.ts, moist: moistMap[e.ts] };
   });
   const pathD = 'M' + points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L');
 
@@ -3490,16 +3562,16 @@ function renderTrendChart(series, moistSeries, thresh, label, unit, color) {
   });
 
   // Y-axis labels
-  const yTicks = [min, (min+max)/2, max];
+  const yTicks = [min, (min + max) / 2, max];
   let yLabels = yTicks.map(v => {
     const y = padT + plotH - ((v - min) / range) * plotH;
-    return `<text x="${padL-4}" y="${y+3}" font-size="9" fill="var(--muted)" text-anchor="end">${v.toFixed(unit === '°C' ? 1 : 0)}</text>`;
+    return `<text x="${padL - 4}" y="${y + 3}" font-size="9" fill="var(--muted)" text-anchor="end">${v.toFixed(unit === '°C' ? 1 : 0)}</text>`;
   }).join('');
 
   // X-axis (ora)
-  const fmtHour = ts => { const d = new Date(ts*1000); return d.getHours()+':'+String(d.getMinutes()).padStart(2,'0'); };
-  const xLabels = `<text x="${padL}" y="${H-4}" font-size="9" fill="var(--muted)">${fmtHour(tsMin)}</text>
-                   <text x="${W-padR}" y="${H-4}" font-size="9" fill="var(--muted)" text-anchor="end">${fmtHour(tsMax)}</text>`;
+  const fmtHour = ts => { const d = new Date(ts * 1000); return d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0'); };
+  const xLabels = `<text x="${padL}" y="${H - 4}" font-size="9" fill="var(--muted)">${fmtHour(tsMin)}</text>
+                   <text x="${W - padR}" y="${H - 4}" font-size="9" fill="var(--muted)" text-anchor="end">${fmtHour(tsMax)}</text>`;
 
   const latest = entries[entries.length - 1].val;
   return `<div style="padding:8px 4px">
@@ -3536,14 +3608,14 @@ async function meteoFetchForecast() {
       return;
     }
 
-    const todayStr = new Date().toISOString().slice(0,10);
+    const todayStr = new Date().toISOString().slice(0, 10);
 
     // Render forecast cards
     let html = '<div class="fc-grid">';
     for (let i = 0; i < daily.time.length; i++) {
       const d = new Date(daily.time[i] + 'T12:00');
       const dayName = FC_DAYS_IT[d.getDay()];
-      const dateStr = d.getDate() + '/' + (d.getMonth()+1);
+      const dateStr = d.getDate() + '/' + (d.getMonth() + 1);
       const tMax = daily.temperature_2m_max[i];
       const tMin = daily.temperature_2m_min[i];
       const rain = daily.precipitation_sum[i];
@@ -3560,7 +3632,7 @@ async function meteoFetchForecast() {
       else if (tMax > PARAMS.alertHeat) alertClass = 'alert-heat';
       else if (rain > PARAMS.rainSure) alertClass = 'alert-rain';
 
-      html += `<div class="fc-day ${isToday?'today':''} ${alertClass}">
+      html += `<div class="fc-day ${isToday ? 'today' : ''} ${alertClass}">
         <div class="fc-day-name">${dayName}</div>
         <div class="fc-day-date">${dateStr}</div>
         <div class="fc-day-icon">${icon}</div>
@@ -3568,7 +3640,7 @@ async function meteoFetchForecast() {
           <span class="fc-day-max">${Math.round(tMax)}°</span>
           <span class="fc-day-min">${Math.round(tMin)}°</span>
         </div>
-        ${rain > 0.1 ? `<div class="fc-day-rain">🌧️ ${rain.toFixed(1)}mm${rainProb?' ('+Math.round(rainProb)+'%)':''}</div>` : ''}
+        ${rain > 0.1 ? `<div class="fc-day-rain">🌧️ ${rain.toFixed(1)}mm${rainProb ? ' (' + Math.round(rainProb) + '%)' : ''}</div>` : ''}
         ${windMax && windMax > 30 ? `<div class="fc-day-wind">💨 ${Math.round(windMax)} km/h</div>` : ''}
       </div>`;
     }
@@ -3582,12 +3654,12 @@ async function meteoFetchForecast() {
     for (let i = 0; i < daily.time.length; i++) {
       const tMin = daily.temperature_2m_min[i];
       const d = new Date(daily.time[i] + 'T12:00');
-      const dayLabel = i === 0 ? 'Oggi' : i === 1 ? 'Domani' : FC_DAYS_IT[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth()+1);
+      const dayLabel = i === 0 ? 'Oggi' : i === 1 ? 'Domani' : FC_DAYS_IT[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth() + 1);
 
       if (tMin < 0) {
-        alerts.push({type:'danger', icon:'🥶', text:`<b>GELO PREVISTO ${dayLabel}: ${Math.round(tMin)}°C</b> — temperatura sotto zero! Porta dentro tutte le piante tropicali (Carmona, Stella di Natale, Tradescantia), copri Limone e Oleandro con tessuto non tessuto.`});
+        alerts.push({ type: 'danger', icon: '🥶', text: `<b>GELO PREVISTO ${dayLabel}: ${Math.round(tMin)}°C</b> — temperatura sotto zero! Porta dentro tutte le piante tropicali (Carmona, Stella di Natale, Tradescantia), copri Limone e Oleandro con tessuto non tessuto.` });
       } else if (tMin < PARAMS.alertFrost) {
-        alerts.push({type:'warn', icon:'❄️', text:`<b>Freddo ${dayLabel}: min ${Math.round(tMin)}°C</b> — porta al riparo Carmona (<12°C) e le piante tropicali. Controlla che il Limone sia protetto.`});
+        alerts.push({ type: 'warn', icon: '❄️', text: `<b>Freddo ${dayLabel}: min ${Math.round(tMin)}°C</b> — porta al riparo Carmona (<12°C) e le piante tropicali. Controlla che il Limone sia protetto.` });
       }
     }
 
@@ -3597,21 +3669,21 @@ async function meteoFetchForecast() {
       if (daily.temperature_2m_max[i] > PARAMS.alertHeat) heatDays++;
     }
     if (heatDays >= 3) {
-      alerts.push({type:'warn', icon:'🔥', text:`<b>Ondata di calore in arrivo: ${heatDays} giorni sopra ${PARAMS.alertHeat}°C</b> — prepara ombreggiatura, aumenta frequenza annaffiature, nebulizza le foglie la sera. Le piante in vasi piccoli (bonsai) soffrono di più.`});
+      alerts.push({ type: 'warn', icon: '🔥', text: `<b>Ondata di calore in arrivo: ${heatDays} giorni sopra ${PARAMS.alertHeat}°C</b> — prepara ombreggiatura, aumenta frequenza annaffiature, nebulizza le foglie la sera. Le piante in vasi piccoli (bonsai) soffrono di più.` });
     } else if (heatDays >= 1) {
       const maxT = Math.max(...daily.temperature_2m_max);
-      alerts.push({type:'info', icon:'☀️', text:`<b>Giornate calde previste: max ${Math.round(maxT)}°C</b> — monitora l'umidità del terreno con i sensori WH51 e annaffia nelle ore fresche.`});
+      alerts.push({ type: 'info', icon: '☀️', text: `<b>Giornate calde previste: max ${Math.round(maxT)}°C</b> — monitora l'umidità del terreno con i sensori WH51 e annaffia nelle ore fresche.` });
     }
 
     // Check heavy rain
-    const totalRain = daily.precipitation_sum.reduce((s,v) => s + v, 0);
+    const totalRain = daily.precipitation_sum.reduce((s, v) => s + v, 0);
     const maxDayRain = Math.max(...daily.precipitation_sum);
     if (maxDayRain > 30) {
       const rainDay = daily.time[daily.precipitation_sum.indexOf(maxDayRain)];
       const rd = new Date(rainDay + 'T12:00');
-      alerts.push({type:'warn', icon:'⛈️', text:`<b>Pioggia intensa prevista ${FC_DAYS_IT[rd.getDay()]} ${rd.getDate()}/${rd.getMonth()+1}: ${maxDayRain.toFixed(0)}mm</b> — rischio ristagno. Verifica il drenaggio dei vasi e proteggi le piante sensibili.`});
+      alerts.push({ type: 'warn', icon: '⛈️', text: `<b>Pioggia intensa prevista ${FC_DAYS_IT[rd.getDay()]} ${rd.getDate()}/${rd.getMonth() + 1}: ${maxDayRain.toFixed(0)}mm</b> — rischio ristagno. Verifica il drenaggio dei vasi e proteggi le piante sensibili.` });
     } else if (totalRain > 40) {
-      alerts.push({type:'info', icon:'🌧️', text:`<b>Settimana piovosa: ${totalRain.toFixed(0)}mm totali</b> — riduci le annaffiature delle piante all'esterno. Attento al rischio oidio con umidità prolungata.`});
+      alerts.push({ type: 'info', icon: '🌧️', text: `<b>Settimana piovosa: ${totalRain.toFixed(0)}mm totali</b> — riduci le annaffiature delle piante all'esterno. Attento al rischio oidio con umidità prolungata.` });
     }
 
     // Check strong wind
@@ -3620,7 +3692,7 @@ async function meteoFetchForecast() {
       if (maxGust > PARAMS.alertWind) {
         const gustDay = daily.time[daily.wind_gusts_10m_max.indexOf(maxGust)];
         const gd = new Date(gustDay + 'T12:00');
-        alerts.push({type:'warn', icon:'💨', text:`<b>Raffiche fino a ${Math.round(maxGust)} km/h previste ${FC_DAYS_IT[gd.getDay()]} ${gd.getDate()}/${gd.getMonth()+1}</b> — metti al riparo i bonsai, ancora i vasi alti e leggeri.`});
+        alerts.push({ type: 'warn', icon: '💨', text: `<b>Raffiche fino a ${Math.round(maxGust)} km/h previste ${FC_DAYS_IT[gd.getDay()]} ${gd.getDate()}/${gd.getMonth() + 1}</b> — metti al riparo i bonsai, ancora i vasi alti e leggeri.` });
       }
     }
 
@@ -3631,7 +3703,7 @@ async function meteoFetchForecast() {
         if (daily.temperature_2m_min[i] < 2 && daily.temperature_2m_min[i] >= 0) {
           const d = new Date(daily.time[i] + 'T12:00');
           const label = month <= 5 ? 'tardiva' : 'precoce';
-          alerts.push({type:'warn', icon:'🌡️', text:`<b>Possibile gelata ${label} ${FC_DAYS_IT[d.getDay()]} ${d.getDate()}/${d.getMonth()+1}: ${daily.temperature_2m_min[i].toFixed(1)}°C</b> — prossimo allo zero! Se hai piante appena rinvasate o talee in radicazione, proteggile.`});
+          alerts.push({ type: 'warn', icon: '🌡️', text: `<b>Possibile gelata ${label} ${FC_DAYS_IT[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}: ${daily.temperature_2m_min[i].toFixed(1)}°C</b> — prossimo allo zero! Se hai piante appena rinvasate o talee in radicazione, proteggile.` });
           break; // solo una allerta gelata tardiva/precoce
         }
       }
@@ -3639,7 +3711,7 @@ async function meteoFetchForecast() {
 
     // No alerts
     if (!alerts.length) {
-      alerts.push({type:'good', icon:'✅', text:'Nessun evento meteo estremo previsto nei prossimi 7 giorni.'});
+      alerts.push({ type: 'good', icon: '✅', text: 'Nessun evento meteo estremo previsto nei prossimi 7 giorni.' });
     }
 
     if (alertsEl) {
@@ -3647,7 +3719,7 @@ async function meteoFetchForecast() {
         alerts.map(a => `<div class="alert-card ${a.type}"><span class="alert-icon">${a.icon}</span><span class="alert-text">${a.text}</span></div>`).join('');
     }
 
-  } catch(e) {
+  } catch (e) {
     fcEl.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:11px;padding:1rem">❌ Errore caricamento previsioni</div>`;
   }
 }
@@ -3656,71 +3728,123 @@ async function meteoFetchForecast() {
 // ⑥ CALENDARIO BIOBIZZ
 // ══════════════════════════════════════════════════════════════════════
 const BB_PRODUCTS = {
-  grow:   {label:'Bio·Grow',  color:'#4a8a3a', abbr:'G'},
-  bloom:  {label:'Bio·Bloom', color:'#c05a20', abbr:'B'},
-  alg:    {label:'Alg·A·Mic', color:'#0f7a60', abbr:'A'},
-  fish:   {label:'Fish·Mix',  color:'#185fa5', abbr:'F'},
-  calmag: {label:'CalMag',    color:'#7b3fa0', abbr:'Ca'},
-  topmax: {label:'Top·Max',   color:'#b08010', abbr:'T'},
-  root:   {label:'Root·Juice',color:'#7a4820', abbr:'R'},
+  grow: { label: 'Bio·Grow', color: '#4a8a3a', abbr: 'G' },
+  bloom: { label: 'Bio·Bloom', color: '#c05a20', abbr: 'B' },
+  alg: { label: 'Alg·A·Mic', color: '#0f7a60', abbr: 'A' },
+  fish: { label: 'Fish·Mix', color: '#185fa5', abbr: 'F' },
+  calmag: { label: 'CalMag', color: '#7b3fa0', abbr: 'Ca' },
+  topmax: { label: 'Top·Max', color: '#b08010', abbr: 'T' },
+  root: { label: 'Root·Juice', color: '#7a4820', abbr: 'R' },
 };
 
 // bbPlants è esteso a runtime ma le piante custom non generano schedule
 // BioBizz automatici (l'utente può aggiungere voci al diario manualmente
 // se serve). Restano comunque elencate qui per coerenza degli id.
 let bbPlants = [
-  {id:0,  name:'Sanseviera',      latin:'',                    icon:'🌿', color:'#5a7a4a',
-    schedules:[{prod:'grow',months:[4,5,6,7,8,9],interval:30,start:new Date(2026,3,10),dose:'¼ dose',note:'Molto diluito — pianta abituata a terreni poveri'},{prod:'alg',months:[4,5,6,7,8,9],interval:45,start:new Date(2026,3,25),dose:'¼ dose',note:'Alternativa più delicata al Bio·Grow'}]},
-  {id:1,  name:'Orchidea',        latin:'Phalaenopsis',        icon:'🌸', color:'#c06080',
-    schedules:[{prod:'alg',months:[3,4,5,6,7,8,9],interval:14,start:new Date(2026,2,20),dose:'¼ dose',note:'Unico prodotto adatto — mai Bio·Grow o Bio·Bloom'},{prod:'alg',months:[1,10],interval:21,start:new Date(2026,0,8),dose:'¼ dose ridotta',note:'Dose minima in semiriposo'}]},
-  {id:2,  name:'Ficus Benjamina', latin:'',                    icon:'🌳', color:'#3d6b30',
-    schedules:[{prod:'grow',months:[3,4,5,6,7,8,9],interval:14,start:new Date(2026,2,20),dose:'½ dose',note:'Non superare ½ dose — sensibile ai sali'},{prod:'calmag',months:[4,5,6,7,8,9],interval:30,start:new Date(2026,3,12),dose:'dose piena',note:'Previene la clorosi ferrica'}]},
-  {id:3,  name:'Ficus Elastica',  latin:'',                    icon:'🌱', color:'#2e5522',
-    schedules:[{prod:'grow',months:[3,4,5,6,7,8,9],interval:14,start:new Date(2026,2,23),dose:'½ dose',note:''},{prod:'alg',months:[4,5,6,7,8,9],interval:30,start:new Date(2026,3,20),dose:'½ dose',note:'Come spray fogliare diluito mantiene le foglie lucide'}]},
-  {id:4,  name:'Oleandro',        latin:'Nerium oleander',     icon:'🌺', color:'#c03050',
-    schedules:[{prod:'bloom',months:[3,4,5,6,7,8,9],interval:14,start:new Date(2026,2,18),dose:'dose piena',note:"Mai Bio·Grow — l\u2019azoto blocca la fioritura"},{prod:'topmax',months:[4,5,6,7,8],interval:30,start:new Date(2026,3,8),dose:'dose piena',note:'Booster per la fioritura'},{prod:'alg',months:[3,4,5,6,7,8,9],interval:30,start:new Date(2026,2,28),dose:'½ dose',note:'Rinvigorente mensile'}]},
-  {id:5,  name:'Glicine Bonsai',  latin:'Wisteria',            icon:'💜', color:'#7b5ea7',
-    schedules:[{prod:'alg',months:[2,3],interval:21,start:new Date(2026,1,10),dose:'½ dose',note:'Solo durante la fioritura — non stimolare la crescita'},{prod:'bloom',months:[4,5,6,7,8],interval:25,start:new Date(2026,3,20),dose:'½ dose',note:'Zero azoto — il glicine è una leguminosa'}]},
-  {id:6,  name:'Limone',          latin:'Citrus limon',        icon:'🍋', color:'#c08a10',
-    schedules:[{prod:'calmag',months:[1,2,3,4,5,6,7,8,9,10,11,12],interval:30,start:new Date(2026,0,10),dose:'dose piena',note:"Tutto l\u2019anno — indispensabile anche con granulare (ferro + magnesio)"},{prod:'alg',months:[3,4,5,6,7,8,9],interval:30,start:new Date(2026,2,20),dose:'\u00bd dose',note:'Rinvigorente mensile — complemento al granulare'},{prod:'bloom',months:[6,7,8,9],interval:30,start:new Date(2026,5,5),dose:'\u00bd dose',note:'Supporto alla fruttificazione in aggiunta al granulare'}]},
-  {id:7,  name:'Moneta Cinese',   latin:'Pilea peperomioides', icon:'🪙', color:'#7a9a50',
-    schedules:[{prod:'grow',months:[4,5,6,7,8],interval:25,start:new Date(2026,3,7),dose:'¼ dose',note:'Non esagerare — a dose piena causa foglie deformate'},{prod:'alg',months:[4,5,6,7,8],interval:30,start:new Date(2026,3,22),dose:'¼ dose',note:'Booster mensile leggero'}]},
-  {id:8,  name:'Vinca',           latin:'Vinca minor/major',   icon:'🔵', color:'#4060b0',
-    schedules:[{prod:'bloom',months:[4,5,6,7,8],interval:25,start:new Date(2026,3,10),dose:'½ dose',note:"Mai Bio·Grow — produce foglie a scapito dei fiori"}]},
-  {id:9,  name:'Mimosa',          latin:'Acacia dealbata',     icon:'🌼', color:'#c0a020',
-    schedules:[{prod:'alg',months:[2,3],interval:21,start:new Date(2026,1,5),dose:'½ dose',note:'Solo durante la fioritura'},{prod:'bloom',months:[3,4,5,6,7,8,9],interval:25,start:new Date(2026,2,25),dose:'½ dose',note:'Solo Bio·Bloom — mai Bio·Grow (leguminosa)'}]},
-  {id:10, name:'Melograno',       latin:'Punica granatum',     icon:'🍎', color:'#b03030',
-    schedules:[{prod:'grow',months:[3,4],interval:25,start:new Date(2026,2,22),dose:'dose piena',note:'Ripresa vegetativa primaverile'},{prod:'bloom',months:[5,6,7,8,9],interval:25,start:new Date(2026,4,5),dose:'dose piena',note:'Passa a Bio·Bloom non appena compaiono i fiori'},{prod:'topmax',months:[6,7,8],interval:30,start:new Date(2026,5,10),dose:'dose piena',note:'Migliora assorbimento e riduce rischio spaccatura frutti'}]},
-  {id:11, name:'Stella di Natale',latin:'Euphorbia pulcherrima',icon:'🌟', color:'#c04030',
-    schedules:[{prod:'grow',months:[4,5,6,7],interval:18,start:new Date(2026,3,12),dose:'dose piena',note:'Stop assoluto da agosto — non disturbare il protocollo buio'}]},
-  {id:12, name:'Aloe Vera',       latin:'Aloe barbadensis',    icon:'🌵', color:'#5a9060',
-    schedules:[{prod:'alg',months:[4,5,6,7,8,9],interval:30,start:new Date(2026,3,10),dose:'¼ dose',note:"Unico prodotto adatto — mai Bio·Grow o Bio·Bloom"}]},
-  {id:13, name:'Liquidambar',     latin:'Liquidambar styraciflua',icon:'🍂', color:'#c05020',
-    schedules:[{prod:'grow',months:[3,4,5,6,7],interval:35,start:new Date(2026,2,18),dose:'dose piena',note:'Solo giovani piante (primi 3 anni)'},{prod:'alg',months:[4,8],interval:120,start:new Date(2026,3,1),dose:'½ dose',note:'1-2 volte a stagione come rinvigorente'}]},
-  {id:14, name:'Ippocastano',     latin:'Aesculus hippocastanum',icon:'🌰', color:'#8b5c2a',
-    schedules:[{prod:'grow',months:[3,4,5,6],interval:45,start:new Date(2026,2,20),dose:'dose piena',note:'Solo giovani piante (primi 2-3 anni)'}]},
-  {id:15, name:'Betulla',         latin:'Betula pendula',      icon:'🌿', color:'#7a9a70',
-    schedules:[{prod:'grow',months:[3,4,5,6],interval:35,start:new Date(2026,2,22),dose:'½ dose',note:'Solo giovani piante'}]},
-  {id:16, name:'Acero Campestre', latin:'Acer campestre',      icon:'🍁', color:'#c07820',
-    schedules:[{prod:'grow',months:[3,4,5],interval:40,start:new Date(2026,2,15),dose:'½ dose',note:'Solo giovani piante o siepi potate intensivamente'}]},
-  {id:17, name:'Pitosforo',       latin:'Pittosporum tobira',  icon:'🌿', color:'#3a6850',
-    schedules:[{prod:'grow',months:[3,4,5,6,7,8,9],interval:35,start:new Date(2026,2,25),dose:'dose piena',note:''},{prod:'fish',months:[4,8],interval:120,start:new Date(2026,3,5),dose:'dose piena',note:'Dopo la potatura primaverile e quella estiva di agosto'}]},
-  {id:18, name:'Spino di Giuda',  latin:'Gleditsia triacanthos',icon:'🌿', color:'#6a8a50',
-    schedules:[{prod:'grow',months:[3,4,5,6,7],interval:35,start:new Date(2026,2,28),dose:'dose piena',note:"Non fissa azoto — Bio·Grow è appropriato (a differenza di Mimosa)"}]},
-  {id:19, name:'Gelso Bonsai',    latin:'Morus alba/nigra',    icon:'🍃', color:'#4a7a38',
-    schedules:[{prod:'grow',months:[4,5,6],interval:18,start:new Date(2026,3,5),dose:'½ dose',note:'Sostiene la crescita esplosiva primaverile'},{prod:'bloom',months:[7,8],interval:28,start:new Date(2026,6,5),dose:'½ dose',note:'Favorisce la lignificazione — fondamentale da luglio'},{prod:'alg',months:[8],interval:60,start:new Date(2026,7,25),dose:'½ dose',note:'Rinvigorente pre-riposo a fine agosto'}]},
-  {id:20, name:'Tradescantia',    latin:'Tradescantia zebrina', icon:'💜', color:'#9060a0',
-    schedules:[{prod:'grow',months:[4,5,6,7,8,9],interval:25,start:new Date(2026,3,8),dose:'¼ dose',note:'Dose minima — eccesso causa perdita colorazione viola'},{prod:'alg',months:[4,5,6,7,8,9],interval:30,start:new Date(2026,3,22),dose:'¼ dose',note:'Rinvigorente mensile leggero'}]},
-  {id:21, name:'Rosmarino',       latin:'Salvia rosmarinus',    icon:'🌿', color:'#4a7060',
-    schedules:[{prod:'bloom',months:[3,4,5,6,7],interval:45,start:new Date(2026,2,18),dose:'½ dose',note:"Mai Bio·Grow — l'azoto riduce l'aroma e causa crescita molle"}]},
-  {id:22, name:'Salvia',          latin:'Salvia officinalis',   icon:'🍃', color:'#6a8050',
-    schedules:[{prod:'bloom',months:[3,4,5,6,7],interval:45,start:new Date(2026,2,20),dose:'½ dose',note:"Mai Bio·Grow — l'azoto diluisce gli oli essenziali"}]},
-  {id:23, name:'Paulownia',       latin:'Paulownia tomentosa',  icon:'🌸', color:'#8060b0',
-    schedules:[{prod:'grow',months:[3,4,5,6,7],interval:25,start:new Date(2026,2,15),dose:'dose piena',note:'Solo giovani piante — crescita esplosiva'},{prod:'fish',months:[3,4,5],interval:30,start:new Date(2026,2,22),dose:'dose piena',note:'Alternato con Bio·Grow in primavera'}]},
-  {id:24, name:'Crassula Ovata',  latin:'Crassula ovata',       icon:'🪴', color:'#5a8a50',
-    schedules:[{prod:'alg',months:[4,5,6,7,8,9],interval:30,start:new Date(2026,3,12),dose:'¼ dose',note:"Unico prodotto adatto — mai Bio·Grow o Bio·Bloom"}]},
-  {id:25, name:'Carmona Bonsai',  latin:'Carmona microphylla',  icon:'🌳', color:'#4a6a3a',
-    schedules:[{prod:'grow',months:[4,5,6,7,8,9],interval:18,start:new Date(2026,3,8),dose:'½ dose',note:'Non superare ½ dose — radici delicate'},{prod:'alg',months:[4,5,6,7,8,9],interval:25,start:new Date(2026,3,15),dose:'½ dose',note:'Anche come spray fogliare diluito per umidità'}]}
+  {
+    id: 0, name: 'Sanseviera', latin: '', icon: '🌿', color: '#5a7a4a',
+    schedules: [{ prod: 'grow', months: [4, 5, 6, 7, 8, 9], interval: 30, start: new Date(2026, 3, 10), dose: '¼ dose', note: 'Molto diluito — pianta abituata a terreni poveri' }, { prod: 'alg', months: [4, 5, 6, 7, 8, 9], interval: 45, start: new Date(2026, 3, 25), dose: '¼ dose', note: 'Alternativa più delicata al Bio·Grow' }]
+  },
+  {
+    id: 1, name: 'Orchidea', latin: 'Phalaenopsis', icon: '🌸', color: '#c06080',
+    schedules: [{ prod: 'alg', months: [3, 4, 5, 6, 7, 8, 9], interval: 14, start: new Date(2026, 2, 20), dose: '¼ dose', note: 'Unico prodotto adatto — mai Bio·Grow o Bio·Bloom' }, { prod: 'alg', months: [1, 10], interval: 21, start: new Date(2026, 0, 8), dose: '¼ dose ridotta', note: 'Dose minima in semiriposo' }]
+  },
+  {
+    id: 2, name: 'Ficus Benjamina', latin: '', icon: '🌳', color: '#3d6b30',
+    schedules: [{ prod: 'grow', months: [3, 4, 5, 6, 7, 8, 9], interval: 14, start: new Date(2026, 2, 20), dose: '½ dose', note: 'Non superare ½ dose — sensibile ai sali' }, { prod: 'calmag', months: [4, 5, 6, 7, 8, 9], interval: 30, start: new Date(2026, 3, 12), dose: 'dose piena', note: 'Previene la clorosi ferrica' }]
+  },
+  {
+    id: 3, name: 'Ficus Elastica', latin: '', icon: '🌱', color: '#2e5522',
+    schedules: [{ prod: 'grow', months: [3, 4, 5, 6, 7, 8, 9], interval: 14, start: new Date(2026, 2, 23), dose: '½ dose', note: '' }, { prod: 'alg', months: [4, 5, 6, 7, 8, 9], interval: 30, start: new Date(2026, 3, 20), dose: '½ dose', note: 'Come spray fogliare diluito mantiene le foglie lucide' }]
+  },
+  {
+    id: 4, name: 'Oleandro', latin: 'Nerium oleander', icon: '🌺', color: '#c03050',
+    schedules: [{ prod: 'bloom', months: [3, 4, 5, 6, 7, 8, 9], interval: 14, start: new Date(2026, 2, 18), dose: 'dose piena', note: "Mai Bio·Grow — l\u2019azoto blocca la fioritura" }, { prod: 'topmax', months: [4, 5, 6, 7, 8], interval: 30, start: new Date(2026, 3, 8), dose: 'dose piena', note: 'Booster per la fioritura' }, { prod: 'alg', months: [3, 4, 5, 6, 7, 8, 9], interval: 30, start: new Date(2026, 2, 28), dose: '½ dose', note: 'Rinvigorente mensile' }]
+  },
+  {
+    id: 5, name: 'Glicine Bonsai', latin: 'Wisteria', icon: '💜', color: '#7b5ea7',
+    schedules: [{ prod: 'alg', months: [2, 3], interval: 21, start: new Date(2026, 1, 10), dose: '½ dose', note: 'Solo durante la fioritura — non stimolare la crescita' }, { prod: 'bloom', months: [4, 5, 6, 7, 8], interval: 25, start: new Date(2026, 3, 20), dose: '½ dose', note: 'Zero azoto — il glicine è una leguminosa' }]
+  },
+  {
+    id: 6, name: 'Limone', latin: 'Citrus limon', icon: '🍋', color: '#c08a10',
+    schedules: [{ prod: 'calmag', months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], interval: 30, start: new Date(2026, 0, 10), dose: 'dose piena', note: "Tutto l\u2019anno — indispensabile anche con granulare (ferro + magnesio)" }, { prod: 'alg', months: [3, 4, 5, 6, 7, 8, 9], interval: 30, start: new Date(2026, 2, 20), dose: '\u00bd dose', note: 'Rinvigorente mensile — complemento al granulare' }, { prod: 'bloom', months: [6, 7, 8, 9], interval: 30, start: new Date(2026, 5, 5), dose: '\u00bd dose', note: 'Supporto alla fruttificazione in aggiunta al granulare' }]
+  },
+  {
+    id: 7, name: 'Moneta Cinese', latin: 'Pilea peperomioides', icon: '🪙', color: '#7a9a50',
+    schedules: [{ prod: 'grow', months: [4, 5, 6, 7, 8], interval: 25, start: new Date(2026, 3, 7), dose: '¼ dose', note: 'Non esagerare — a dose piena causa foglie deformate' }, { prod: 'alg', months: [4, 5, 6, 7, 8], interval: 30, start: new Date(2026, 3, 22), dose: '¼ dose', note: 'Booster mensile leggero' }]
+  },
+  {
+    id: 8, name: 'Vinca', latin: 'Vinca minor/major', icon: '🔵', color: '#4060b0',
+    schedules: [{ prod: 'bloom', months: [4, 5, 6, 7, 8], interval: 25, start: new Date(2026, 3, 10), dose: '½ dose', note: "Mai Bio·Grow — produce foglie a scapito dei fiori" }]
+  },
+  {
+    id: 9, name: 'Mimosa', latin: 'Acacia dealbata', icon: '🌼', color: '#c0a020',
+    schedules: [{ prod: 'alg', months: [2, 3], interval: 21, start: new Date(2026, 1, 5), dose: '½ dose', note: 'Solo durante la fioritura' }, { prod: 'bloom', months: [3, 4, 5, 6, 7, 8, 9], interval: 25, start: new Date(2026, 2, 25), dose: '½ dose', note: 'Solo Bio·Bloom — mai Bio·Grow (leguminosa)' }]
+  },
+  {
+    id: 10, name: 'Melograno', latin: 'Punica granatum', icon: '🍎', color: '#b03030',
+    schedules: [{ prod: 'grow', months: [3, 4], interval: 25, start: new Date(2026, 2, 22), dose: 'dose piena', note: 'Ripresa vegetativa primaverile' }, { prod: 'bloom', months: [5, 6, 7, 8, 9], interval: 25, start: new Date(2026, 4, 5), dose: 'dose piena', note: 'Passa a Bio·Bloom non appena compaiono i fiori' }, { prod: 'topmax', months: [6, 7, 8], interval: 30, start: new Date(2026, 5, 10), dose: 'dose piena', note: 'Migliora assorbimento e riduce rischio spaccatura frutti' }]
+  },
+  {
+    id: 11, name: 'Stella di Natale', latin: 'Euphorbia pulcherrima', icon: '🌟', color: '#c04030',
+    schedules: [{ prod: 'grow', months: [4, 5, 6, 7], interval: 18, start: new Date(2026, 3, 12), dose: 'dose piena', note: 'Stop assoluto da agosto — non disturbare il protocollo buio' }]
+  },
+  {
+    id: 12, name: 'Aloe Vera', latin: 'Aloe barbadensis', icon: '🌵', color: '#5a9060',
+    schedules: [{ prod: 'alg', months: [4, 5, 6, 7, 8, 9], interval: 30, start: new Date(2026, 3, 10), dose: '¼ dose', note: "Unico prodotto adatto — mai Bio·Grow o Bio·Bloom" }]
+  },
+  {
+    id: 13, name: 'Liquidambar', latin: 'Liquidambar styraciflua', icon: '🍂', color: '#c05020',
+    schedules: [{ prod: 'grow', months: [3, 4, 5, 6, 7], interval: 35, start: new Date(2026, 2, 18), dose: 'dose piena', note: 'Solo giovani piante (primi 3 anni)' }, { prod: 'alg', months: [4, 8], interval: 120, start: new Date(2026, 3, 1), dose: '½ dose', note: '1-2 volte a stagione come rinvigorente' }]
+  },
+  {
+    id: 14, name: 'Ippocastano', latin: 'Aesculus hippocastanum', icon: '🌰', color: '#8b5c2a',
+    schedules: [{ prod: 'grow', months: [3, 4, 5, 6], interval: 45, start: new Date(2026, 2, 20), dose: 'dose piena', note: 'Solo giovani piante (primi 2-3 anni)' }]
+  },
+  {
+    id: 15, name: 'Betulla', latin: 'Betula pendula', icon: '🌿', color: '#7a9a70',
+    schedules: [{ prod: 'grow', months: [3, 4, 5, 6], interval: 35, start: new Date(2026, 2, 22), dose: '½ dose', note: 'Solo giovani piante' }]
+  },
+  {
+    id: 16, name: 'Acero Campestre', latin: 'Acer campestre', icon: '🍁', color: '#c07820',
+    schedules: [{ prod: 'grow', months: [3, 4, 5], interval: 40, start: new Date(2026, 2, 15), dose: '½ dose', note: 'Solo giovani piante o siepi potate intensivamente' }]
+  },
+  {
+    id: 17, name: 'Pitosforo', latin: 'Pittosporum tobira', icon: '🌿', color: '#3a6850',
+    schedules: [{ prod: 'grow', months: [3, 4, 5, 6, 7, 8, 9], interval: 35, start: new Date(2026, 2, 25), dose: 'dose piena', note: '' }, { prod: 'fish', months: [4, 8], interval: 120, start: new Date(2026, 3, 5), dose: 'dose piena', note: 'Dopo la potatura primaverile e quella estiva di agosto' }]
+  },
+  {
+    id: 18, name: 'Spino di Giuda', latin: 'Gleditsia triacanthos', icon: '🌿', color: '#6a8a50',
+    schedules: [{ prod: 'grow', months: [3, 4, 5, 6, 7], interval: 35, start: new Date(2026, 2, 28), dose: 'dose piena', note: "Non fissa azoto — Bio·Grow è appropriato (a differenza di Mimosa)" }]
+  },
+  {
+    id: 19, name: 'Gelso Bonsai', latin: 'Morus alba/nigra', icon: '🍃', color: '#4a7a38',
+    schedules: [{ prod: 'grow', months: [4, 5, 6], interval: 18, start: new Date(2026, 3, 5), dose: '½ dose', note: 'Sostiene la crescita esplosiva primaverile' }, { prod: 'bloom', months: [7, 8], interval: 28, start: new Date(2026, 6, 5), dose: '½ dose', note: 'Favorisce la lignificazione — fondamentale da luglio' }, { prod: 'alg', months: [8], interval: 60, start: new Date(2026, 7, 25), dose: '½ dose', note: 'Rinvigorente pre-riposo a fine agosto' }]
+  },
+  {
+    id: 20, name: 'Tradescantia', latin: 'Tradescantia zebrina', icon: '💜', color: '#9060a0',
+    schedules: [{ prod: 'grow', months: [4, 5, 6, 7, 8, 9], interval: 25, start: new Date(2026, 3, 8), dose: '¼ dose', note: 'Dose minima — eccesso causa perdita colorazione viola' }, { prod: 'alg', months: [4, 5, 6, 7, 8, 9], interval: 30, start: new Date(2026, 3, 22), dose: '¼ dose', note: 'Rinvigorente mensile leggero' }]
+  },
+  {
+    id: 21, name: 'Rosmarino', latin: 'Salvia rosmarinus', icon: '🌿', color: '#4a7060',
+    schedules: [{ prod: 'bloom', months: [3, 4, 5, 6, 7], interval: 45, start: new Date(2026, 2, 18), dose: '½ dose', note: "Mai Bio·Grow — l'azoto riduce l'aroma e causa crescita molle" }]
+  },
+  {
+    id: 22, name: 'Salvia', latin: 'Salvia officinalis', icon: '🍃', color: '#6a8050',
+    schedules: [{ prod: 'bloom', months: [3, 4, 5, 6, 7], interval: 45, start: new Date(2026, 2, 20), dose: '½ dose', note: "Mai Bio·Grow — l'azoto diluisce gli oli essenziali" }]
+  },
+  {
+    id: 23, name: 'Paulownia', latin: 'Paulownia tomentosa', icon: '🌸', color: '#8060b0',
+    schedules: [{ prod: 'grow', months: [3, 4, 5, 6, 7], interval: 25, start: new Date(2026, 2, 15), dose: 'dose piena', note: 'Solo giovani piante — crescita esplosiva' }, { prod: 'fish', months: [3, 4, 5], interval: 30, start: new Date(2026, 2, 22), dose: 'dose piena', note: 'Alternato con Bio·Grow in primavera' }]
+  },
+  {
+    id: 24, name: 'Crassula Ovata', latin: 'Crassula ovata', icon: '🪴', color: '#5a8a50',
+    schedules: [{ prod: 'alg', months: [4, 5, 6, 7, 8, 9], interval: 30, start: new Date(2026, 3, 12), dose: '¼ dose', note: "Unico prodotto adatto — mai Bio·Grow o Bio·Bloom" }]
+  },
+  {
+    id: 25, name: 'Carmona Bonsai', latin: 'Carmona microphylla', icon: '🌳', color: '#4a6a3a',
+    schedules: [{ prod: 'grow', months: [4, 5, 6, 7, 8, 9], interval: 18, start: new Date(2026, 3, 8), dose: '½ dose', note: 'Non superare ½ dose — radici delicate' }, { prod: 'alg', months: [4, 5, 6, 7, 8, 9], interval: 25, start: new Date(2026, 3, 15), dose: '½ dose', note: 'Anche come spray fogliare diluito per umidità' }]
+  }
 
 ];
 
@@ -3728,45 +3852,75 @@ let bbPlants = [
 // ⑦ TRATTAMENTI PREVENTIVI
 // ══════════════════════════════════════════════════════════════════════
 const TR_PRODUCTS = {
-  neem:    {label:'Olio di Neem',     color:'#2d8a4e', abbr:'N'},
-  rame:    {label:'Rame/Polt.Bord.',  color:'#1a7a8a', abbr:'Cu'},
-  zolfo:   {label:'Zolfo bagnabile',  color:'#b0960a', abbr:'S'},
-  sapone:  {label:'Sapone molle K',   color:'#5a8a6a', abbr:'Sk'},
-  obianco: {label:'Olio bianco',      color:'#7a7a7a', abbr:'Ob'},
+  neem: { label: 'Olio di Neem', color: '#2d8a4e', abbr: 'N' },
+  rame: { label: 'Rame/Polt.Bord.', color: '#1a7a8a', abbr: 'Cu' },
+  zolfo: { label: 'Zolfo bagnabile', color: '#b0960a', abbr: 'S' },
+  sapone: { label: 'Sapone molle K', color: '#5a8a6a', abbr: 'Sk' },
+  obianco: { label: 'Olio bianco', color: '#7a7a7a', abbr: 'Ob' },
 };
 
 // trPlants segue la stessa logica di bbPlants per le piante custom.
 let trPlants = [
-  {id:2,  name:'Ficus Benjamina', latin:'',                icon:'🌳', color:'#3d6b30',
-    schedules:[{prod:'neem',months:[4,5,6,7,8],interval:30,start:new Date(2026,3,5),dose:'5 ml/L',note:'Cocciniglia e ragnetto rosso — ambienti secchi lo favoriscono'}]},
-  {id:3,  name:'Ficus Elastica',  latin:'',                icon:'🌱', color:'#2e5522',
-    schedules:[{prod:'neem',months:[5,6,7,8],interval:35,start:new Date(2026,4,8),dose:'5 ml/L',note:'Ragnetto rosso — pulire foglie con panno umido dopo il trattamento'}]},
-  {id:4,  name:'Oleandro',        latin:'Nerium oleander', icon:'🌺', color:'#c03050',
-    schedules:[{prod:'neem',months:[5,6,7],interval:28,start:new Date(2026,4,5),dose:'5 ml/L',note:'Cocciniglia e afidi estivi'},{prod:'rame',months:[3,9],interval:30,start:new Date(2026,2,10),dose:'20 g/10L',note:'Preventivo fungino primavera e fine estate'},{prod:'obianco',months:[1],interval:30,start:new Date(2026,0,15),dose:'15 ml/L',note:'Cocciniglie svernanti sui rami lignificati'}]},
-  {id:5,  name:'Glicine Bonsai',  latin:'Wisteria',       icon:'💜', color:'#7b5ea7',
-    schedules:[{prod:'rame',months:[2],interval:30,start:new Date(2026,1,10),dose:'20 g/10L',note:'Dopo potatura invernale — protegge i tagli da infezioni fungine'},{prod:'neem',months:[4,5],interval:30,start:new Date(2026,3,8),dose:'5 ml/L',note:'Afidi sui germogli primaverili'}]},
-  {id:6,  name:'Limone',          latin:'Citrus limon',    icon:'🍋', color:'#c08a10',
-    schedules:[{prod:'neem',months:[4,5,6,7,8],interval:28,start:new Date(2026,3,8),dose:'5 ml/L',note:'Cocciniglia, afidi, minatore fogliare — trattare anche il sotto delle foglie'},{prod:'rame',months:[2,10],interval:30,start:new Date(2026,1,12),dose:'20 g/10L',note:'Pre-primavera e post-raccolta — preventivo batteriosi e fumaggine'},{prod:'obianco',months:[1],interval:30,start:new Date(2026,0,12),dose:'15 ml/L',note:'Trattamento invernale contro cocciniglie svernanti su rami e tronco'}]},
-  {id:1,  name:'Orchidea',        latin:'Phalaenopsis',    icon:'🌸', color:'#c06080',
-    schedules:[{prod:'sapone',months:[4,5,6,7],interval:35,start:new Date(2026,3,10),dose:'8-10 g/L',note:'Cocciniglia — il sapone molle è più delicato del neem sulle orchidee'}]},
-  {id:10, name:'Melograno',       latin:'Punica granatum', icon:'🍎', color:'#b03030',
-    schedules:[{prod:'rame',months:[2,10],interval:30,start:new Date(2026,1,15),dose:'20 g/10L',note:'Dormant spray pre-primavera + post-raccolta — preventivo Alternaria'},{prod:'obianco',months:[1],interval:30,start:new Date(2026,0,15),dose:'15 ml/L',note:'Uova e cocciniglie svernanti — trattare rami e tronco'},{prod:'neem',months:[5,6],interval:30,start:new Date(2026,4,10),dose:'5 ml/L',note:'Afidi sui germogli primaverili'}]},
-  {id:11, name:'Stella di Natale',latin:'Euphorbia pulcherrima', icon:'🌟', color:'#c04030',
-    schedules:[{prod:'neem',months:[4,5,6],interval:28,start:new Date(2026,3,10),dose:'3 ml/L (dose ridotta)',note:'Mosca bianca e cocciniglia — dose ridotta per non stressare la pianta'},{prod:'sapone',months:[5,6],interval:35,start:new Date(2026,4,5),dose:'10-15 g/L',note:'Mosca bianca — complemento al neem, alternare i due prodotti'}]},
-  {id:14, name:'Ippocastano',     latin:'Aesculus hippocastanum', icon:'🌰', color:'#8b5c2a',
-    schedules:[{prod:'neem',months:[4,5],interval:30,start:new Date(2026,3,10),dose:'5 ml/L',note:'Cameraria ohridella (minatore fogliare) — trattamento preventivo fondamentale'}]},
-  {id:17, name:'Pitosforo',       latin:'Pittosporum tobira',    icon:'🌿', color:'#3a6850',
-    schedules:[{prod:'neem',months:[5,6,7],interval:30,start:new Date(2026,4,5),dose:'5 ml/L',note:'Cocciniglia e afidi sui germogli primaverili'}]},
-  {id:19, name:'Gelso Bonsai',    latin:'Morus alba/nigra',      icon:'🍃', color:'#4a7a38',
-    schedules:[{prod:'neem',months:[5,6,7,8],interval:30,start:new Date(2026,4,8),dose:'5 ml/L',note:'Cocciniglia e ragnetto rosso in estate — controllare quotidianamente'},{prod:'rame',months:[2,3],interval:30,start:new Date(2026,1,18),dose:'20 g/10L',note:'Dopo potatura strutturale invernale — protegge i tagli'}]},
-  {id:21, name:'Rosmarino',       latin:'Salvia rosmarinus',     icon:'🌿', color:'#4a7060',
-    schedules:[{prod:'zolfo',months:[4,5],interval:30,start:new Date(2026,3,10),dose:'3-5 g/L',note:'Preventivo oidio (mal bianco) — non trattare sopra 30°C'}]},
-  {id:22, name:'Salvia',          latin:'Salvia officinalis',    icon:'🍃', color:'#6a8050',
-    schedules:[{prod:'zolfo',months:[4,5],interval:30,start:new Date(2026,3,12),dose:'3-5 g/L',note:'Preventivo oidio — trattare al mattino presto o alla sera'}]},
-  {id:24, name:'Crassula Ovata',  latin:'Crassula ovata',        icon:'🪴', color:'#5a8a50',
-    schedules:[{prod:'neem',months:[5,6,7,8],interval:35,start:new Date(2026,4,10),dose:'3 ml/L (dose ridotta)',note:'Cocciniglia cotonosa — controllare anche sotto le foglie e alla base del fusto'}]},
-  {id:25, name:'Carmona Bonsai',  latin:'Carmona microphylla',  icon:'🌳', color:'#4a6a3a',
-    schedules:[{prod:'neem',months:[4,5,6,7,8],interval:25,start:new Date(2026,3,8),dose:'3 ml/L (dose ridotta)',note:'Cocciniglia, ragnetto rosso e mosca bianca — molto sensibile in ambienti secchi'},{prod:'sapone',months:[5,6,7],interval:30,start:new Date(2026,4,5),dose:'8 g/L',note:'Alternare con neem. Più delicato sulle foglie piccole'}]}
+  {
+    id: 2, name: 'Ficus Benjamina', latin: '', icon: '🌳', color: '#3d6b30',
+    schedules: [{ prod: 'neem', months: [4, 5, 6, 7, 8], interval: 30, start: new Date(2026, 3, 5), dose: '5 ml/L', note: 'Cocciniglia e ragnetto rosso — ambienti secchi lo favoriscono' }]
+  },
+  {
+    id: 3, name: 'Ficus Elastica', latin: '', icon: '🌱', color: '#2e5522',
+    schedules: [{ prod: 'neem', months: [5, 6, 7, 8], interval: 35, start: new Date(2026, 4, 8), dose: '5 ml/L', note: 'Ragnetto rosso — pulire foglie con panno umido dopo il trattamento' }]
+  },
+  {
+    id: 4, name: 'Oleandro', latin: 'Nerium oleander', icon: '🌺', color: '#c03050',
+    schedules: [{ prod: 'neem', months: [5, 6, 7], interval: 28, start: new Date(2026, 4, 5), dose: '5 ml/L', note: 'Cocciniglia e afidi estivi' }, { prod: 'rame', months: [3, 9], interval: 30, start: new Date(2026, 2, 10), dose: '20 g/10L', note: 'Preventivo fungino primavera e fine estate' }, { prod: 'obianco', months: [1], interval: 30, start: new Date(2026, 0, 15), dose: '15 ml/L', note: 'Cocciniglie svernanti sui rami lignificati' }]
+  },
+  {
+    id: 5, name: 'Glicine Bonsai', latin: 'Wisteria', icon: '💜', color: '#7b5ea7',
+    schedules: [{ prod: 'rame', months: [2], interval: 30, start: new Date(2026, 1, 10), dose: '20 g/10L', note: 'Dopo potatura invernale — protegge i tagli da infezioni fungine' }, { prod: 'neem', months: [4, 5], interval: 30, start: new Date(2026, 3, 8), dose: '5 ml/L', note: 'Afidi sui germogli primaverili' }]
+  },
+  {
+    id: 6, name: 'Limone', latin: 'Citrus limon', icon: '🍋', color: '#c08a10',
+    schedules: [{ prod: 'neem', months: [4, 5, 6, 7, 8], interval: 28, start: new Date(2026, 3, 8), dose: '5 ml/L', note: 'Cocciniglia, afidi, minatore fogliare — trattare anche il sotto delle foglie' }, { prod: 'rame', months: [2, 10], interval: 30, start: new Date(2026, 1, 12), dose: '20 g/10L', note: 'Pre-primavera e post-raccolta — preventivo batteriosi e fumaggine' }, { prod: 'obianco', months: [1], interval: 30, start: new Date(2026, 0, 12), dose: '15 ml/L', note: 'Trattamento invernale contro cocciniglie svernanti su rami e tronco' }]
+  },
+  {
+    id: 1, name: 'Orchidea', latin: 'Phalaenopsis', icon: '🌸', color: '#c06080',
+    schedules: [{ prod: 'sapone', months: [4, 5, 6, 7], interval: 35, start: new Date(2026, 3, 10), dose: '8-10 g/L', note: 'Cocciniglia — il sapone molle è più delicato del neem sulle orchidee' }]
+  },
+  {
+    id: 10, name: 'Melograno', latin: 'Punica granatum', icon: '🍎', color: '#b03030',
+    schedules: [{ prod: 'rame', months: [2, 10], interval: 30, start: new Date(2026, 1, 15), dose: '20 g/10L', note: 'Dormant spray pre-primavera + post-raccolta — preventivo Alternaria' }, { prod: 'obianco', months: [1], interval: 30, start: new Date(2026, 0, 15), dose: '15 ml/L', note: 'Uova e cocciniglie svernanti — trattare rami e tronco' }, { prod: 'neem', months: [5, 6], interval: 30, start: new Date(2026, 4, 10), dose: '5 ml/L', note: 'Afidi sui germogli primaverili' }]
+  },
+  {
+    id: 11, name: 'Stella di Natale', latin: 'Euphorbia pulcherrima', icon: '🌟', color: '#c04030',
+    schedules: [{ prod: 'neem', months: [4, 5, 6], interval: 28, start: new Date(2026, 3, 10), dose: '3 ml/L (dose ridotta)', note: 'Mosca bianca e cocciniglia — dose ridotta per non stressare la pianta' }, { prod: 'sapone', months: [5, 6], interval: 35, start: new Date(2026, 4, 5), dose: '10-15 g/L', note: 'Mosca bianca — complemento al neem, alternare i due prodotti' }]
+  },
+  {
+    id: 14, name: 'Ippocastano', latin: 'Aesculus hippocastanum', icon: '🌰', color: '#8b5c2a',
+    schedules: [{ prod: 'neem', months: [4, 5], interval: 30, start: new Date(2026, 3, 10), dose: '5 ml/L', note: 'Cameraria ohridella (minatore fogliare) — trattamento preventivo fondamentale' }]
+  },
+  {
+    id: 17, name: 'Pitosforo', latin: 'Pittosporum tobira', icon: '🌿', color: '#3a6850',
+    schedules: [{ prod: 'neem', months: [5, 6, 7], interval: 30, start: new Date(2026, 4, 5), dose: '5 ml/L', note: 'Cocciniglia e afidi sui germogli primaverili' }]
+  },
+  {
+    id: 19, name: 'Gelso Bonsai', latin: 'Morus alba/nigra', icon: '🍃', color: '#4a7a38',
+    schedules: [{ prod: 'neem', months: [5, 6, 7, 8], interval: 30, start: new Date(2026, 4, 8), dose: '5 ml/L', note: 'Cocciniglia e ragnetto rosso in estate — controllare quotidianamente' }, { prod: 'rame', months: [2, 3], interval: 30, start: new Date(2026, 1, 18), dose: '20 g/10L', note: 'Dopo potatura strutturale invernale — protegge i tagli' }]
+  },
+  {
+    id: 21, name: 'Rosmarino', latin: 'Salvia rosmarinus', icon: '🌿', color: '#4a7060',
+    schedules: [{ prod: 'zolfo', months: [4, 5], interval: 30, start: new Date(2026, 3, 10), dose: '3-5 g/L', note: 'Preventivo oidio (mal bianco) — non trattare sopra 30°C' }]
+  },
+  {
+    id: 22, name: 'Salvia', latin: 'Salvia officinalis', icon: '🍃', color: '#6a8050',
+    schedules: [{ prod: 'zolfo', months: [4, 5], interval: 30, start: new Date(2026, 3, 12), dose: '3-5 g/L', note: 'Preventivo oidio — trattare al mattino presto o alla sera' }]
+  },
+  {
+    id: 24, name: 'Crassula Ovata', latin: 'Crassula ovata', icon: '🪴', color: '#5a8a50',
+    schedules: [{ prod: 'neem', months: [5, 6, 7, 8], interval: 35, start: new Date(2026, 4, 10), dose: '3 ml/L (dose ridotta)', note: 'Cocciniglia cotonosa — controllare anche sotto le foglie e alla base del fusto' }]
+  },
+  {
+    id: 25, name: 'Carmona Bonsai', latin: 'Carmona microphylla', icon: '🌳', color: '#4a6a3a',
+    schedules: [{ prod: 'neem', months: [4, 5, 6, 7, 8], interval: 25, start: new Date(2026, 3, 8), dose: '3 ml/L (dose ridotta)', note: 'Cocciniglia, ragnetto rosso e mosca bianca — molto sensibile in ambienti secchi' }, { prod: 'sapone', months: [5, 6, 7], interval: 30, start: new Date(2026, 4, 5), dose: '8 g/L', note: 'Alternare con neem. Più delicato sulle foglie piccole' }]
+  }
 
 ];
 
@@ -3775,22 +3929,22 @@ let trHiddenProds = new Set();
 
 // ── Protocolli curativi per malattia/parassita ──
 const CURE_PROTOCOLS = {
-  cocciniglia:          {steps:[{prod:'obianco',dose:'15 ml/L',note:'Trattamento d\'urto — coprire bene pagina inferiore foglie'},{prod:'sapone',dose:'10 g/L',note:'Lavaggio dopo 3gg dal trattamento olio'},{prod:'obianco',dose:'15 ml/L',note:'Secondo trattamento — eliminare le ninfatrici'}], interval:7, total:3, color:'#a04040'},
-  cocciniglia_cotonosa: {steps:[{prod:'obianco',dose:'15 ml/L',note:'Coprire zona colpita e ascelle foglie'},{prod:'sapone',dose:'10 g/L',note:'Rimuovere manualmente i batuffoli con cotton fioc + alcol'},{prod:'obianco',dose:'15 ml/L',note:'Ripetere — controllare anche radici e fusto'}], interval:7, total:3, color:'#a04040'},
-  ragnetto_rosso:       {steps:[{prod:'neem',dose:'5 ml/L',note:'Nebulizzare su tutta la chioma, pagina inf. foglie'},{prod:'sapone',dose:'8 g/L',note:'Alternare con neem — aumentare umidità ambiente'},{prod:'neem',dose:'5 ml/L',note:'Terzo passaggio — verificare assenza ragnatele'}], interval:5, total:3, color:'#c06030'},
-  afidi:                {steps:[{prod:'sapone',dose:'10 g/L',note:'Spruzzare su colonie — getto forte d\'acqua prima del trattamento'},{prod:'neem',dose:'5 ml/L',note:'Trattamento sistemico dopo il lavaggio'}], interval:5, total:2, color:'#6a8a30'},
-  mosca_bianca:         {steps:[{prod:'neem',dose:'5 ml/L',note:'Trattare la sera — le mosche bianche sono più attive di giorno'},{prod:'sapone',dose:'8 g/L',note:'Alternare con neem'},{prod:'neem',dose:'5 ml/L',note:'Terzo passaggio — posizionare trappole gialle adesive'}], interval:7, total:3, color:'#b0a020'},
-  oidio:                {steps:[{prod:'zolfo',dose:'3 g/L',note:'Non trattare sopra i 32°C — rischio fitotossicità'},{prod:'rame',dose:'Polt. bordolese 10 g/L',note:'Alternare con zolfo'},{prod:'zolfo',dose:'3 g/L',note:'Ripetere — rimuovere foglie molto colpite'},{prod:'rame',dose:'Polt. bordolese 10 g/L',note:'Quarto passaggio se necessario'}], interval:10, total:4, color:'#8a6a20'},
-  fumaggine:            {steps:[{prod:'sapone',dose:'10 g/L',note:'Lavare le foglie dalla fumaggine nera — trattare poi la causa (cocciniglia/afidi)'},{prod:'sapone',dose:'10 g/L',note:'Secondo lavaggio — controllare l\'insetto causa'}], interval:10, total:2, color:'#4a4a4a'},
-  clorosi_ferrica:      {steps:[{prod:'ferro',dose:'Ferro chelato 2 ml/L',note:'Trattamento fogliare + irrigazione. Controllare pH substrato (deve essere <7)'},{prod:'ferro',dose:'Ferro chelato 2 ml/L',note:'Ripetere dopo 15gg se le foglie sono ancora gialle'}], interval:15, total:2, color:'#8a8a20'},
-  minatore_fogliare:    {steps:[{prod:'neem',dose:'5 ml/L',note:'Trattamento sistemico — rimuovere le foglie con gallerie visibili'},{prod:'neem',dose:'5 ml/L',note:'Secondo trattamento'},{prod:'neem',dose:'5 ml/L',note:'Terzo passaggio — le larve hanno cicli di 2-3 settimane'}], interval:10, total:3, color:'#5a7a3a'},
-  alternaria:           {steps:[{prod:'rame',dose:'Polt. bordolese 10 g/L',note:'Rimuovere tutte le foglie con macchie — non compostare'},{prod:'rame',dose:'Polt. bordolese 10 g/L',note:'Ripetere — ridurre bagnatura fogliare'},{prod:'rame',dose:'Polt. bordolese 10 g/L',note:'Terzo passaggio'}], interval:10, total:3, color:'#6a4a20'},
-  marciume_radicale:    {steps:[{prod:'rame',dose:'Rame in irrigazione 3 g/L',note:'⚠️ Rinvasare subito: rimuovere radici marce, substrato drenante, vaso pulito. Ridurre annaffiature drasticamente'},{prod:'rame',dose:'Rame in irrigazione 3 g/L',note:'Seconda irrigazione con rame dopo 15gg — non annaffiare fino a substrato quasi asciutto'}], interval:15, total:2, color:'#6a3a20'},
+  cocciniglia: { steps: [{ prod: 'obianco', dose: '15 ml/L', note: 'Trattamento d\'urto — coprire bene pagina inferiore foglie' }, { prod: 'sapone', dose: '10 g/L', note: 'Lavaggio dopo 3gg dal trattamento olio' }, { prod: 'obianco', dose: '15 ml/L', note: 'Secondo trattamento — eliminare le ninfatrici' }], interval: 7, total: 3, color: '#a04040' },
+  cocciniglia_cotonosa: { steps: [{ prod: 'obianco', dose: '15 ml/L', note: 'Coprire zona colpita e ascelle foglie' }, { prod: 'sapone', dose: '10 g/L', note: 'Rimuovere manualmente i batuffoli con cotton fioc + alcol' }, { prod: 'obianco', dose: '15 ml/L', note: 'Ripetere — controllare anche radici e fusto' }], interval: 7, total: 3, color: '#a04040' },
+  ragnetto_rosso: { steps: [{ prod: 'neem', dose: '5 ml/L', note: 'Nebulizzare su tutta la chioma, pagina inf. foglie' }, { prod: 'sapone', dose: '8 g/L', note: 'Alternare con neem — aumentare umidità ambiente' }, { prod: 'neem', dose: '5 ml/L', note: 'Terzo passaggio — verificare assenza ragnatele' }], interval: 5, total: 3, color: '#c06030' },
+  afidi: { steps: [{ prod: 'sapone', dose: '10 g/L', note: 'Spruzzare su colonie — getto forte d\'acqua prima del trattamento' }, { prod: 'neem', dose: '5 ml/L', note: 'Trattamento sistemico dopo il lavaggio' }], interval: 5, total: 2, color: '#6a8a30' },
+  mosca_bianca: { steps: [{ prod: 'neem', dose: '5 ml/L', note: 'Trattare la sera — le mosche bianche sono più attive di giorno' }, { prod: 'sapone', dose: '8 g/L', note: 'Alternare con neem' }, { prod: 'neem', dose: '5 ml/L', note: 'Terzo passaggio — posizionare trappole gialle adesive' }], interval: 7, total: 3, color: '#b0a020' },
+  oidio: { steps: [{ prod: 'zolfo', dose: '3 g/L', note: 'Non trattare sopra i 32°C — rischio fitotossicità' }, { prod: 'rame', dose: 'Polt. bordolese 10 g/L', note: 'Alternare con zolfo' }, { prod: 'zolfo', dose: '3 g/L', note: 'Ripetere — rimuovere foglie molto colpite' }, { prod: 'rame', dose: 'Polt. bordolese 10 g/L', note: 'Quarto passaggio se necessario' }], interval: 10, total: 4, color: '#8a6a20' },
+  fumaggine: { steps: [{ prod: 'sapone', dose: '10 g/L', note: 'Lavare le foglie dalla fumaggine nera — trattare poi la causa (cocciniglia/afidi)' }, { prod: 'sapone', dose: '10 g/L', note: 'Secondo lavaggio — controllare l\'insetto causa' }], interval: 10, total: 2, color: '#4a4a4a' },
+  clorosi_ferrica: { steps: [{ prod: 'ferro', dose: 'Ferro chelato 2 ml/L', note: 'Trattamento fogliare + irrigazione. Controllare pH substrato (deve essere <7)' }, { prod: 'ferro', dose: 'Ferro chelato 2 ml/L', note: 'Ripetere dopo 15gg se le foglie sono ancora gialle' }], interval: 15, total: 2, color: '#8a8a20' },
+  minatore_fogliare: { steps: [{ prod: 'neem', dose: '5 ml/L', note: 'Trattamento sistemico — rimuovere le foglie con gallerie visibili' }, { prod: 'neem', dose: '5 ml/L', note: 'Secondo trattamento' }, { prod: 'neem', dose: '5 ml/L', note: 'Terzo passaggio — le larve hanno cicli di 2-3 settimane' }], interval: 10, total: 3, color: '#5a7a3a' },
+  alternaria: { steps: [{ prod: 'rame', dose: 'Polt. bordolese 10 g/L', note: 'Rimuovere tutte le foglie con macchie — non compostare' }, { prod: 'rame', dose: 'Polt. bordolese 10 g/L', note: 'Ripetere — ridurre bagnatura fogliare' }, { prod: 'rame', dose: 'Polt. bordolese 10 g/L', note: 'Terzo passaggio' }], interval: 10, total: 3, color: '#6a4a20' },
+  marciume_radicale: { steps: [{ prod: 'rame', dose: 'Rame in irrigazione 3 g/L', note: '⚠️ Rinvasare subito: rimuovere radici marce, substrato drenante, vaso pulito. Ridurre annaffiature drasticamente' }, { prod: 'rame', dose: 'Rame in irrigazione 3 g/L', note: 'Seconda irrigazione con rame dopo 15gg — non annaffiare fino a substrato quasi asciutto' }], interval: 15, total: 2, color: '#6a3a20' },
 };
 
 // Prodotti aggiuntivi per cure (non nei preventivi)
 const CURE_EXTRA_PRODUCTS = {
-  ferro: {label:'Ferro chelato', color:'#8a8a20', abbr:'Fe'},
+  ferro: { label: 'Ferro chelato', color: '#8a8a20', abbr: 'Fe' },
 };
 
 const cureDateMap = {};
@@ -3803,7 +3957,7 @@ function buildCurativeEvents() {
   if (!inv.length) return;
 
   const today = new Date();
-  today.setHours(0,0,0,0);
+  today.setHours(0, 0, 0, 0);
 
   inv.forEach(it => {
     const diseases = it.diseases || [];
@@ -3835,7 +3989,7 @@ function buildCurativeEvents() {
 
         const stepInfo = protocol.steps[Math.min(step, protocol.steps.length - 1)];
         cureDateMap[key].push({
-          plant: {id: it.plant_type_idx !== undefined ? it.plant_type_idx : it.plantTypeIdx, name: it.nickname || p.name, icon: p.icon, latin: p.latin},
+          plant: { id: it.plant_type_idx !== undefined ? it.plant_type_idx : it.plantTypeIdx, name: it.nickname || p.name, icon: p.icon, latin: p.latin },
           disease: disease,
           diseaseLabel: INV_DISEASE_LABELS[disease.type] || disease.type,
           prod: stepInfo.prod,
@@ -3852,13 +4006,13 @@ function buildCurativeEvents() {
 }
 
 function cureCompKey(d, invId, diseaseType) {
-  return 'cure_' + d.getFullYear() + '-' + (d.getMonth()+1) + '-' + d.getDate() + '_' + invId + '_' + diseaseType;
+  return 'cure_' + d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate() + '_' + invId + '_' + diseaseType;
 }
 function cureIsDone(d, invId, diseaseType) {
   try { return localStorage.getItem(cureCompKey(d, invId, diseaseType)) === '1'; } catch { return false; }
 }
 function cureSetDone(d, invId, diseaseType, v) {
-  try { if(v) localStorage.setItem(cureCompKey(d, invId, diseaseType), '1'); else localStorage.removeItem(cureCompKey(d, invId, diseaseType)); } catch {}
+  try { if (v) localStorage.setItem(cureCompKey(d, invId, diseaseType), '1'); else localStorage.removeItem(cureCompKey(d, invId, diseaseType)); } catch { }
 }
 function cureToggleDone(dy, dm, dd, invId, diseaseType) {
   const date = new Date(dy, dm, dd);
@@ -3875,36 +4029,36 @@ function cureToggleDone(dy, dm, dd, invId, diseaseType) {
   gRenderCalendar();
   if (document.getElementById('g-overlay').classList.contains('open')) {
     const k = gDateKey(date);
-    const fe = (gFilter==='all'||gFilter==='fert') ? (gDateMap[k]||[]).filter(e=>!gIsHiddenEvent(e)) : [];
-    const be = (gFilter==='all'||gFilter==='biobizz') ? (bbDateMap[k]||[]).filter(e=>!bbHiddenProds.has(e.prod)) : [];
-    const te = (gFilter==='all'||gFilter==='tratt') ? (trDateMap[k]||[]).filter(e=>!trHiddenProds.has(e.prod)) : [];
-    const we = (gFilter==='all'||gFilter==='acqua') ? (waDateMap[k]||[]).filter(e=>!waHiddenPlants.has(e.plant.id)) : [];
+    const fe = (gFilter === 'all' || gFilter === 'fert') ? (gDateMap[k] || []).filter(e => !gIsHiddenEvent(e)) : [];
+    const be = (gFilter === 'all' || gFilter === 'biobizz') ? (bbDateMap[k] || []).filter(e => !bbHiddenProds.has(e.prod)) : [];
+    const te = (gFilter === 'all' || gFilter === 'tratt') ? (trDateMap[k] || []).filter(e => !trHiddenProds.has(e.prod)) : [];
+    const we = (gFilter === 'all' || gFilter === 'acqua') ? (waDateMap[k] || []).filter(e => !waHiddenPlants.has(e.plant.id)) : [];
     gOpenDay(date, fe, be, te, we);
   }
 }
 
-function trDateKey(d){return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
-function trCompKey(d,pid,prod){return 'tr_'+trDateKey(d)+'_'+pid+'_'+prod;}
-function trIsDone(d,pid,prod){try{return localStorage.getItem(trCompKey(d,pid,prod))==='1';}catch{return false;}}
-function trSetDone(d,pid,prod,v){try{if(v)localStorage.setItem(trCompKey(d,pid,prod),'1');else localStorage.removeItem(trCompKey(d,pid,prod));}catch{}}
-function trToggleDone(dy,dm,dd,pid,prod){
-  const date=new Date(dy,dm,dd);
-  const wasDone=trIsDone(date,pid,prod);
-  trSetDone(date,pid,prod,!wasDone);
-  if(!wasDone){
-    const ev=(trDateMap[gDateKey(date)]||[]).find(e=>e.plant.id===pid&&e.prod===prod);
-    if(ev){
-      const pLabel=TR_PRODUCTS[prod]?.label||prod;
-      _autoDiary(date, ev.plant.name, 'trattamento', '🛡️ '+pLabel+' — '+ev.sched.dose+(ev.sched.note?' — '+ev.sched.note:''));
+function trDateKey(d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+function trCompKey(d, pid, prod) { return 'tr_' + trDateKey(d) + '_' + pid + '_' + prod; }
+function trIsDone(d, pid, prod) { try { return localStorage.getItem(trCompKey(d, pid, prod)) === '1'; } catch { return false; } }
+function trSetDone(d, pid, prod, v) { try { if (v) localStorage.setItem(trCompKey(d, pid, prod), '1'); else localStorage.removeItem(trCompKey(d, pid, prod)); } catch { } }
+function trToggleDone(dy, dm, dd, pid, prod) {
+  const date = new Date(dy, dm, dd);
+  const wasDone = trIsDone(date, pid, prod);
+  trSetDone(date, pid, prod, !wasDone);
+  if (!wasDone) {
+    const ev = (trDateMap[gDateKey(date)] || []).find(e => e.plant.id === pid && e.prod === prod);
+    if (ev) {
+      const pLabel = TR_PRODUCTS[prod]?.label || prod;
+      _autoDiary(date, ev.plant.name, 'trattamento', '🛡️ ' + pLabel + ' — ' + ev.sched.dose + (ev.sched.note ? ' — ' + ev.sched.note : ''));
     }
   }
   gRenderCalendar();
-  if(document.getElementById('g-overlay').classList.contains('open')){
-    const k=gDateKey(date);
-    const fe=(gFilter==='all'||gFilter==='fert')?(gDateMap[k]||[]).filter(e=>!gIsHiddenEvent(e)):[];
-    const be=(gFilter==='all'||gFilter==='biobizz')?(bbDateMap[k]||[]).filter(e=>!bbHiddenProds.has(e.prod)):[];
-    const te=(gFilter==='all'||gFilter==='tratt')?(trDateMap[k]||[]).filter(e=>!trHiddenProds.has(e.prod)):[];
-    gOpenDay(date,fe,be,te);
+  if (document.getElementById('g-overlay').classList.contains('open')) {
+    const k = gDateKey(date);
+    const fe = (gFilter === 'all' || gFilter === 'fert') ? (gDateMap[k] || []).filter(e => !gIsHiddenEvent(e)) : [];
+    const be = (gFilter === 'all' || gFilter === 'biobizz') ? (bbDateMap[k] || []).filter(e => !bbHiddenProds.has(e.prod)) : [];
+    const te = (gFilter === 'all' || gFilter === 'tratt') ? (trDateMap[k] || []).filter(e => !trHiddenProds.has(e.prod)) : [];
+    gOpenDay(date, fe, be, te);
   }
 }
 
@@ -3917,75 +4071,119 @@ const WA_COLOR = '#3a8abf';
 // dedotti dal gruppo simulazione. Le 26 native restano hard-coded qui sotto
 // con i loro programmi di annaffiatura curati a mano stagione per stagione.
 let waPlants = [
-  {id:0,  name:'Sanseviera',      icon:'🌿', color:'#5a7a4a', method:'Terreno completamente asciutto',
-    schedules:[{months:[4,5,6,7,8,9],interval:12,note:'Solo quando il terreno è completamente asciutto — ogni 10-14 giorni'},{months:[10,11,12,1,2,3],interval:25,note:'Inverno: 1× al mese o meno. Il nemico è l\'eccesso d\'acqua'}]},
-  {id:1,  name:'Orchidea',        icon:'🌸', color:'#c06080', method:'Immersione 15 min + scolo completo',
-    schedules:[{months:[4,5,6,7,8],interval:7,note:'Immergere il vaso 15 min, poi scolare completamente'},{months:[3,9,10],interval:10,note:'Ridurre. Radici grigie = vuole acqua'},{months:[11,12,1,2],interval:14,note:'Inverno: ogni 2 settimane. Radici verdi = idratata'}]},
-  {id:2,  name:'Ficus Benjamina', icon:'🌳', color:'#3d6b30', method:'Terreno leggermente umido',
-    schedules:[{months:[6,7,8],interval:5,note:'Estate: terreno leggermente umido, mai saturo'},{months:[3,4,5,9,10],interval:7,note:'Annaffiare quando i primi 2-3 cm sono asciutti'},{months:[11,12,1,2],interval:12,note:'Inverno: ridurre molto. Nebulizzare con riscaldamento'}]},
-  {id:3,  name:'Ficus Elastica',  icon:'🌱', color:'#2e5522', method:'Primi 3-4 cm asciutti',
-    schedules:[{months:[6,7,8],interval:5,note:'Estate: annaffiare quando i primi 3-4 cm sono asciutti'},{months:[3,4,5,9,10],interval:8,note:'Controllare il terreno prima di annaffiare'},{months:[11,12,1,2],interval:14,note:'Inverno: ridurre sensibilmente'}]},
-  {id:4,  name:'Oleandro',        icon:'🌺', color:'#c03050', method:'Abbondante in estate',
-    schedules:[{months:[6,7,8],interval:3,note:'Estate: annaffiatura abbondante'},{months:[4,5,9],interval:5,note:'Primavera/autunno: regolare'},{months:[10,11,12,1,2,3],interval:14,note:'Inverno: ridurre molto'}]},
-  {id:5,  name:'Glicine Bonsai',  icon:'💜', color:'#7b5ea7', method:'Controllare ogni giorno',
-    schedules:[{months:[6,7,8],interval:2,note:'Estate: il bonsai asciuga in fretta! Controllare ogni giorno'},{months:[4,5,9,10],interval:4,note:'Primavera/autunno: ogni 3-4 giorni'},{months:[11,12,1,2,3],interval:8,note:'Inverno: ridurre ma non far seccare'}]},
-  {id:6,  name:'Limone',          icon:'🍋', color:'#c08a10', method:'Regolare e abbondante, no ristagni',
-    schedules:[{months:[6,7,8],interval:3,note:'Estate: abbondante. Preferire acqua piovana o decantata'},{months:[3,4,5,9,10],interval:5,note:'Mantenere il terreno fresco'},{months:[11,12,1,2],interval:10,note:'Inverno: ridurre ma non sospendere'}]},
-  {id:7,  name:'Moneta Cinese',   icon:'🪙', color:'#7a9a50', method:'Primi 2-3 cm asciutti',
-    schedules:[{months:[5,6,7,8],interval:5,note:'Estate: quando i primi 2-3 cm sono asciutti'},{months:[3,4,9,10],interval:7,note:'Primavera/autunno: moderata'},{months:[11,12,1,2],interval:12,note:'Inverno: ridurre. Foglie gialle = troppa acqua'}]},
-  {id:8,  name:'Vinca',           icon:'🔵', color:'#4060b0', method:'Moderata, tollera siccità',
-    schedules:[{months:[6,7,8],interval:4,note:'Estate: regolare in vaso'},{months:[4,5,9,10],interval:7,note:'Primavera/autunno: moderata'}]},
-  {id:9,  name:'Mimosa',          icon:'🌼', color:'#c0a020', method:'Moderata, tollera siccità',
-    schedules:[{months:[6,7,8],interval:5,note:'Estate: moderata'},{months:[3,4,5,9,10],interval:8,note:'Primavera/autunno: regolare'}]},
-  {id:10, name:'Melograno',       icon:'🍎', color:'#b03030', method:'Regolare — irregolarità = frutti spaccati',
-    schedules:[{months:[6,7,8],interval:3,note:'Estate: regolare e costante! Irregolarità = frutti spaccati'},{months:[4,5,9,10],interval:5,note:'Mantenere costanza'},{months:[11,12,1,2,3],interval:14,note:'Inverno: ridurre molto'}]},
-  {id:11, name:'Stella di Natale',icon:'🌟', color:'#c04030', method:'Moderata e costante',
-    schedules:[{months:[4,5,6,7],interval:5,note:'Crescita: quando i primi 2 cm sono asciutti. Acqua a temp. ambiente'},{months:[10,11,12],interval:7,note:'Fase decorativa: moderata e costante'},{months:[1,2,3],interval:12,note:'Riposo: annaffiatura minima'}]},
-  {id:12, name:'Aloe Vera',       icon:'🌵', color:'#5a9060', method:'Soak & dry — completamente asciutto',
-    schedules:[{months:[5,6,7,8,9],interval:12,note:'Soak & dry: bagno abbondante, poi asciugatura completa'},{months:[10,11,12,1,2,3,4],interval:25,note:'Inverno: 1× al mese. Foglie appiattite = sete'}]},
-  {id:13, name:'Liquidambar',     icon:'🍂', color:'#c05020', method:'Regolare (solo giovani piante)',
-    schedules:[{months:[6,7,8],interval:5,note:'Estate: regolare nei primi 3 anni'},{months:[4,5,9,10],interval:8,note:'Primavera/autunno: moderata (giovani)'}]},
-  {id:17, name:'Pitosforo',       icon:'🌿', color:'#3a6850', method:'Moderata in vaso',
-    schedules:[{months:[6,7,8],interval:4,note:'Estate: regolare in vaso'},{months:[4,5,9,10],interval:7,note:'Primavera/autunno: moderata'}]},
-  {id:19, name:'Gelso Bonsai',    icon:'🍃', color:'#4a7a38', method:'Controllare ogni giorno in estate',
-    schedules:[{months:[6,7,8],interval:2,note:'Estate: il bonsai asciuga in fretta! Controllare ogni giorno'},{months:[4,5,9,10],interval:3,note:'Ogni 3 giorni circa'},{months:[11,12,1,2,3],interval:8,note:'Inverno (riposo): quasi stop, non far seccare le radici'}]},
-  {id:20, name:'Tradescantia',    icon:'💜', color:'#9060a0', method:'Terreno leggermente umido',
-    schedules:[{months:[5,6,7,8],interval:4,note:'Estate: terreno leggermente umido, mai saturo'},{months:[3,4,9,10],interval:7,note:'Primavera/autunno: moderata'},{months:[11,12,1,2],interval:12,note:'Inverno: ridurre'}]},
-  {id:21, name:'Rosmarino',       icon:'🌿', color:'#4a7060', method:'Solo terreno completamente asciutto',
-    schedules:[{months:[6,7,8],interval:7,note:'Estate: solo quando completamente asciutto. Troppo poco > troppo!'},{months:[3,4,5,9,10],interval:12,note:'Molto moderata'}]},
-  {id:22, name:'Salvia',          icon:'🍃', color:'#6a8050', method:'Solo terreno completamente asciutto',
-    schedules:[{months:[6,7,8],interval:7,note:'Estate: solo quando completamente asciutto'},{months:[3,4,5,9,10],interval:12,note:'Molto moderata'}]},
-  {id:23, name:'Paulownia',       icon:'🌸', color:'#8060b0', method:'Abbondante (giovani piante)',
-    schedules:[{months:[6,7,8],interval:3,note:'Estate: abbondante nei primi 2-3 anni'},{months:[4,5,9,10],interval:5,note:'Primavera/autunno: regolare (giovani)'}]},
-  {id:24, name:'Crassula Ovata',  icon:'🪴', color:'#5a8a50', method:'Soak & dry — completamente asciutto',
-    schedules:[{months:[5,6,7,8,9],interval:12,note:'Soak & dry: bagno abbondante, poi asciugatura completa'},{months:[10,11,12,1,2,3,4],interval:25,note:'Inverno: 1× al mese o meno'}]},
-  {id:25, name:'Carmona Bonsai',  icon:'🌳', color:'#4a6a3a', method:'Substrato leggermente umido, mai secco',
-    schedules:[{months:[6,7,8],interval:2,note:'Estate: controllare ogni giorno! Il vaso bonsai asciuga rapidamente'},{months:[4,5,9,10],interval:3,note:'Primavera/autunno: ogni 2-3 giorni'},{months:[11,12,1,2,3],interval:5,note:'Inverno: ogni 4-5 giorni se temp >18°C. Non far mai seccare completamente'}]}
+  {
+    id: 0, name: 'Sanseviera', icon: '🌿', color: '#5a7a4a', method: 'Terreno completamente asciutto',
+    schedules: [{ months: [4, 5, 6, 7, 8, 9], interval: 12, note: 'Solo quando il terreno è completamente asciutto — ogni 10-14 giorni' }, { months: [10, 11, 12, 1, 2, 3], interval: 25, note: 'Inverno: 1× al mese o meno. Il nemico è l\'eccesso d\'acqua' }]
+  },
+  {
+    id: 1, name: 'Orchidea', icon: '🌸', color: '#c06080', method: 'Immersione 15 min + scolo completo',
+    schedules: [{ months: [4, 5, 6, 7, 8], interval: 7, note: 'Immergere il vaso 15 min, poi scolare completamente' }, { months: [3, 9, 10], interval: 10, note: 'Ridurre. Radici grigie = vuole acqua' }, { months: [11, 12, 1, 2], interval: 14, note: 'Inverno: ogni 2 settimane. Radici verdi = idratata' }]
+  },
+  {
+    id: 2, name: 'Ficus Benjamina', icon: '🌳', color: '#3d6b30', method: 'Terreno leggermente umido',
+    schedules: [{ months: [6, 7, 8], interval: 5, note: 'Estate: terreno leggermente umido, mai saturo' }, { months: [3, 4, 5, 9, 10], interval: 7, note: 'Annaffiare quando i primi 2-3 cm sono asciutti' }, { months: [11, 12, 1, 2], interval: 12, note: 'Inverno: ridurre molto. Nebulizzare con riscaldamento' }]
+  },
+  {
+    id: 3, name: 'Ficus Elastica', icon: '🌱', color: '#2e5522', method: 'Primi 3-4 cm asciutti',
+    schedules: [{ months: [6, 7, 8], interval: 5, note: 'Estate: annaffiare quando i primi 3-4 cm sono asciutti' }, { months: [3, 4, 5, 9, 10], interval: 8, note: 'Controllare il terreno prima di annaffiare' }, { months: [11, 12, 1, 2], interval: 14, note: 'Inverno: ridurre sensibilmente' }]
+  },
+  {
+    id: 4, name: 'Oleandro', icon: '🌺', color: '#c03050', method: 'Abbondante in estate',
+    schedules: [{ months: [6, 7, 8], interval: 3, note: 'Estate: annaffiatura abbondante' }, { months: [4, 5, 9], interval: 5, note: 'Primavera/autunno: regolare' }, { months: [10, 11, 12, 1, 2, 3], interval: 14, note: 'Inverno: ridurre molto' }]
+  },
+  {
+    id: 5, name: 'Glicine Bonsai', icon: '💜', color: '#7b5ea7', method: 'Controllare ogni giorno',
+    schedules: [{ months: [6, 7, 8], interval: 2, note: 'Estate: il bonsai asciuga in fretta! Controllare ogni giorno' }, { months: [4, 5, 9, 10], interval: 4, note: 'Primavera/autunno: ogni 3-4 giorni' }, { months: [11, 12, 1, 2, 3], interval: 8, note: 'Inverno: ridurre ma non far seccare' }]
+  },
+  {
+    id: 6, name: 'Limone', icon: '🍋', color: '#c08a10', method: 'Regolare e abbondante, no ristagni',
+    schedules: [{ months: [6, 7, 8], interval: 3, note: 'Estate: abbondante. Preferire acqua piovana o decantata' }, { months: [3, 4, 5, 9, 10], interval: 5, note: 'Mantenere il terreno fresco' }, { months: [11, 12, 1, 2], interval: 10, note: 'Inverno: ridurre ma non sospendere' }]
+  },
+  {
+    id: 7, name: 'Moneta Cinese', icon: '🪙', color: '#7a9a50', method: 'Primi 2-3 cm asciutti',
+    schedules: [{ months: [5, 6, 7, 8], interval: 5, note: 'Estate: quando i primi 2-3 cm sono asciutti' }, { months: [3, 4, 9, 10], interval: 7, note: 'Primavera/autunno: moderata' }, { months: [11, 12, 1, 2], interval: 12, note: 'Inverno: ridurre. Foglie gialle = troppa acqua' }]
+  },
+  {
+    id: 8, name: 'Vinca', icon: '🔵', color: '#4060b0', method: 'Moderata, tollera siccità',
+    schedules: [{ months: [6, 7, 8], interval: 4, note: 'Estate: regolare in vaso' }, { months: [4, 5, 9, 10], interval: 7, note: 'Primavera/autunno: moderata' }]
+  },
+  {
+    id: 9, name: 'Mimosa', icon: '🌼', color: '#c0a020', method: 'Moderata, tollera siccità',
+    schedules: [{ months: [6, 7, 8], interval: 5, note: 'Estate: moderata' }, { months: [3, 4, 5, 9, 10], interval: 8, note: 'Primavera/autunno: regolare' }]
+  },
+  {
+    id: 10, name: 'Melograno', icon: '🍎', color: '#b03030', method: 'Regolare — irregolarità = frutti spaccati',
+    schedules: [{ months: [6, 7, 8], interval: 3, note: 'Estate: regolare e costante! Irregolarità = frutti spaccati' }, { months: [4, 5, 9, 10], interval: 5, note: 'Mantenere costanza' }, { months: [11, 12, 1, 2, 3], interval: 14, note: 'Inverno: ridurre molto' }]
+  },
+  {
+    id: 11, name: 'Stella di Natale', icon: '🌟', color: '#c04030', method: 'Moderata e costante',
+    schedules: [{ months: [4, 5, 6, 7], interval: 5, note: 'Crescita: quando i primi 2 cm sono asciutti. Acqua a temp. ambiente' }, { months: [10, 11, 12], interval: 7, note: 'Fase decorativa: moderata e costante' }, { months: [1, 2, 3], interval: 12, note: 'Riposo: annaffiatura minima' }]
+  },
+  {
+    id: 12, name: 'Aloe Vera', icon: '🌵', color: '#5a9060', method: 'Soak & dry — completamente asciutto',
+    schedules: [{ months: [5, 6, 7, 8, 9], interval: 12, note: 'Soak & dry: bagno abbondante, poi asciugatura completa' }, { months: [10, 11, 12, 1, 2, 3, 4], interval: 25, note: 'Inverno: 1× al mese. Foglie appiattite = sete' }]
+  },
+  {
+    id: 13, name: 'Liquidambar', icon: '🍂', color: '#c05020', method: 'Regolare (solo giovani piante)',
+    schedules: [{ months: [6, 7, 8], interval: 5, note: 'Estate: regolare nei primi 3 anni' }, { months: [4, 5, 9, 10], interval: 8, note: 'Primavera/autunno: moderata (giovani)' }]
+  },
+  {
+    id: 17, name: 'Pitosforo', icon: '🌿', color: '#3a6850', method: 'Moderata in vaso',
+    schedules: [{ months: [6, 7, 8], interval: 4, note: 'Estate: regolare in vaso' }, { months: [4, 5, 9, 10], interval: 7, note: 'Primavera/autunno: moderata' }]
+  },
+  {
+    id: 19, name: 'Gelso Bonsai', icon: '🍃', color: '#4a7a38', method: 'Controllare ogni giorno in estate',
+    schedules: [{ months: [6, 7, 8], interval: 2, note: 'Estate: il bonsai asciuga in fretta! Controllare ogni giorno' }, { months: [4, 5, 9, 10], interval: 3, note: 'Ogni 3 giorni circa' }, { months: [11, 12, 1, 2, 3], interval: 8, note: 'Inverno (riposo): quasi stop, non far seccare le radici' }]
+  },
+  {
+    id: 20, name: 'Tradescantia', icon: '💜', color: '#9060a0', method: 'Terreno leggermente umido',
+    schedules: [{ months: [5, 6, 7, 8], interval: 4, note: 'Estate: terreno leggermente umido, mai saturo' }, { months: [3, 4, 9, 10], interval: 7, note: 'Primavera/autunno: moderata' }, { months: [11, 12, 1, 2], interval: 12, note: 'Inverno: ridurre' }]
+  },
+  {
+    id: 21, name: 'Rosmarino', icon: '🌿', color: '#4a7060', method: 'Solo terreno completamente asciutto',
+    schedules: [{ months: [6, 7, 8], interval: 7, note: 'Estate: solo quando completamente asciutto. Troppo poco > troppo!' }, { months: [3, 4, 5, 9, 10], interval: 12, note: 'Molto moderata' }]
+  },
+  {
+    id: 22, name: 'Salvia', icon: '🍃', color: '#6a8050', method: 'Solo terreno completamente asciutto',
+    schedules: [{ months: [6, 7, 8], interval: 7, note: 'Estate: solo quando completamente asciutto' }, { months: [3, 4, 5, 9, 10], interval: 12, note: 'Molto moderata' }]
+  },
+  {
+    id: 23, name: 'Paulownia', icon: '🌸', color: '#8060b0', method: 'Abbondante (giovani piante)',
+    schedules: [{ months: [6, 7, 8], interval: 3, note: 'Estate: abbondante nei primi 2-3 anni' }, { months: [4, 5, 9, 10], interval: 5, note: 'Primavera/autunno: regolare (giovani)' }]
+  },
+  {
+    id: 24, name: 'Crassula Ovata', icon: '🪴', color: '#5a8a50', method: 'Soak & dry — completamente asciutto',
+    schedules: [{ months: [5, 6, 7, 8, 9], interval: 12, note: 'Soak & dry: bagno abbondante, poi asciugatura completa' }, { months: [10, 11, 12, 1, 2, 3, 4], interval: 25, note: 'Inverno: 1× al mese o meno' }]
+  },
+  {
+    id: 25, name: 'Carmona Bonsai', icon: '🌳', color: '#4a6a3a', method: 'Substrato leggermente umido, mai secco',
+    schedules: [{ months: [6, 7, 8], interval: 2, note: 'Estate: controllare ogni giorno! Il vaso bonsai asciuga rapidamente' }, { months: [4, 5, 9, 10], interval: 3, note: 'Primavera/autunno: ogni 2-3 giorni' }, { months: [11, 12, 1, 2, 3], interval: 5, note: 'Inverno: ogni 4-5 giorni se temp >18°C. Non far mai seccare completamente' }]
+  }
 
 ];
 
 const waDateMap = {};
 let waHiddenPlants = new Set();
 
-function waCompKey(d,pid){return 'wa_'+d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()+'_'+pid;}
-function waIsDone(d,pid){try{return localStorage.getItem(waCompKey(d,pid))==='1';}catch{return false;}}
-function waSetDone(d,pid,v){try{if(v)localStorage.setItem(waCompKey(d,pid),'1');else localStorage.removeItem(waCompKey(d,pid));}catch{}}
-function waToggleDone(dy,dm,dd,pid){
-  const date=new Date(dy,dm,dd);
-  const wasDone=waIsDone(date,pid);
-  waSetDone(date,pid,!wasDone);
-  if(!wasDone){
-    const ev=(waDateMap[gDateKey(date)]||[]).find(e=>e.plant.id===pid);
-    if(ev) _autoDiary(date, ev.plant.name, 'annaffiatura', '💧 '+ev.plant.method+(ev.note?' — '+ev.note:''));
+function waCompKey(d, pid) { return 'wa_' + d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate() + '_' + pid; }
+function waIsDone(d, pid) { try { return localStorage.getItem(waCompKey(d, pid)) === '1'; } catch { return false; } }
+function waSetDone(d, pid, v) { try { if (v) localStorage.setItem(waCompKey(d, pid), '1'); else localStorage.removeItem(waCompKey(d, pid)); } catch { } }
+function waToggleDone(dy, dm, dd, pid) {
+  const date = new Date(dy, dm, dd);
+  const wasDone = waIsDone(date, pid);
+  waSetDone(date, pid, !wasDone);
+  if (!wasDone) {
+    const ev = (waDateMap[gDateKey(date)] || []).find(e => e.plant.id === pid);
+    if (ev) _autoDiary(date, ev.plant.name, 'annaffiatura', '💧 ' + ev.plant.method + (ev.note ? ' — ' + ev.note : ''));
   }
   gRenderCalendar();
-  if(document.getElementById('g-overlay').classList.contains('open')){
-    const k=gDateKey(date);
-    const fe=(gFilter==='all'||gFilter==='fert')?(gDateMap[k]||[]).filter(e=>!gIsHiddenEvent(e)):[];
-    const be=(gFilter==='all'||gFilter==='biobizz')?(bbDateMap[k]||[]).filter(e=>!bbHiddenProds.has(e.prod)):[];
-    const te=(gFilter==='all'||gFilter==='tratt')?(trDateMap[k]||[]).filter(e=>!trHiddenProds.has(e.prod)):[];
-    const we=(gFilter==='all'||gFilter==='acqua')?(waDateMap[k]||[]).filter(e=>!waHiddenPlants.has(e.plant.id)):[];
-    gOpenDay(date,fe,be,te,we);
+  if (document.getElementById('g-overlay').classList.contains('open')) {
+    const k = gDateKey(date);
+    const fe = (gFilter === 'all' || gFilter === 'fert') ? (gDateMap[k] || []).filter(e => !gIsHiddenEvent(e)) : [];
+    const be = (gFilter === 'all' || gFilter === 'biobizz') ? (bbDateMap[k] || []).filter(e => !bbHiddenProds.has(e.prod)) : [];
+    const te = (gFilter === 'all' || gFilter === 'tratt') ? (trDateMap[k] || []).filter(e => !trHiddenProds.has(e.prod)) : [];
+    const we = (gFilter === 'all' || gFilter === 'acqua') ? (waDateMap[k] || []).filter(e => !waHiddenPlants.has(e.plant.id)) : [];
+    gOpenDay(date, fe, be, te, we);
   }
 }
 
@@ -3999,7 +4197,7 @@ async function waAnalyzeMeteo(waEvs, date) {
     const res = await apiFetch('/api/ecowitt/realtime');
     const json = await res.json();
     if (json.configured && json.code === 0) ewData = json.data;
-  } catch {}
+  } catch { }
 
   if (!ewData) {
     banner.innerHTML = '📡 Stazione Ecowitt non disponibile — intervalli statici';
@@ -4011,25 +4209,25 @@ async function waAnalyzeMeteo(waEvs, date) {
 
   // Estrai dati meteo
   const getVal = (sec, key) => {
-    try { const v = ewData[sec][key]; return v ? parseFloat(v.value||v) : null; } catch { return null; }
+    try { const v = ewData[sec][key]; return v ? parseFloat(v.value || v) : null; } catch { return null; }
   };
-  const temp = getVal('outdoor','temperature');
-  const hum = getVal('outdoor','humidity');
-  const solar = getVal('solar_and_uvi','solar');
-  const windKmh = getVal('wind','wind_speed');
-  const rainDay = getVal('rainfall','daily');
+  const temp = getVal('outdoor', 'temperature');
+  const hum = getVal('outdoor', 'humidity');
+  const solar = getVal('solar_and_uvi', 'solar');
+  const windKmh = getVal('wind', 'wind_speed');
+  const rainDay = getVal('rainfall', 'daily');
 
   // Soil moisture per canale
   const soilData = {};
   // Raccogli tutti i dati soil (moisture + temp + EC) per canale
   const soilByCh = {};
-  for (let ch=1; ch<=16; ch++) {
-    const d = meteoGetSoilData({data: ewData}, ch);
+  for (let ch = 1; ch <= 16; ch++) {
+    const d = meteoGetSoilData({ data: ewData }, ch);
     if (d.moisture !== null || d.temp !== null || d.ec !== null) soilByCh[ch] = d;
   }
 
   // Calcola ET₀
-  const et0Result = (typeof calcET0 === 'function') ? calcET0(temp||20, hum||60, solar||200, windKmh||5) : {et0:3, factor:1};
+  const et0Result = (typeof calcET0 === 'function') ? calcET0(temp || 20, hum || 60, solar || 200, windKmh || 5) : { et0: 3, factor: 1 };
 
   // Banner globale
   const bannerParts = [];
@@ -4053,11 +4251,11 @@ async function waAnalyzeMeteo(waEvs, date) {
   const sogliEC = PARAMS.sogliEC || {};
 
   // Dati indoor (WN31 CH1) se servono per piante interne
-  const indoorData = meteoGetIndoorData({data: ewData}, 1);
+  const indoorData = meteoGetIndoorData({ data: ewData }, 1);
 
   // Per ogni annaffiatura: analizza e aggiorna badge
   waEvs.forEach(e => {
-    const badgeEl = document.getElementById('wa-badge-'+e.plant.id);
+    const badgeEl = document.getElementById('wa-badge-' + e.plant.id);
     if (!badgeEl) return;
 
     const badges = [];
@@ -4078,11 +4276,11 @@ async function waAnalyzeMeteo(waEvs, date) {
 
     if (invItemWithSensor && invItemWithSensor.wh51Ch) {
       const ch = parseInt(invItemWithSensor.wh51Ch);
-      const sensorData = soilByCh[ch] || {moisture:null, temp:null, ec:null};
+      const sensorData = soilByCh[ch] || { moisture: null, temp: null, ec: null };
       const moisture = sensorData.moisture;
       const cat = invItemWithSensor.wh51Cat || 'universale';
-      const thresh = soglie[cat] || {secco:20, ok_min:20, ok_max:50, umido:60};
-      const ecThresh = sogliEC[cat] || sogliEC.universale || {min:400, target:800, max:2000};
+      const thresh = soglie[cat] || { secco: 20, ok_min: 20, ok_max: 50, umido: 60 };
+      const ecThresh = sogliEC[cat] || sogliEC.universale || { min: 400, target: 800, max: 2000 };
       const isWH52 = invItemWithSensor.sensorType === 'wh52';
 
       if (moisture !== null) {
@@ -4167,40 +4365,40 @@ async function waAnalyzeMeteo(waEvs, date) {
   });
 }
 
-let bbHiddenProds  = new Set();
+let bbHiddenProds = new Set();
 let bbHiddenPlants = new Set();
 let bbCurrentMonth = new Date().getMonth();
-let bbCurrentYear  = new Date().getFullYear();
+let bbCurrentYear = new Date().getFullYear();
 const bbToday = new Date();
 const bbDateMap = {};
 
-function bbDateKey(d){return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
-function bbCompKey(d,pid,prod){return 'bb_'+bbDateKey(d)+'_'+pid+'_'+prod;}
-function bbIsDone(d,pid,prod){try{return localStorage.getItem(bbCompKey(d,pid,prod))==='1';}catch{return false;}}
-function bbSetDone(d,pid,prod,v){try{if(v)localStorage.setItem(bbCompKey(d,pid,prod),'1');else localStorage.removeItem(bbCompKey(d,pid,prod));}catch{}}
-function bbToggleDone(dy,dm,dd,pid,prod){
-  const date=new Date(dy,dm,dd);
-  const wasDone=bbIsDone(date,pid,prod);
-  bbSetDone(date,pid,prod,!wasDone);
-  if(!wasDone){
-    const ev=(bbDateMap[gDateKey(date)]||[]).find(e=>e.plant.id===pid&&e.prod===prod);
-    if(ev){
-      const pLabel=BB_PRODUCTS[prod]?.label||prod;
-      _autoDiary(date, ev.plant.name, 'concimazione', '💚 BioBizz '+pLabel+' — '+ev.sched.dose+(ev.sched.note?' — '+ev.sched.note:''));
+function bbDateKey(d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+function bbCompKey(d, pid, prod) { return 'bb_' + bbDateKey(d) + '_' + pid + '_' + prod; }
+function bbIsDone(d, pid, prod) { try { return localStorage.getItem(bbCompKey(d, pid, prod)) === '1'; } catch { return false; } }
+function bbSetDone(d, pid, prod, v) { try { if (v) localStorage.setItem(bbCompKey(d, pid, prod), '1'); else localStorage.removeItem(bbCompKey(d, pid, prod)); } catch { } }
+function bbToggleDone(dy, dm, dd, pid, prod) {
+  const date = new Date(dy, dm, dd);
+  const wasDone = bbIsDone(date, pid, prod);
+  bbSetDone(date, pid, prod, !wasDone);
+  if (!wasDone) {
+    const ev = (bbDateMap[gDateKey(date)] || []).find(e => e.plant.id === pid && e.prod === prod);
+    if (ev) {
+      const pLabel = BB_PRODUCTS[prod]?.label || prod;
+      _autoDiary(date, ev.plant.name, 'concimazione', '💚 BioBizz ' + pLabel + ' — ' + ev.sched.dose + (ev.sched.note ? ' — ' + ev.sched.note : ''));
     }
   }
   gRenderCalendar();
-  if(document.getElementById('g-overlay').classList.contains('open')){
-    const k=gDateKey(date);
-    const fe=(gFilter==='all'||gFilter==='fert')?(gDateMap[k]||[]).filter(e=>!gIsHiddenEvent(e)):[];
-    const be=(gFilter==='all'||gFilter==='biobizz')?(bbDateMap[k]||[]).filter(e=>!bbHiddenProds.has(e.prod)):[];
-    const te=(gFilter==='all'||gFilter==='tratt')?(trDateMap[k]||[]).filter(e=>!trHiddenProds.has(e.prod)):[];
-    gOpenDay(date,fe,be,te);
+  if (document.getElementById('g-overlay').classList.contains('open')) {
+    const k = gDateKey(date);
+    const fe = (gFilter === 'all' || gFilter === 'fert') ? (gDateMap[k] || []).filter(e => !gIsHiddenEvent(e)) : [];
+    const be = (gFilter === 'all' || gFilter === 'biobizz') ? (bbDateMap[k] || []).filter(e => !bbHiddenProds.has(e.prod)) : [];
+    const te = (gFilter === 'all' || gFilter === 'tratt') ? (trDateMap[k] || []).filter(e => !trHiddenProds.has(e.prod)) : [];
+    gOpenDay(date, fe, be, te);
   }
 }
 
-function bbVisibleEvents(date){
-  return (bbDateMap[bbDateKey(date)]||[]).filter(e=>!bbHiddenPlants.has(e.plant.id)&&!bbHiddenProds.has(e.prod));
+function bbVisibleEvents(date) {
+  return (bbDateMap[bbDateKey(date)] || []).filter(e => !bbHiddenPlants.has(e.plant.id) && !bbHiddenProds.has(e.prod));
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -4232,26 +4430,26 @@ const PARAMS_DEFAULTS = {
   et0Ritarda: 0.5,
   // Soglie umidità terreno
   soglie: {
-    succulente:   {secco:10, ok_max:35, umido:40},
-    tropicali:    {secco:25, ok_max:55, umido:65},
-    mediterranee: {secco:15, ok_max:40, umido:50},
-    agrumi:       {secco:20, ok_max:50, umido:60},
-    bonsai:       {secco:20, ok_max:50, umido:60},
-    orchidee:     {secco:15, ok_max:40, umido:50},
-    aromatiche:   {secco:8,  ok_max:30, umido:35},
-    universale:   {secco:20, ok_max:50, umido:60},
+    succulente: { secco: 10, ok_max: 35, umido: 40 },
+    tropicali: { secco: 25, ok_max: 55, umido: 65 },
+    mediterranee: { secco: 15, ok_max: 40, umido: 50 },
+    agrumi: { secco: 20, ok_max: 50, umido: 60 },
+    bonsai: { secco: 20, ok_max: 50, umido: 60 },
+    orchidee: { secco: 15, ok_max: 40, umido: 50 },
+    aromatiche: { secco: 8, ok_max: 30, umido: 35 },
+    universale: { secco: 20, ok_max: 50, umido: 60 },
   },
   // Soglie EC (µS/cm) — WH52. Min = sotto cui manca nutrienti, Max = sopra cui accumulo tossico
   // Letture affidabili solo quando moisture ≥ ecMoistureMin
   sogliEC: {
-    succulente:   {min:200,  target:500,  max:1500},
-    tropicali:    {min:500,  target:1000, max:2500},
-    mediterranee: {min:300,  target:700,  max:1800},
-    agrumi:       {min:600,  target:1100, max:2200},
-    bonsai:       {min:400,  target:800,  max:1800},
-    orchidee:     {min:300,  target:600,  max:1200},
-    aromatiche:   {min:200,  target:500,  max:1400},
-    universale:   {min:400,  target:800,  max:2000},
+    succulente: { min: 200, target: 500, max: 1500 },
+    tropicali: { min: 500, target: 1000, max: 2500 },
+    mediterranee: { min: 300, target: 700, max: 1800 },
+    agrumi: { min: 600, target: 1100, max: 2200 },
+    bonsai: { min: 400, target: 800, max: 1800 },
+    orchidee: { min: 300, target: 600, max: 1200 },
+    aromatiche: { min: 200, target: 500, max: 1400 },
+    universale: { min: 400, target: 800, max: 2000 },
   },
   // Soglie temperatura substrato (°C)
   tempRadiciMin: 12,  // Sotto: radici non assorbono bene → blocca fertirrigazione
@@ -4261,9 +4459,9 @@ const PARAMS_DEFAULTS = {
 };
 
 const SOGLIE_LABELS = {
-  succulente:'🌵 Succulente/Cactus', tropicali:'🌳 Tropicali', mediterranee:'🌿 Mediterranee',
-  agrumi:'🍋 Agrumi', bonsai:'💜 Bonsai', orchidee:'🌸 Orchidee',
-  aromatiche:'🌿 Aromatiche', universale:'🌱 Universale'
+  succulente: '🌵 Succulente/Cactus', tropicali: '🌳 Tropicali', mediterranee: '🌿 Mediterranee',
+  agrumi: '🍋 Agrumi', bonsai: '💜 Bonsai', orchidee: '🌸 Orchidee',
+  aromatiche: '🌿 Aromatiche', universale: '🌱 Universale'
 };
 
 let PARAMS = {};
@@ -4271,7 +4469,7 @@ let PARAMS = {};
 function paramsLoad() {
   try {
     const saved = JSON.parse(localStorage.getItem('giardino_params') || '{}');
-    PARAMS = {...JSON.parse(JSON.stringify(PARAMS_DEFAULTS))};
+    PARAMS = { ...JSON.parse(JSON.stringify(PARAMS_DEFAULTS)) };
     // Merge saved over defaults (shallow for simple, deep for soglie)
     Object.keys(PARAMS_DEFAULTS).forEach(k => {
       if (k === 'soglie' || k === 'sogliEC') {
@@ -4290,7 +4488,7 @@ function paramsLoad() {
 }
 
 function paramsSaveToStorage() {
-  try { localStorage.setItem('giardino_params', JSON.stringify(PARAMS)); } catch {}
+  try { localStorage.setItem('giardino_params', JSON.stringify(PARAMS)); } catch { }
 }
 
 function paramsInit() {
@@ -4387,8 +4585,8 @@ async function paramsLoadServerConfig() {
     const cfg = await res.json();
     // Posizione
     const pos = cfg.posizione || {};
-    document.getElementById('p-pos-lat').value  = pos.latitudine  || '';
-    document.getElementById('p-pos-lng').value  = pos.longitudine || '';
+    document.getElementById('p-pos-lat').value = pos.latitudine || '';
+    document.getElementById('p-pos-lng').value = pos.longitudine || '';
     document.getElementById('p-pos-name').value = pos.nome || '';
     // Ecowitt
     const eco = cfg.ecowitt || {};
@@ -4411,24 +4609,24 @@ async function paramsSaveConfig() {
   const payload = {
     ecowitt: {
       application_key: document.getElementById('p-ecowitt-app').value.trim(),
-      api_key:         document.getElementById('p-ecowitt-api').value.trim(),
-      mac:             document.getElementById('p-ecowitt-mac').value.trim(),
+      api_key: document.getElementById('p-ecowitt-api').value.trim(),
+      mac: document.getElementById('p-ecowitt-mac').value.trim(),
     },
     posizione: {
-      latitudine:  document.getElementById('p-pos-lat').value,
+      latitudine: document.getElementById('p-pos-lat').value,
       longitudine: document.getElementById('p-pos-lng').value,
-      nome:        document.getElementById('p-pos-name').value.trim(),
+      nome: document.getElementById('p-pos-name').value.trim(),
     }
   };
 
   try {
     const res = await apiFetch('/api/config', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({error: 'Errore sconosciuto'}));
+      const err = await res.json().catch(() => ({ error: 'Errore sconosciuto' }));
       throw new Error(err.error || 'Errore nel salvataggio');
     }
     const result = await res.json();
@@ -4480,7 +4678,7 @@ function paramsUseGeoLocation() {
       status.style.color = '#c04030';
       setTimeout(() => { status.textContent = ''; }, 5000);
     },
-    {timeout: 8000, enableHighAccuracy: false}
+    { timeout: 8000, enableHighAccuracy: false }
   );
 }
 
@@ -4559,16 +4757,16 @@ paramsLoad();
 
 // Kc (coefficiente colturale) per gruppo di piante e stadio
 const SIM_KC_BY_GROUP = {
-  succulenta:    {initial:0.25, dev:0.35, mid:0.50, late:0.40, dormant:0.20},
-  orchidea:      {initial:0.40, dev:0.50, mid:0.60, late:0.50, dormant:0.35},
-  tropicale:     {initial:0.60, dev:0.75, mid:0.90, late:0.75, dormant:0.60},
-  agrume:        {initial:0.55, dev:0.70, mid:0.85, late:0.70, dormant:0.60},
-  mediterranea:  {initial:0.50, dev:0.65, mid:0.80, late:0.65, dormant:0.45},
-  bonsai:        {initial:0.45, dev:0.55, mid:0.70, late:0.55, dormant:0.35},
-  arbusto:       {initial:0.55, dev:0.70, mid:0.85, late:0.70, dormant:0.45},
-  albero:        {initial:0.60, dev:0.75, mid:0.90, late:0.75, dormant:0.55},
-  aromatica:     {initial:0.40, dev:0.55, mid:0.70, late:0.55, dormant:0.40},
-  fiorita:       {initial:0.60, dev:0.75, mid:0.95, late:0.70, dormant:0.40},
+  succulenta: { initial: 0.25, dev: 0.35, mid: 0.50, late: 0.40, dormant: 0.20 },
+  orchidea: { initial: 0.40, dev: 0.50, mid: 0.60, late: 0.50, dormant: 0.35 },
+  tropicale: { initial: 0.60, dev: 0.75, mid: 0.90, late: 0.75, dormant: 0.60 },
+  agrume: { initial: 0.55, dev: 0.70, mid: 0.85, late: 0.70, dormant: 0.60 },
+  mediterranea: { initial: 0.50, dev: 0.65, mid: 0.80, late: 0.65, dormant: 0.45 },
+  bonsai: { initial: 0.45, dev: 0.55, mid: 0.70, late: 0.55, dormant: 0.35 },
+  arbusto: { initial: 0.55, dev: 0.70, mid: 0.85, late: 0.70, dormant: 0.45 },
+  albero: { initial: 0.60, dev: 0.75, mid: 0.90, late: 0.75, dormant: 0.55 },
+  aromatica: { initial: 0.40, dev: 0.55, mid: 0.70, late: 0.55, dormant: 0.40 },
+  fiorita: { initial: 0.60, dev: 0.75, mid: 0.95, late: 0.70, dormant: 0.40 },
 };
 
 // Parametri simulazione per pianta: gruppo, profondità radicale (cm), p coefficient
@@ -4576,32 +4774,32 @@ const SIM_KC_BY_GROUP = {
 // una entry con il sim_group scelto e, se l'utente ha compilato il livello
 // esperto del form, anche root_depth_cm e p_coef personalizzati.
 let SIM_PLANT_PARAMS = {
-  0:  {group:'succulenta',   root:18, p:0.60}, // Sanseviera
-  1:  {group:'orchidea',     root:10, p:0.35}, // Orchidea
-  2:  {group:'tropicale',    root:25, p:0.40}, // Ficus Benjamina
-  3:  {group:'tropicale',    root:28, p:0.40}, // Ficus Elastica
-  4:  {group:'mediterranea', root:30, p:0.45}, // Oleandro
-  5:  {group:'bonsai',       root:15, p:0.40}, // Glicine Bonsai
-  6:  {group:'agrume',       root:32, p:0.50}, // Limone
-  7:  {group:'tropicale',    root:12, p:0.40}, // Moneta Cinese
-  8:  {group:'fiorita',      root:18, p:0.50}, // Vinca
-  9:  {group:'arbusto',      root:28, p:0.45}, // Mimosa
-  10: {group:'arbusto',      root:32, p:0.50}, // Melograno
-  11: {group:'fiorita',      root:18, p:0.40}, // Stella di Natale
-  12: {group:'succulenta',   root:15, p:0.60}, // Aloe Vera
-  13: {group:'albero',       root:40, p:0.55}, // Liquidambar
-  14: {group:'albero',       root:45, p:0.55}, // Ippocastano
-  15: {group:'albero',       root:40, p:0.55}, // Betulla
-  16: {group:'albero',       root:35, p:0.55}, // Acero Campestre
-  17: {group:'arbusto',      root:30, p:0.50}, // Pitosforo
-  18: {group:'arbusto',      root:30, p:0.50}, // Spino di Giuda
-  19: {group:'bonsai',       root:15, p:0.40}, // Gelso Bonsai
-  20: {group:'tropicale',    root:12, p:0.40}, // Tradescantia
-  21: {group:'aromatica',    root:25, p:0.50}, // Rosmarino
-  22: {group:'aromatica',    root:22, p:0.50}, // Salvia
-  23: {group:'albero',       root:45, p:0.55}, // Paulownia
-  24: {group:'succulenta',   root:15, p:0.60}, // Crassula Ovata
-  25: {group:'bonsai',       root:15, p:0.40}, // Carmona Bonsai
+  0: { group: 'succulenta', root: 18, p: 0.60 }, // Sanseviera
+  1: { group: 'orchidea', root: 10, p: 0.35 }, // Orchidea
+  2: { group: 'tropicale', root: 25, p: 0.40 }, // Ficus Benjamina
+  3: { group: 'tropicale', root: 28, p: 0.40 }, // Ficus Elastica
+  4: { group: 'mediterranea', root: 30, p: 0.45 }, // Oleandro
+  5: { group: 'bonsai', root: 15, p: 0.40 }, // Glicine Bonsai
+  6: { group: 'agrume', root: 32, p: 0.50 }, // Limone
+  7: { group: 'tropicale', root: 12, p: 0.40 }, // Moneta Cinese
+  8: { group: 'fiorita', root: 18, p: 0.50 }, // Vinca
+  9: { group: 'arbusto', root: 28, p: 0.45 }, // Mimosa
+  10: { group: 'arbusto', root: 32, p: 0.50 }, // Melograno
+  11: { group: 'fiorita', root: 18, p: 0.40 }, // Stella di Natale
+  12: { group: 'succulenta', root: 15, p: 0.60 }, // Aloe Vera
+  13: { group: 'albero', root: 40, p: 0.55 }, // Liquidambar
+  14: { group: 'albero', root: 45, p: 0.55 }, // Ippocastano
+  15: { group: 'albero', root: 40, p: 0.55 }, // Betulla
+  16: { group: 'albero', root: 35, p: 0.55 }, // Acero Campestre
+  17: { group: 'arbusto', root: 30, p: 0.50 }, // Pitosforo
+  18: { group: 'arbusto', root: 30, p: 0.50 }, // Spino di Giuda
+  19: { group: 'bonsai', root: 15, p: 0.40 }, // Gelso Bonsai
+  20: { group: 'tropicale', root: 12, p: 0.40 }, // Tradescantia
+  21: { group: 'aromatica', root: 25, p: 0.50 }, // Rosmarino
+  22: { group: 'aromatica', root: 22, p: 0.50 }, // Salvia
+  23: { group: 'albero', root: 45, p: 0.55 }, // Paulownia
+  24: { group: 'succulenta', root: 15, p: 0.60 }, // Crassula Ovata
+  25: { group: 'bonsai', root: 15, p: 0.40 }, // Carmona Bonsai
 };
 
 // ════════════════════════════════════════════════════════════════════════
@@ -4625,16 +4823,16 @@ let customPlantsCache = [];
 // il colore del suo gruppo, così piante simili hanno tonalità coerenti nel
 // calendario. Le native hanno colori scelti uno ad uno e non passano da qui.
 const CUSTOM_GROUP_COLORS = {
-  succulenta:   '#7a8a4a',
-  orchidea:     '#a06aa8',
-  tropicale:    '#3d6b30',
-  agrume:       '#c79a2c',
+  succulenta: '#7a8a4a',
+  orchidea: '#a06aa8',
+  tropicale: '#3d6b30',
+  agrume: '#c79a2c',
   mediterranea: '#7a6b3a',
-  bonsai:       '#5a4a3a',
-  arbusto:      '#5a7a4a',
-  albero:       '#3a5a2a',
-  aromatica:    '#6a8a5a',
-  fiorita:      '#c45a7a',
+  bonsai: '#5a4a3a',
+  arbusto: '#5a7a4a',
+  albero: '#3a5a2a',
+  aromatica: '#6a8a5a',
+  fiorita: '#c45a7a',
 };
 
 // Costruisce un record sPlants a partire da un row del database custom_plants.
@@ -4646,8 +4844,8 @@ function buildCustomSPlant(row) {
   const tcKeys = [];      // Quali tab mostrare (pt, pg, pgr) — guidato dai dati
   const record = {
     id: row.id,                 // Identificativo standard usato dalla dropdown,
-                                // da getPlantById, e da tutto il resto del sistema.
-                                // Coerente con il campo id delle 26 native.
+    // da getPlantById, e da tutto il resto del sistema.
+    // Coerente con il campo id delle 26 native.
     name: row.name,
     latin: row.latin || '',
     icon: row.icon || '🌱',
@@ -4656,7 +4854,7 @@ function buildCustomSPlant(row) {
     tc: tcKeys,
     isCustom: true,             // Flag interno per la UI di gestione
     customId: row.id,           // Riferimento al record nel database (per il
-                                // pulsante "Modifica" delle custom)
+    // pulsante "Modifica" delle custom)
   };
 
   // Sezione concimazione (con). Questa è quasi sempre presente perché il
@@ -4686,11 +4884,11 @@ function buildCustomSPlant(row) {
   // Le altre informazioni del livello avanzato vengono raccolte in un campo
   // "info" generico che la sezione Schede mostrerà come prima cosa.
   const infoBlocks = [];
-  if (row.description) infoBlocks.push({label: 'Descrizione', value: row.description});
-  if (row.exposure)    infoBlocks.push({label: 'Esposizione', value: row.exposure});
-  if (row.watering)    infoBlocks.push({label: 'Annaffiatura', value: row.watering});
-  if (row.substrate)   infoBlocks.push({label: 'Substrato',  value: row.substrate});
-  if (row.temperature) infoBlocks.push({label: 'Temperatura',value: row.temperature});
+  if (row.description) infoBlocks.push({ label: 'Descrizione', value: row.description });
+  if (row.exposure) infoBlocks.push({ label: 'Esposizione', value: row.exposure });
+  if (row.watering) infoBlocks.push({ label: 'Annaffiatura', value: row.watering });
+  if (row.substrate) infoBlocks.push({ label: 'Substrato', value: row.substrate });
+  if (row.temperature) infoBlocks.push({ label: 'Temperatura', value: row.temperature });
   if (infoBlocks.length) record.info = infoBlocks;
 
   return record;
@@ -4701,19 +4899,19 @@ function buildCustomSPlant(row) {
 // Per il manuale utente questa è una piccola gentilezza estetica.
 function _monthsToPeriod(monthsStr) {
   if (!monthsStr) return '';
-  const months = monthsStr.split(',').map(s => parseInt(s.trim())).filter(n => n >= 1 && n <= 12).sort((a,b)=>a-b);
+  const months = monthsStr.split(',').map(s => parseInt(s.trim())).filter(n => n >= 1 && n <= 12).sort((a, b) => a - b);
   if (!months.length) return '';
-  const names = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+  const names = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
   // Caso più comune: mesi consecutivi → "Aprile – Settembre"
   let allConsecutive = true;
   for (let i = 1; i < months.length; i++) {
-    if (months[i] !== months[i-1] + 1) { allConsecutive = false; break; }
+    if (months[i] !== months[i - 1] + 1) { allConsecutive = false; break; }
   }
   if (allConsecutive && months.length >= 3) {
-    return `${names[months[0]-1]} – ${names[months[months.length-1]-1]}`;
+    return `${names[months[0] - 1]} – ${names[months[months.length - 1] - 1]}`;
   }
   // Altrimenti elenco diretto
-  return months.map(m => names[m-1]).join(', ');
+  return months.map(m => names[m - 1]).join(', ');
 }
 
 // Costruisce un record gPlants per il calendario fertilizzazione.
@@ -4722,7 +4920,7 @@ function _monthsToPeriod(monthsStr) {
 function buildCustomGPlant(row) {
   const months = row.fert_months
     ? row.fert_months.split(',').map(s => parseInt(s.trim())).filter(n => n >= 1 && n <= 12)
-    : [4,5,6,7,8,9];
+    : [4, 5, 6, 7, 8, 9];
   const firstMonth = months[0] || 4;
   return {
     id: row.id,
@@ -4764,17 +4962,17 @@ function buildCustomMinimalPlant(row) {
 function buildCustomSimParams(row) {
   // Default: profondità radicale ragionevole per il gruppo
   const groupDefaults = {
-    succulenta:18, orchidea:10, tropicale:25, agrume:30, mediterranea:30,
-    bonsai:15, arbusto:30, albero:45, aromatica:25, fiorita:25
+    succulenta: 18, orchidea: 10, tropicale: 25, agrume: 30, mediterranea: 30,
+    bonsai: 15, arbusto: 30, albero: 45, aromatica: 25, fiorita: 25
   };
   const groupP = {
-    succulenta:0.60, orchidea:0.35, tropicale:0.40, agrume:0.50, mediterranea:0.45,
-    bonsai:0.40, arbusto:0.50, albero:0.55, aromatica:0.50, fiorita:0.50
+    succulenta: 0.60, orchidea: 0.35, tropicale: 0.40, agrume: 0.50, mediterranea: 0.45,
+    bonsai: 0.40, arbusto: 0.50, albero: 0.55, aromatica: 0.50, fiorita: 0.50
   };
   return {
     group: row.sim_group || 'arbusto',
     root: row.root_depth_cm != null ? row.root_depth_cm : (groupDefaults[row.sim_group] || 25),
-    p:    row.p_coef        != null ? row.p_coef        : (groupP[row.sim_group]        || 0.45),
+    p: row.p_coef != null ? row.p_coef : (groupP[row.sim_group] || 0.45),
   };
 }
 
@@ -4820,7 +5018,7 @@ function buildCustomCPlant(row) {
     // Costruisco l'array di 12 elementi: il mese i (1-12) ha stato 1
     // se è in fertSet, altrimenti 0. Nota che l'array è 0-indexed
     // mentre i mesi sono 1-indexed, da qui il +1.
-    months = Array.from({length: 12}, (_, i) => fertSet.has(i + 1) ? 1 : 0);
+    months = Array.from({ length: 12 }, (_, i) => fertSet.has(i + 1) ? 1 : 0);
   }
 
   // ── Note mensili ───────────────────────────────────────────────
@@ -4845,43 +5043,43 @@ function buildCustomCPlant(row) {
   // "Ogni 3-4 settimane". Imito quello stile con scaglioni sensati.
   const interval = row.fert_interval || 21;
   let freq;
-  if (interval <= 7)        freq = 'Settimanale';
-  else if (interval <= 10)  freq = 'Ogni 7-10 giorni';
-  else if (interval <= 16)  freq = 'Ogni 2 settimane';
-  else if (interval <= 24)  freq = 'Ogni 3 settimane';
-  else if (interval <= 35)  freq = 'Mensile';
-  else                      freq = `Ogni ${interval} giorni`;
+  if (interval <= 7) freq = 'Settimanale';
+  else if (interval <= 10) freq = 'Ogni 7-10 giorni';
+  else if (interval <= 16) freq = 'Ogni 2 settimane';
+  else if (interval <= 24) freq = 'Ogni 3 settimane';
+  else if (interval <= 35) freq = 'Mensile';
+  else freq = `Ogni ${interval} giorni`;
 
   // ── Concime ────────────────────────────────────────────────────
   // Se l'utente ha specificato un prodotto, usiamo quello. Altrimenti
   // un fallback generico ma onesto basato sul gruppo simulazione.
   const groupConcimeDefaults = {
-    succulenta:   'Liquido per succulente, ½ dose',
-    orchidea:     'Specifico orchidee, ¼ dose',
-    tropicale:    'Universale bilanciato, ½ dose',
-    agrume:       'Granulare specifico agrumi',
+    succulenta: 'Liquido per succulente, ½ dose',
+    orchidea: 'Specifico orchidee, ¼ dose',
+    tropicale: 'Universale bilanciato, ½ dose',
+    agrume: 'Granulare specifico agrumi',
     mediterranea: 'Universale o specifico mediterranee',
-    bonsai:       'Liquido bonsai, dose ridotta',
-    arbusto:      'Universale bilanciato',
-    albero:       'Universale a lenta cessione',
-    aromatica:    'Leggero P-K per aromatiche',
-    fiorita:      'Specifico piante da fiore P-K',
+    bonsai: 'Liquido bonsai, dose ridotta',
+    arbusto: 'Universale bilanciato',
+    albero: 'Universale a lenta cessione',
+    aromatica: 'Leggero P-K per aromatiche',
+    fiorita: 'Specifico piante da fiore P-K',
   };
   const concime = row.fert_product
     || groupConcimeDefaults[row.sim_group]
     || 'Universale bilanciato';
 
   return {
-    id:      row.id,    // Identificativo standard. Necessario perché la sezione
-                        // Mensile, come tutte le altre, usa getPlantById per
-                        // recuperare la pianta corrispondente.
-    name:    row.name,
-    latin:   row.latin || '',
-    icon:    row.icon || '🌱',
-    months:  months,
-    freq:    freq,
+    id: row.id,    // Identificativo standard. Necessario perché la sezione
+    // Mensile, come tutte le altre, usa getPlantById per
+    // recuperare la pianta corrispondente.
+    name: row.name,
+    latin: row.latin || '',
+    icon: row.icon || '🌱',
+    months: months,
+    freq: freq,
     concime: concime,
-    notes:   notes,
+    notes: notes,
     isCustom: true,
     customId: row.id,   // Per il pulsante "modifica" nei dettagli mensili
   };
@@ -4906,77 +5104,77 @@ function buildCustomWaPlant(row) {
     succulenta: {
       method: 'Soak & dry — completamente asciutto tra una annaffiatura e l\'altra',
       schedules: [
-        {months:[5,6,7,8,9],   interval:14, note:'Soak & dry: bagno abbondante, poi asciugatura completa'},
-        {months:[10,11,12,1,2,3,4], interval:28, note:'Inverno: 1× al mese o meno. Eccesso d\'acqua = morte'},
+        { months: [5, 6, 7, 8, 9], interval: 14, note: 'Soak & dry: bagno abbondante, poi asciugatura completa' },
+        { months: [10, 11, 12, 1, 2, 3, 4], interval: 28, note: 'Inverno: 1× al mese o meno. Eccesso d\'acqua = morte' },
       ],
     },
     orchidea: {
       method: 'Immersione 15 minuti, poi scolo completo',
       schedules: [
-        {months:[5,6,7,8],     interval:7,  note:'Immergere il vaso 15 min, scolare completamente'},
-        {months:[3,4,9,10],    interval:10, note:'Radici grigie = vuole acqua, radici verdi = idratata'},
-        {months:[11,12,1,2],   interval:14, note:'Inverno: ogni 2 settimane'},
+        { months: [5, 6, 7, 8], interval: 7, note: 'Immergere il vaso 15 min, scolare completamente' },
+        { months: [3, 4, 9, 10], interval: 10, note: 'Radici grigie = vuole acqua, radici verdi = idratata' },
+        { months: [11, 12, 1, 2], interval: 14, note: 'Inverno: ogni 2 settimane' },
       ],
     },
     tropicale: {
       method: 'Terreno leggermente umido, mai saturo',
       schedules: [
-        {months:[6,7,8],       interval:5,  note:'Estate: terreno leggermente umido, mai saturo'},
-        {months:[3,4,5,9,10],  interval:7,  note:'Annaffiare quando i primi 2-3 cm sono asciutti'},
-        {months:[11,12,1,2],   interval:12, note:'Inverno: ridurre molto. Nebulizzare con riscaldamenti'},
+        { months: [6, 7, 8], interval: 5, note: 'Estate: terreno leggermente umido, mai saturo' },
+        { months: [3, 4, 5, 9, 10], interval: 7, note: 'Annaffiare quando i primi 2-3 cm sono asciutti' },
+        { months: [11, 12, 1, 2], interval: 12, note: 'Inverno: ridurre molto. Nebulizzare con riscaldamenti' },
       ],
     },
     agrume: {
       method: 'Regolare e abbondante, no ristagni',
       schedules: [
-        {months:[6,7,8],       interval:3,  note:'Estate: abbondante. Preferire acqua piovana o decantata'},
-        {months:[3,4,5,9,10],  interval:5,  note:'Mantenere il terreno fresco'},
-        {months:[11,12,1,2],   interval:10, note:'Inverno: ridurre ma non sospendere'},
+        { months: [6, 7, 8], interval: 3, note: 'Estate: abbondante. Preferire acqua piovana o decantata' },
+        { months: [3, 4, 5, 9, 10], interval: 5, note: 'Mantenere il terreno fresco' },
+        { months: [11, 12, 1, 2], interval: 10, note: 'Inverno: ridurre ma non sospendere' },
       ],
     },
     mediterranea: {
       method: 'Solo terreno completamente asciutto',
       schedules: [
-        {months:[6,7,8],       interval:7,  note:'Estate: solo quando completamente asciutto. Tollera siccità'},
-        {months:[3,4,5,9,10],  interval:12, note:'Mezze stagioni: molto moderata'},
+        { months: [6, 7, 8], interval: 7, note: 'Estate: solo quando completamente asciutto. Tollera siccità' },
+        { months: [3, 4, 5, 9, 10], interval: 12, note: 'Mezze stagioni: molto moderata' },
       ],
     },
     bonsai: {
       method: 'Controllare ogni giorno — il vaso bonsai asciuga rapidamente',
       schedules: [
-        {months:[6,7,8],       interval:2,  note:'Estate: il bonsai asciuga in fretta! Controllare ogni giorno'},
-        {months:[4,5,9,10],    interval:3,  note:'Primavera/autunno: ogni 2-3 giorni'},
-        {months:[11,12,1,2,3], interval:7,  note:'Inverno: ridurre ma non far seccare le radici'},
+        { months: [6, 7, 8], interval: 2, note: 'Estate: il bonsai asciuga in fretta! Controllare ogni giorno' },
+        { months: [4, 5, 9, 10], interval: 3, note: 'Primavera/autunno: ogni 2-3 giorni' },
+        { months: [11, 12, 1, 2, 3], interval: 7, note: 'Inverno: ridurre ma non far seccare le radici' },
       ],
     },
     arbusto: {
       method: 'Moderata, regolare in vaso',
       schedules: [
-        {months:[6,7,8],       interval:5,  note:'Estate: regolare in vaso, abbondante'},
-        {months:[3,4,5,9,10],  interval:8,  note:'Primavera/autunno: moderata'},
-        {months:[11,12,1,2],   interval:14, note:'Inverno: ridurre sensibilmente'},
+        { months: [6, 7, 8], interval: 5, note: 'Estate: regolare in vaso, abbondante' },
+        { months: [3, 4, 5, 9, 10], interval: 8, note: 'Primavera/autunno: moderata' },
+        { months: [11, 12, 1, 2], interval: 14, note: 'Inverno: ridurre sensibilmente' },
       ],
     },
     albero: {
       method: 'Regolare nei primi anni, poi autonomo',
       schedules: [
-        {months:[6,7,8],       interval:5,  note:'Estate: regolare nei primi 3 anni'},
-        {months:[4,5,9,10],    interval:8,  note:'Primavera/autunno: moderata'},
+        { months: [6, 7, 8], interval: 5, note: 'Estate: regolare nei primi 3 anni' },
+        { months: [4, 5, 9, 10], interval: 8, note: 'Primavera/autunno: moderata' },
       ],
     },
     aromatica: {
       method: 'Solo terreno completamente asciutto — meglio poca che troppa',
       schedules: [
-        {months:[6,7,8],       interval:7,  note:'Estate: solo quando completamente asciutto'},
-        {months:[3,4,5,9,10],  interval:12, note:'Molto moderata. Troppo poco > troppo!'},
+        { months: [6, 7, 8], interval: 7, note: 'Estate: solo quando completamente asciutto' },
+        { months: [3, 4, 5, 9, 10], interval: 12, note: 'Molto moderata. Troppo poco > troppo!' },
       ],
     },
     fiorita: {
       method: 'Moderata e costante in fioritura',
       schedules: [
-        {months:[5,6,7,8],     interval:4,  note:'Fioritura: terreno leggermente umido, mai saturo'},
-        {months:[3,4,9,10],    interval:7,  note:'Primavera/autunno: moderata'},
-        {months:[11,12,1,2],   interval:12, note:'Inverno: ridurre'},
+        { months: [5, 6, 7, 8], interval: 4, note: 'Fioritura: terreno leggermente umido, mai saturo' },
+        { months: [3, 4, 9, 10], interval: 7, note: 'Primavera/autunno: moderata' },
+        { months: [11, 12, 1, 2], interval: 12, note: 'Inverno: ridurre' },
       ],
     },
   };
@@ -4991,13 +5189,13 @@ function buildCustomWaPlant(row) {
   const method = (row.watering && row.watering.trim()) || profile.method;
 
   return {
-    id:        row.id,
-    name:      row.name,
-    icon:      row.icon || '🌱',
-    color:     CUSTOM_GROUP_COLORS[row.sim_group] || '#5a7a4a',
-    method:    method,
-    schedules: profile.schedules.map(s => ({...s})),  // Copia per evitare mutation indiretta
-    isCustom:  true,
+    id: row.id,
+    name: row.name,
+    icon: row.icon || '🌱',
+    color: CUSTOM_GROUP_COLORS[row.sim_group] || '#5a7a4a',
+    method: method,
+    schedules: profile.schedules.map(s => ({ ...s })),  // Copia per evitare mutation indiretta
+    isCustom: true,
   };
 }
 
@@ -5015,16 +5213,16 @@ function buildCustomFIPlant(row) {
   // Profilo per gruppo: waterMl per dose tipica, doseFactor (concentrazione).
   // I valori sono presi mediando le 26 native dello stesso "tipo".
   const groupProfiles = {
-    succulenta:   {waterMl: 200, doseFactor: 0.25},
-    orchidea:     {waterMl: 200, doseFactor: 0.25},
-    tropicale:    {waterMl: 400, doseFactor: 0.5},
-    agrume:       {waterMl: 1500, doseFactor: 1.0},
-    mediterranea: {waterMl: 600, doseFactor: 0.5},
-    bonsai:       {waterMl: 250, doseFactor: 0.5},
-    arbusto:      {waterMl: 800, doseFactor: 0.5},
-    albero:       {waterMl: 2000, doseFactor: 1.0},
-    aromatica:    {waterMl: 300, doseFactor: 0.5},
-    fiorita:      {waterMl: 500, doseFactor: 1.0},
+    succulenta: { waterMl: 200, doseFactor: 0.25 },
+    orchidea: { waterMl: 200, doseFactor: 0.25 },
+    tropicale: { waterMl: 400, doseFactor: 0.5 },
+    agrume: { waterMl: 1500, doseFactor: 1.0 },
+    mediterranea: { waterMl: 600, doseFactor: 0.5 },
+    bonsai: { waterMl: 250, doseFactor: 0.5 },
+    arbusto: { waterMl: 800, doseFactor: 0.5 },
+    albero: { waterMl: 2000, doseFactor: 1.0 },
+    aromatica: { waterMl: 300, doseFactor: 0.5 },
+    fiorita: { waterMl: 500, doseFactor: 1.0 },
   };
   const profile = groupProfiles[row.sim_group] || groupProfiles.arbusto;
 
@@ -5044,13 +5242,13 @@ function buildCustomFIPlant(row) {
   }
 
   return {
-    id:         row.id,
-    name:       row.name,
-    icon:       row.icon || '🌱',
-    loc:        loc,
-    waterMl:    profile.waterMl,
+    id: row.id,
+    name: row.name,
+    icon: row.icon || '🌱',
+    loc: loc,
+    waterMl: profile.waterMl,
     doseFactor: profile.doseFactor,
-    isCustom:   true,
+    isCustom: true,
   };
 }
 
@@ -5082,12 +5280,12 @@ async function loadCustomPlants() {
   // Le 7 strutture array filtrano per il flag isCustom (più robusto del
   // controllo per id che alcune strutture come cPlants non espongono).
   // SIM_PLANT_PARAMS è un oggetto e cancelliamo le chiavi custom per id.
-  sPlants   = sPlants.filter(p   => !p.isCustom);
-  gPlants   = gPlants.filter(p   => !p.isCustom);
-  bbPlants  = bbPlants.filter(p  => !p.isCustom);
-  trPlants  = trPlants.filter(p  => !p.isCustom);
-  cPlants   = cPlants.filter(p   => !p.isCustom);
-  waPlants  = waPlants.filter(p  => !p.isCustom);
+  sPlants = sPlants.filter(p => !p.isCustom);
+  gPlants = gPlants.filter(p => !p.isCustom);
+  bbPlants = bbPlants.filter(p => !p.isCustom);
+  trPlants = trPlants.filter(p => !p.isCustom);
+  cPlants = cPlants.filter(p => !p.isCustom);
+  waPlants = waPlants.filter(p => !p.isCustom);
   FI_PLANTS = FI_PLANTS.filter(p => !p.isCustom);
   Object.keys(SIM_PLANT_PARAMS).forEach(k => {
     if (parseInt(k) >= 26) delete SIM_PLANT_PARAMS[k];
@@ -5112,11 +5310,11 @@ async function loadCustomPlants() {
   // Quando l'utente le riaprirà, verranno re-inizializzate con i dati nuovi.
   // Questo meccanismo sfrutta sectionInited già esistente.
   if (typeof sectionInited !== 'undefined') {
-    sectionInited.schede  = false;
+    sectionInited.schede = false;
     sectionInited.mensile = false;
-    sectionInited.giorni  = false;
-    sectionInited.vasi    = false;
-    sectionInited.diario  = false;  // Il filtro pianta del diario deve aggiornarsi
+    sectionInited.giorni = false;
+    sectionInited.vasi = false;
+    sectionInited.diario = false;  // Il filtro pianta del diario deve aggiornarsi
   }
   // Il calcolatore di fertirrigazione ha un suo flag separato perché viene
   // inizializzato fuori dal sistema sectionInited centrale. Resetto anche
@@ -5133,7 +5331,7 @@ async function loadCustomPlants() {
     Object.keys(trDateMap).forEach(k => delete trDateMap[k]);
   }
 
-  console.log(`✅ Caricate ${items.length} piante custom (id 26-${items.length ? Math.max(...items.map(i=>i.id)) : 25})`);
+  console.log(`✅ Caricate ${items.length} piante custom (id 26-${items.length ? Math.max(...items.map(i => i.id)) : 25})`);
 }
 
 // State
@@ -5152,7 +5350,7 @@ let _simIndoorLive = null;  // Dati live dal WN31 CH1 per piante indoor
 let cpEditingId = null;
 let cpFertMonths = new Set();  // Set dei mesi attivi nel selettore
 let cpDirty = false;            // True se l'utente ha modificato qualcosa
-let cpSectionStates = {advanced: false, monthly: false, expert: false};  // Persistenza espansioni
+let cpSectionStates = { advanced: false, monthly: false, expert: false };  // Persistenza espansioni
 // Stato del calendario annuale (sezione Mensile). Array di 12 numeri 0-3
 // (0=auto/riposo, 1=attivo, 2=ridotto, 3=speciale) e dict {mese: nota}.
 // All'apertura del form questi due valori vengono inizializzati da cpResetForm
@@ -5196,7 +5394,7 @@ function cpRenderPanel() {
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">`;
 
   items.forEach(p => {
-    const groupLabel = {succulenta:'Succ.',orchidea:'Orc.',tropicale:'Trop.',agrume:'Agr.',mediterranea:'Med.',bonsai:'Bon.',arbusto:'Arb.',albero:'Alb.',aromatica:'Arom.',fiorita:'Fior.'}[p.sim_group] || p.sim_group;
+    const groupLabel = { succulenta: 'Succ.', orchidea: 'Orc.', tropicale: 'Trop.', agrume: 'Agr.', mediterranea: 'Med.', bonsai: 'Bon.', arbusto: 'Arb.', albero: 'Alb.', aromatica: 'Arom.', fiorita: 'Fior.' }[p.sim_group] || p.sim_group;
     html += `
       <div style="position:relative;padding:10px 8px 8px;background:white;border:1px solid #e0e0d8;border-radius:8px;cursor:pointer;text-align:center" onclick="cpOpenEditForm(${p.id})">
         <div style="position:absolute;top:4px;right:6px;font-size:9px;background:var(--accent);color:white;padding:1px 6px;border-radius:8px">custom</div>
@@ -5263,18 +5461,18 @@ function cpResetForm() {
   document.getElementById('cp-sim-group').value = 'arbusto';
   document.getElementById('cp-sensor-cat').value = 'universale';
   // Livello avanzato — testi scheda
-  ['description','exposure','watering','substrate-text','temperature','pruning','pests','fertilization'].forEach(id => {
+  ['description', 'exposure', 'watering', 'substrate-text', 'temperature', 'pruning', 'pests', 'fertilization'].forEach(id => {
     const el = document.getElementById('cp-' + id);
     if (el) el.value = '';
   });
   // Livello avanzato — calendario fertilizzazione
-  cpFertMonths = new Set([3,4,5,6,7,8,9,10]);  // Default: primavera-autunno
+  cpFertMonths = new Set([3, 4, 5, 6, 7, 8, 9, 10]);  // Default: primavera-autunno
   cpRenderFertMonths();
   document.getElementById('cp-fert-interval').value = 21;
   document.getElementById('cp-fert-product').value = '';
   document.getElementById('cp-fert-note').value = '';
   // Livello esperto — parametri Kc (vuoti = usa default del gruppo)
-  ['root-depth','p-coef','kc-initial','kc-dev','kc-mid','kc-late','kc-dormant'].forEach(id => {
+  ['root-depth', 'p-coef', 'kc-initial', 'kc-dev', 'kc-mid', 'kc-late', 'kc-dormant'].forEach(id => {
     document.getElementById('cp-' + id).value = '';
   });
   // Livello calendario annuale: parto con tutti gli stati a 0 (auto/riposo)
@@ -5317,7 +5515,7 @@ function cpPopulateForm(plant) {
   if (plant.fert_months) {
     cpFertMonths = new Set(plant.fert_months.split(',').map(s => parseInt(s.trim())).filter(n => n >= 1 && n <= 12));
   } else {
-    cpFertMonths = new Set([3,4,5,6,7,8,9,10]);
+    cpFertMonths = new Set([3, 4, 5, 6, 7, 8, 9, 10]);
   }
   cpRenderFertMonths();
   document.getElementById('cp-fert-interval').value = plant.fert_interval || 21;
@@ -5397,13 +5595,13 @@ function cpPopulateForm(plant) {
 function cpRenderFertMonths() {
   const container = document.getElementById('cp-fert-months');
   if (!container) return;
-  const names = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+  const names = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
   let html = '';
   for (let m = 1; m <= 12; m++) {
     const active = cpFertMonths.has(m);
     const bg = active ? 'var(--accent)' : '#f0f0e8';
     const color = active ? 'white' : 'var(--muted)';
-    html += `<button type="button" onclick="cpToggleMonth(${m})" style="padding:5px 10px;border-radius:6px;border:1px solid ${active ? 'var(--accent)' : '#d0d0c8'};background:${bg};color:${color};font-size:11px;font-weight:500;cursor:pointer">${names[m-1]}</button>`;
+    html += `<button type="button" onclick="cpToggleMonth(${m})" style="padding:5px 10px;border-radius:6px;border:1px solid ${active ? 'var(--accent)' : '#d0d0c8'};background:${bg};color:${color};font-size:11px;font-weight:500;cursor:pointer">${names[m - 1]}</button>`;
   }
   container.innerHTML = html;
 }
@@ -5431,15 +5629,15 @@ function cpToggleMonth(m) {
 function cpRenderMonthlyGrid() {
   const container = document.getElementById('cp-monthly-grid');
   if (!container) return;
-  const monthNames = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
-                      'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+    'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
   // Mappa stato → {label breve, colore}. Coerente con i colori usati nella
   // sezione Mensile dalle 26 native, così l'utente trova continuità visiva.
   const stateConfig = [
-    {label: 'Auto',      color: '#d8d8d8', textColor: '#666'},     // 0
-    {label: 'Attiva',    color: '#7a9a50', textColor: 'white'},    // 1
-    {label: 'Ridotta',   color: '#c0a040', textColor: 'white'},    // 2
-    {label: 'Speciale',  color: '#c06040', textColor: 'white'},    // 3
+    { label: 'Auto', color: '#d8d8d8', textColor: '#666' },     // 0
+    { label: 'Attiva', color: '#7a9a50', textColor: 'white' },    // 1
+    { label: 'Ridotta', color: '#c0a040', textColor: 'white' },    // 2
+    { label: 'Speciale', color: '#c06040', textColor: 'white' },    // 3
   ];
 
   let html = '';
@@ -5571,7 +5769,7 @@ async function cpSavePlant() {
     pruning: document.getElementById('cp-pruning').value.trim(),
     pests: document.getElementById('cp-pests').value.trim(),
     fertilization: document.getElementById('cp-fertilization').value.trim(),
-    fertMonths: Array.from(cpFertMonths).sort((a,b) => a-b),
+    fertMonths: Array.from(cpFertMonths).sort((a, b) => a - b),
     fertInterval: parseInt(document.getElementById('cp-fert-interval').value) || 21,
     fertProduct: document.getElementById('cp-fert-product').value.trim(),
     fertNote: document.getElementById('cp-fert-note').value.trim(),
@@ -5597,20 +5795,20 @@ async function cpSavePlant() {
       // Modifica: PUT
       res = await apiFetch(`/api/plants/${cpEditingId}`, {
         method: 'PUT',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
     } else {
       // Aggiunta: POST
       res = await apiFetch('/api/plants', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
     }
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({error: 'Errore sconosciuto'}));
+      const err = await res.json().catch(() => ({ error: 'Errore sconosciuto' }));
       cpToast(err.error || 'Errore nel salvataggio', 'error');
       return;
     }
@@ -5652,7 +5850,7 @@ async function cpDeletePlant() {
   }
 
   try {
-    const res = await apiFetch(`/api/plants/${cpEditingId}`, {method: 'DELETE'});
+    const res = await apiFetch(`/api/plants/${cpEditingId}`, { method: 'DELETE' });
 
     if (res.status === 409) {
       // Eliminazione bloccata: ci sono dipendenze. Mostro lista dettagliata.
@@ -5675,7 +5873,7 @@ async function cpDeletePlant() {
     }
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({error: 'Errore'}));
+      const err = await res.json().catch(() => ({ error: 'Errore' }));
       cpToast(err.error || 'Errore eliminazione', 'error');
       return;
     }
@@ -5703,9 +5901,9 @@ function cpToast(message, type = 'info') {
   // Rimuovi eventuali toast esistenti
   document.querySelectorAll('.cp-toast').forEach(t => t.remove());
   const colors = {
-    success: {bg: '#e0f2e0', border: '#7aaa7a', text: '#2a5a2a'},
-    error:   {bg: '#fdf0f0', border: '#d8a0a0', text: '#a04040'},
-    info:    {bg: '#edf5ff', border: '#a8c8e8', text: '#2a5a8a'},
+    success: { bg: '#e0f2e0', border: '#7aaa7a', text: '#2a5a2a' },
+    error: { bg: '#fdf0f0', border: '#d8a0a0', text: '#a04040' },
+    info: { bg: '#edf5ff', border: '#a8c8e8', text: '#2a5a8a' },
   };
   const c = colors[type] || colors.info;
   const toast = document.createElement('div');
@@ -5739,7 +5937,7 @@ document.addEventListener('input', (e) => {
 // un oggetto completo con tutti i parametri, usando i salvati se presenti
 // e riempiendo il resto coi default del gruppo pianta.
 function simGetParamsForPot(item) {
-  const simP = SIM_PLANT_PARAMS[item.plantTypeIdx] || {group:'arbusto', root:25, p:0.45};
+  const simP = SIM_PLANT_PARAMS[item.plantTypeIdx] || { group: 'arbusto', root: 25, p: 0.45 };
   const kcDefault = SIM_KC_BY_GROUP[simP.group] || SIM_KC_BY_GROUP.arbusto;
   const saved = item.simParams || {};
   return {
@@ -5747,16 +5945,16 @@ function simGetParamsForPot(item) {
     rootDepthCm: saved.rootDepthCm != null ? saved.rootDepthCm : simP.root,
     pCoef: saved.pCoef != null ? saved.pCoef : simP.p,
     kcInitial: saved.kcInitial != null ? saved.kcInitial : kcDefault.initial,
-    kcDev:     saved.kcDev     != null ? saved.kcDev     : kcDefault.dev,
-    kcMid:     saved.kcMid     != null ? saved.kcMid     : kcDefault.mid,
-    kcLate:    saved.kcLate    != null ? saved.kcLate    : kcDefault.late,
+    kcDev: saved.kcDev != null ? saved.kcDev : kcDefault.dev,
+    kcMid: saved.kcMid != null ? saved.kcMid : kcDefault.mid,
+    kcLate: saved.kcLate != null ? saved.kcLate : kcDefault.late,
     kcDormant: saved.kcDormant != null ? saved.kcDormant : kcDefault.dormant,
   };
 }
 
 // Ritorna il Kc per lo stadio corrente usando i parametri del vaso
 function simGetKcForStage(params, stage) {
-  const map = {initial:'kcInitial', dev:'kcDev', mid:'kcMid', late:'kcLate', dormant:'kcDormant'};
+  const map = { initial: 'kcInitial', dev: 'kcDev', mid: 'kcMid', late: 'kcLate', dormant: 'kcDormant' };
   return params[map[stage]] || params.kcMid;
 }
 
@@ -5779,7 +5977,7 @@ function simFindLastWateringDate(item) {
   // 1) Campo manuale "ultima annaffiatura" registrato sul vaso
   if (item.lastWatered) {
     const d = new Date(item.lastWatered + 'T12:00');
-    if (!isNaN(d.getTime())) candidates.push({date: d, source: 'manual'});
+    if (!isNaN(d.getTime())) candidates.push({ date: d, source: 'manual' });
   }
 
   // 2) Ultima spunta nel calendario per questo tipo di pianta (0-25)
@@ -5799,8 +5997,8 @@ function simFindLastWateringDate(item) {
       const date = new Date(+m[1], +m[2] - 1, +m[3]);
       if (!mostRecent || date > mostRecent) mostRecent = date;
     }
-    if (mostRecent) candidates.push({date: mostRecent, source: 'calendar'});
-  } catch {}
+    if (mostRecent) candidates.push({ date: mostRecent, source: 'calendar' });
+  } catch { }
 
   // Scegli la più recente tra manuale e calendario
   if (!candidates.length) return null;
@@ -5816,7 +6014,7 @@ function simEstimateMoistureFromLastWater(item, lastWaterInfo, historicalMeteo) 
   if (!lastWaterInfo) return null;
 
   const today = new Date();
-  today.setHours(0,0,0,0);
+  today.setHours(0, 0, 0, 0);
   const daysSince = Math.floor((today - lastWaterInfo.date) / 86400000);
 
   if (daysSince < 0) return 98;       // Annaffiatura futura nel DB? Tratta come appena fatta
@@ -5833,7 +6031,7 @@ function simEstimateMoistureFromLastWater(item, lastWaterInfo, historicalMeteo) 
   const params = simGetParamsForPot(item);
   const vol = invGetVolFromItem(item);
   const potHeight = item.potShape === 'square' ? item.potHSq :
-                    item.potShape === 'truncated' ? item.potHTrunc : item.potH;
+    item.potShape === 'truncated' ? item.potHTrunc : item.potH;
   const maxRoot = (potHeight || 20) - 2;
   const rootDepthCm = Math.min(params.rootDepthCm, maxRoot);
 
@@ -5848,9 +6046,9 @@ function simEstimateMoistureFromLastWater(item, lastWaterInfo, historicalMeteo) 
   const thetaFC_L = whc * vol * rootFraction;
 
   let areaM2;
-  if (item.potShape === 'square') areaM2 = ((item.potW||25)/100) * ((item.potD||25)/100);
-  else if (item.potShape === 'truncated') areaM2 = Math.PI * Math.pow(((item.potDiamTop||25)/2)/100, 2);
-  else areaM2 = Math.PI * Math.pow(((item.potDiam||25)/2)/100, 2);
+  if (item.potShape === 'square') areaM2 = ((item.potW || 25) / 100) * ((item.potD || 25) / 100);
+  else if (item.potShape === 'truncated') areaM2 = Math.PI * Math.pow(((item.potDiamTop || 25) / 2) / 100, 2);
+  else areaM2 = Math.PI * Math.pow(((item.potDiam || 25) / 2) / 100, 2);
 
   let evapFactor = 1.0;
   if (item.potMat === 'terracotta') evapFactor *= 1.18;
@@ -5861,7 +6059,7 @@ function simEstimateMoistureFromLastWater(item, lastWaterInfo, historicalMeteo) 
   let theta_L = 0.98 * thetaFC_L;
 
   // Stadio dal mese medio del periodo
-  const midMonth = new Date(lastWaterInfo.date.getTime() + (daysSince/2) * 86400000).getMonth() + 1;
+  const midMonth = new Date(lastWaterInfo.date.getTime() + (daysSince / 2) * 86400000).getMonth() + 1;
   const stage = simGetCurrentStage(midMonth);
   const kc = simGetKcForStage(params, stage);
 
@@ -5885,7 +6083,7 @@ function simBuildHistoricalMeteo(days, isIndoor) {
   const meteo = [];
   if (isIndoor) {
     for (let i = 0; i < days; i++) {
-      meteo.push({tmin:19, tmax:23, hum:55, wind:2, solarW:300, rain:0, isIndoor:true});
+      meteo.push({ tmin: 19, tmax: 23, hum: 55, wind: 2, solarW: 300, rain: 0, isIndoor: true });
     }
     return meteo;
   }
@@ -5894,20 +6092,20 @@ function simBuildHistoricalMeteo(days, isIndoor) {
     const date = new Date(today.getTime() - (days - i) * 86400000);
     const month = date.getMonth() + 1;
     const seasonal = {
-      1:{tmin:3,tmax:10,hum:75,wind:8,solarW:150,rain:2},
-      2:{tmin:4,tmax:12,hum:70,wind:8,solarW:200,rain:2},
-      3:{tmin:7,tmax:16,hum:65,wind:10,solarW:300,rain:2},
-      4:{tmin:10,tmax:20,hum:60,wind:10,solarW:400,rain:2},
-      5:{tmin:14,tmax:24,hum:55,wind:8,solarW:500,rain:1},
-      6:{tmin:18,tmax:29,hum:50,wind:8,solarW:600,rain:1},
-      7:{tmin:21,tmax:32,hum:45,wind:8,solarW:700,rain:0.5},
-      8:{tmin:21,tmax:32,hum:50,wind:8,solarW:650,rain:1},
-      9:{tmin:17,tmax:27,hum:60,wind:8,solarW:450,rain:2},
-      10:{tmin:12,tmax:21,hum:65,wind:10,solarW:300,rain:3},
-      11:{tmin:7,tmax:15,hum:75,wind:10,solarW:180,rain:3},
-      12:{tmin:4,tmax:11,hum:75,wind:10,solarW:120,rain:3},
+      1: { tmin: 3, tmax: 10, hum: 75, wind: 8, solarW: 150, rain: 2 },
+      2: { tmin: 4, tmax: 12, hum: 70, wind: 8, solarW: 200, rain: 2 },
+      3: { tmin: 7, tmax: 16, hum: 65, wind: 10, solarW: 300, rain: 2 },
+      4: { tmin: 10, tmax: 20, hum: 60, wind: 10, solarW: 400, rain: 2 },
+      5: { tmin: 14, tmax: 24, hum: 55, wind: 8, solarW: 500, rain: 1 },
+      6: { tmin: 18, tmax: 29, hum: 50, wind: 8, solarW: 600, rain: 1 },
+      7: { tmin: 21, tmax: 32, hum: 45, wind: 8, solarW: 700, rain: 0.5 },
+      8: { tmin: 21, tmax: 32, hum: 50, wind: 8, solarW: 650, rain: 1 },
+      9: { tmin: 17, tmax: 27, hum: 60, wind: 8, solarW: 450, rain: 2 },
+      10: { tmin: 12, tmax: 21, hum: 65, wind: 10, solarW: 300, rain: 3 },
+      11: { tmin: 7, tmax: 15, hum: 75, wind: 10, solarW: 180, rain: 3 },
+      12: { tmin: 4, tmax: 11, hum: 75, wind: 10, solarW: 120, rain: 3 },
     };
-    meteo.push({...seasonal[month]});
+    meteo.push({ ...seasonal[month] });
   }
   return meteo;
 }
@@ -5945,16 +6143,16 @@ async function simOpen(potId) {
   simToggleMeteoMode();
 
   // Info pianta: mostra il profilo Kc completo (personalizzato o default)
-  const groupLabels = {succulenta:'Succulenta', orchidea:'Orchidea', tropicale:'Tropicale', agrume:'Agrume', mediterranea:'Mediterranea', bonsai:'Bonsai', arbusto:'Arbusto', albero:'Albero', aromatica:'Aromatica', fiorita:'Da fiore'};
+  const groupLabels = { succulenta: 'Succulenta', orchidea: 'Orchidea', tropicale: 'Tropicale', agrume: 'Agrume', mediterranea: 'Mediterranea', bonsai: 'Bonsai', arbusto: 'Arbusto', albero: 'Albero', aromatica: 'Aromatica', fiorita: 'Da fiore' };
   const kcCustomized = !!(item.simParams && Object.keys(item.simParams).length);
   document.getElementById('sim-plant-info').innerHTML =
-    `${p.name} · Gruppo: ${groupLabels[params.group]||params.group} · Kc: iniziale ${params.kcInitial}, sviluppo ${params.kcDev}, piena ${params.kcMid}, tarda ${params.kcLate}, riposo ${params.kcDormant}` +
+    `${p.name} · Gruppo: ${groupLabels[params.group] || params.group} · Kc: iniziale ${params.kcInitial}, sviluppo ${params.kcDev}, piena ${params.kcMid}, tarda ${params.kcLate}, riposo ${params.kcDormant}` +
     (kcCustomized ? ' <span style="color:#2a7abf;font-weight:600">· personalizzato</span>' : '');
 
   // Info contenitore
-  const whcInfo = item.substrate==='custom' && item.customSubstrate
+  const whcInfo = item.substrate === 'custom' && item.customSubstrate
     ? 'personalizzato (WHC calcolato dalla media pesata)'
-    : INV_SUB_LABELS[item.substrate]||item.substrate;
+    : INV_SUB_LABELS[item.substrate] || item.substrate;
   document.getElementById('sim-pot-info').innerHTML =
     `<b>${invGetDimsLabel(item)} · ${vol.toFixed(1)}L</b> · materiale: ${item.potMat} · substrato: ${whcInfo}`;
 
@@ -5973,7 +6171,7 @@ async function simOpen(potId) {
     const res = await apiFetch('/api/ecowitt/realtime');
     const j = await res.json();
     if (j.configured && j.code === 0) ewJson = j;
-  } catch {}
+  } catch { }
 
   // Popola dati indoor (WN31 CH1) se la pianta è indoor
   if (ewJson && item.location === 'indoor') {
@@ -6039,7 +6237,7 @@ async function simOpen(potId) {
   if (noteEl) {
     noteEl.textContent = moistureNote;
     noteEl.style.color = moistureSource === 'sensor' ? '#2a6a2a' :
-                         moistureSource === 'estimated' ? '#2a7abf' : '#b08030';
+      moistureSource === 'estimated' ? '#2a7abf' : '#b08030';
   }
 
   // Prefetch previsioni per lo scenario meteo live
@@ -6048,7 +6246,7 @@ async function simOpen(potId) {
     const res = await apiFetch('/api/forecast');
     const data = await res.json();
     if (!data.error && data.daily) _simForecast = data;
-  } catch {}
+  } catch { }
 
   document.getElementById('sim-results').style.display = 'none';
   document.getElementById('sim-overlay').classList.add('open');
@@ -6070,7 +6268,7 @@ async function simSaveParams() {
   const item = inv.find(x => x.id === _simPotId);
   if (!item) return;
 
-  const simP = SIM_PLANT_PARAMS[item.plantTypeIdx] || {group:'arbusto'};
+  const simP = SIM_PLANT_PARAMS[item.plantTypeIdx] || { group: 'arbusto' };
   const kcDefault = SIM_KC_BY_GROUP[simP.group] || SIM_KC_BY_GROUP.arbusto;
   const currentStage = document.getElementById('sim-stage').value;
   const currentKc = +document.getElementById('sim-kc').value;
@@ -6082,13 +6280,13 @@ async function simSaveParams() {
     rootDepthCm: +document.getElementById('sim-root').value,
     pCoef: +document.getElementById('sim-p').value,
     kcInitial: saved.kcInitial != null ? saved.kcInitial : kcDefault.initial,
-    kcDev:     saved.kcDev     != null ? saved.kcDev     : kcDefault.dev,
-    kcMid:     saved.kcMid     != null ? saved.kcMid     : kcDefault.mid,
-    kcLate:    saved.kcLate    != null ? saved.kcLate    : kcDefault.late,
+    kcDev: saved.kcDev != null ? saved.kcDev : kcDefault.dev,
+    kcMid: saved.kcMid != null ? saved.kcMid : kcDefault.mid,
+    kcLate: saved.kcLate != null ? saved.kcLate : kcDefault.late,
     kcDormant: saved.kcDormant != null ? saved.kcDormant : kcDefault.dormant,
   };
   // Aggiorna solo lo stadio corrente con il valore nel form
-  const stageKey = {initial:'kcInitial', dev:'kcDev', mid:'kcMid', late:'kcLate', dormant:'kcDormant'}[currentStage];
+  const stageKey = { initial: 'kcInitial', dev: 'kcDev', mid: 'kcMid', late: 'kcLate', dormant: 'kcDormant' }[currentStage];
   if (stageKey) newSimParams[stageKey] = currentKc;
 
   // Costruisci oggetto completo per l'update
@@ -6103,7 +6301,7 @@ async function simSaveParams() {
     if (invUseAPI) {
       const res = await fetch(`${INV_API}/${item.id}`, {
         method: 'PUT',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updated),
       });
       if (res.ok) {
@@ -6153,7 +6351,7 @@ async function simResetParams() {
     if (invUseAPI) {
       const res = await fetch(`${INV_API}/${item.id}`, {
         method: 'PUT',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updated),
       });
       if (res.ok) {
@@ -6167,7 +6365,7 @@ async function simResetParams() {
     }
     // Riapri il modal per ricaricare i default
     simOpen(item.id);
-  } catch {}
+  } catch { }
 }
 
 function simToggleMeteoMode() {
@@ -6180,7 +6378,7 @@ function simOnStageChange() {
   const inv = invLoad();
   const item = inv.find(x => x.id === _simPotId);
   if (!item) return;
-  const simP = SIM_PLANT_PARAMS[item.plantTypeIdx] || {group:'arbusto'};
+  const simP = SIM_PLANT_PARAMS[item.plantTypeIdx] || { group: 'arbusto' };
   const kc = SIM_KC_BY_GROUP[simP.group] || SIM_KC_BY_GROUP.arbusto;
   const stage = document.getElementById('sim-stage').value;
   document.getElementById('sim-kc').value = kc[stage] || 0.7;
@@ -6206,11 +6404,11 @@ function simBuildMeteoArray(days) {
     // Converti MJ/m²/g → W/m² medio (MJ / 86.4 ks per giorno ≈ W/m² medio diurno)
     const solarW = solarMJ * 1000 / PARAMS.solarConv;
     for (let d = 0; d < days; d++) {
-      meteo.push({tmin, tmax, hum, wind, solarW, rain, source:'manual'});
+      meteo.push({ tmin, tmax, hum, wind, solarW, rain, source: 'manual' });
     }
   } else if (isIndoor) {
     // Modalità live per pianta indoor: usa WN31 CH1 (temp+hum) + surrogati FAO
-    const live = _simIndoorLive || {temp: 21, humidity: 55};
+    const live = _simIndoorLive || { temp: 21, humidity: 55 };
     const t = live.temp !== null ? live.temp : 21;
     const h = live.humidity !== null ? live.humidity : 55;
     for (let d = 0; d < days; d++) {
@@ -6235,12 +6433,12 @@ function simBuildMeteoArray(days) {
           wind: daily.wind_speed_10m_max ? daily.wind_speed_10m_max[d] * 0.6 : 8,
           solarW: 300, // approx, serve radiazione più precisa ma non fornita in daily
           rain: daily.precipitation_sum[d] || 0,
-          source:'forecast',
+          source: 'forecast',
         });
       } else {
         // Fallback: estende con ultimo giorno disponibile
-        const last = meteo[meteo.length-1];
-        meteo.push(last ? {...last} : {tmin:15, tmax:25, hum:60, wind:8, solarW:300, rain:0, source:'default'});
+        const last = meteo[meteo.length - 1];
+        meteo.push(last ? { ...last } : { tmin: 15, tmax: 25, hum: 60, wind: 8, solarW: 300, rain: 0, source: 'default' });
       }
     }
   }
@@ -6272,7 +6470,7 @@ function simRun() {
 
   // Limita la profondità radicale all'altezza del vaso
   const potHeight = item.potShape === 'square' ? item.potHSq :
-                    item.potShape === 'truncated' ? item.potHTrunc : item.potH;
+    item.potShape === 'truncated' ? item.potHTrunc : item.potH;
   const maxRoot = (potHeight || 20) - 2; // margine di 2cm dal fondo
   if (rootDepthCm > maxRoot) rootDepthCm = maxRoot;
 
@@ -6297,12 +6495,12 @@ function simRun() {
   // Superficie del vaso (m²) per conversione ET mm → L
   let areaM2;
   if (item.potShape === 'square') {
-    areaM2 = ((item.potW||25)/100) * ((item.potD||25)/100);
+    areaM2 = ((item.potW || 25) / 100) * ((item.potD || 25) / 100);
   } else if (item.potShape === 'truncated') {
-    const rTop = ((item.potDiamTop||25)/2)/100;
+    const rTop = ((item.potDiamTop || 25) / 2) / 100;
     areaM2 = Math.PI * rTop * rTop;
   } else {
-    const r = ((item.potDiam||25)/2)/100;
+    const r = ((item.potDiam || 25) / 2) / 100;
     areaM2 = Math.PI * r * r;
   }
 
@@ -6351,7 +6549,7 @@ function simRun() {
     if (autoEnabled && depletion_L > rawThreshold_L) {
       const target_L = targetFill * thetaFC_L;
       irrig_L = Math.max(0, target_L - theta_L);
-      irrigationEvents.push({day: d, liters: irrig_L});
+      irrigationEvents.push({ day: d, liters: irrig_L });
       totalIrrigation_L += irrig_L;
     }
 
@@ -6393,9 +6591,9 @@ function simRenderResults(r) {
   document.getElementById('sim-results').style.display = 'block';
 
   // Summary
-  const avgMoist = r.results.reduce((s,x)=>s+x.moisturePct,0) / r.results.length;
-  const minMoist = Math.min(...r.results.map(x=>x.moisturePct));
-  const totalET = r.results.reduce((s,x)=>s+x.ETc_L,0);
+  const avgMoist = r.results.reduce((s, x) => s + x.moisturePct, 0) / r.results.length;
+  const minMoist = Math.min(...r.results.map(x => x.moisturePct));
+  const totalET = r.results.reduce((s, x) => s + x.ETc_L, 0);
 
   document.getElementById('sim-summary').innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px;margin-bottom:12px">
@@ -6411,7 +6609,7 @@ function simRenderResults(r) {
     <div style="font-size:10px;color:var(--muted);padding:6px 8px;background:var(--bg);border-radius:6px;margin-bottom:10px">
       <b>Parametri idrologici del vaso:</b><br>
       FC = ${r.thetaFC_L.toFixed(2)}L · PWP = ${r.thetaPWP_L.toFixed(2)}L · TAW = ${r.TAW_L.toFixed(2)}L · RAW = ${r.RAW_L.toFixed(2)}L (p=${r.pCoef})<br>
-      Area superficie: ${(r.areaM2*10000).toFixed(0)} cm² · Profondità radicale: ${r.rootDepthCm} cm · WHC: ${(r.whc*100).toFixed(0)}%
+      Area superficie: ${(r.areaM2 * 10000).toFixed(0)} cm² · Profondità radicale: ${r.rootDepthCm} cm · WHC: ${(r.whc * 100).toFixed(0)}%
     </div>`;
 
   // Grafico SVG
@@ -6429,7 +6627,7 @@ function simRenderChart(r) {
   const xStep = innerW / Math.max(1, days - 1);
 
   // Coordinate Y: 0-100%
-  const yScale = pct => padT + innerH * (1 - pct/100);
+  const yScale = pct => padT + innerH * (1 - pct / 100);
 
   // Bande colorate: PWP, stress, RAW, ok
   const pwpPct = r.thetaPWP_L / r.thetaFC_L * 100;
@@ -6443,12 +6641,12 @@ function simRenderChart(r) {
 
   // Linee di riferimento FC, RAW, PWP
   const lines = `
-    <line x1="${padL}" y1="${yScale(100)}" x2="${padL+innerW}" y2="${yScale(100)}" stroke="#3a6abf" stroke-dasharray="3,3" stroke-width="1"/>
-    <text x="${padL-3}" y="${yScale(100)+3}" font-size="9" fill="#3a6abf" text-anchor="end">FC 100%</text>
-    <line x1="${padL}" y1="${yScale(rawStartPct)}" x2="${padL+innerW}" y2="${yScale(rawStartPct)}" stroke="#8a6a20" stroke-dasharray="3,3" stroke-width="1"/>
-    <text x="${padL-3}" y="${yScale(rawStartPct)+3}" font-size="9" fill="#8a6a20" text-anchor="end">RAW ${rawStartPct.toFixed(0)}%</text>
-    <line x1="${padL}" y1="${yScale(pwpPct)}" x2="${padL+innerW}" y2="${yScale(pwpPct)}" stroke="#c04040" stroke-dasharray="3,3" stroke-width="1"/>
-    <text x="${padL-3}" y="${yScale(pwpPct)+3}" font-size="9" fill="#c04040" text-anchor="end">PWP ${pwpPct.toFixed(0)}%</text>
+    <line x1="${padL}" y1="${yScale(100)}" x2="${padL + innerW}" y2="${yScale(100)}" stroke="#3a6abf" stroke-dasharray="3,3" stroke-width="1"/>
+    <text x="${padL - 3}" y="${yScale(100) + 3}" font-size="9" fill="#3a6abf" text-anchor="end">FC 100%</text>
+    <line x1="${padL}" y1="${yScale(rawStartPct)}" x2="${padL + innerW}" y2="${yScale(rawStartPct)}" stroke="#8a6a20" stroke-dasharray="3,3" stroke-width="1"/>
+    <text x="${padL - 3}" y="${yScale(rawStartPct) + 3}" font-size="9" fill="#8a6a20" text-anchor="end">RAW ${rawStartPct.toFixed(0)}%</text>
+    <line x1="${padL}" y1="${yScale(pwpPct)}" x2="${padL + innerW}" y2="${yScale(pwpPct)}" stroke="#c04040" stroke-dasharray="3,3" stroke-width="1"/>
+    <text x="${padL - 3}" y="${yScale(pwpPct) + 3}" font-size="9" fill="#c04040" text-anchor="end">PWP ${pwpPct.toFixed(0)}%</text>
   `;
 
   // Linea umidità
@@ -6468,29 +6666,29 @@ function simRenderChart(r) {
     markers += `<circle cx="${xc}" cy="${yc}" r="3" fill="#2a5a8a"/>`;
     // Irrigazione (triangolo blu sopra)
     if (x.irrig_L > 0) {
-      markers += `<path d="M${xc-4},${padT-4} L${xc+4},${padT-4} L${xc},${padT+2} Z" fill="#3a8abf"/>`;
+      markers += `<path d="M${xc - 4},${padT - 4} L${xc + 4},${padT - 4} L${xc},${padT + 2} Z" fill="#3a8abf"/>`;
     }
     // Pioggia (goccia)
     if (x.rain_L > 0) {
-      markers += `<circle cx="${xc}" cy="${padT-6}" r="2.5" fill="#4a90d0"/>`;
+      markers += `<circle cx="${xc}" cy="${padT - 6}" r="2.5" fill="#4a90d0"/>`;
     }
   });
 
   // Asse X
   let axisX = '';
   const today = new Date();
-  for (let i = 0; i < days; i += Math.max(1, Math.floor(days/10))) {
+  for (let i = 0; i < days; i += Math.max(1, Math.floor(days / 10))) {
     const xc = padL + i * xStep;
     const d = new Date(today.getTime() + i * 86400000);
-    axisX += `<text x="${xc}" y="${h - 10}" font-size="9" fill="#666" text-anchor="middle">${d.getDate()}/${d.getMonth()+1}</text>`;
-    axisX += `<line x1="${xc}" y1="${padT+innerH}" x2="${xc}" y2="${padT+innerH+3}" stroke="#aaa"/>`;
+    axisX += `<text x="${xc}" y="${h - 10}" font-size="9" fill="#666" text-anchor="middle">${d.getDate()}/${d.getMonth() + 1}</text>`;
+    axisX += `<line x1="${xc}" y1="${padT + innerH}" x2="${xc}" y2="${padT + innerH + 3}" stroke="#aaa"/>`;
   }
 
   // Asse Y
   let axisY = '';
   [0, 25, 50, 75, 100].forEach(pct => {
-    axisY += `<line x1="${padL-3}" y1="${yScale(pct)}" x2="${padL}" y2="${yScale(pct)}" stroke="#aaa"/>`;
-    axisY += `<text x="${padL-5}" y="${yScale(pct)+3}" font-size="9" fill="#666" text-anchor="end">${pct}%</text>`;
+    axisY += `<line x1="${padL - 3}" y1="${yScale(pct)}" x2="${padL}" y2="${yScale(pct)}" stroke="#aaa"/>`;
+    axisY += `<text x="${padL - 5}" y="${yScale(pct) + 3}" font-size="9" fill="#666" text-anchor="end">${pct}%</text>`;
   });
 
   document.getElementById('sim-chart').innerHTML = `
@@ -6530,7 +6728,7 @@ function simQuickRun(item, days, meteoArray, initialMoistPct) {
 
   // Limita profondità radicale all'altezza utile del vaso
   const potHeight = item.potShape === 'square' ? item.potHSq :
-                    item.potShape === 'truncated' ? item.potHTrunc : item.potH;
+    item.potShape === 'truncated' ? item.potHTrunc : item.potH;
   const maxRoot = (potHeight || 20) - 2;
   if (rootDepthCm > maxRoot) rootDepthCm = maxRoot;
 
@@ -6553,12 +6751,12 @@ function simQuickRun(item, days, meteoArray, initialMoistPct) {
   // Superficie
   let areaM2;
   if (item.potShape === 'square') {
-    areaM2 = ((item.potW||25)/100) * ((item.potD||25)/100);
+    areaM2 = ((item.potW || 25) / 100) * ((item.potD || 25) / 100);
   } else if (item.potShape === 'truncated') {
-    const rTop = ((item.potDiamTop||25)/2)/100;
+    const rTop = ((item.potDiamTop || 25) / 2) / 100;
     areaM2 = Math.PI * rTop * rTop;
   } else {
-    const r = ((item.potDiam||25)/2)/100;
+    const r = ((item.potDiam || 25) / 2) / 100;
     areaM2 = Math.PI * r * r;
   }
 
@@ -6573,7 +6771,7 @@ function simQuickRun(item, days, meteoArray, initialMoistPct) {
   const irrigations = [];
 
   for (let d = 0; d < days; d++) {
-    const m = meteoArray[d] || meteoArray[meteoArray.length-1];
+    const m = meteoArray[d] || meteoArray[meteoArray.length - 1];
     const tMean = (m.tmin + m.tmax) / 2;
     const et0Res = calcET0(tMean, m.hum, m.solarW, m.wind);
     const ET0 = et0Res.et0;
@@ -6590,7 +6788,7 @@ function simQuickRun(item, days, meteoArray, initialMoistPct) {
     if (depletion_L > RAW_L) {
       irrig_L = Math.max(0, 0.98 * thetaFC_L - theta_L);
       if (irrig_L > 0) {
-        irrigations.push({dayOffset: d, liters: irrig_L, ETc_L, moisturePctBefore: theta_L/thetaFC_L*100});
+        irrigations.push({ dayOffset: d, liters: irrig_L, ETc_L, moisturePctBefore: theta_L / thetaFC_L * 100 });
       }
     }
 
@@ -6639,18 +6837,18 @@ function simBuildMeteoForSchedule(days, isIndoor, indoorLive) {
 
   // Valori stagionali di default (Italia centrale)
   const seasonal = {
-    1: {tmin:3, tmax:10, hum:75, wind:8, solarW:150, rain:2},
-    2: {tmin:4, tmax:12, hum:70, wind:8, solarW:200, rain:2},
-    3: {tmin:7, tmax:16, hum:65, wind:10, solarW:300, rain:2},
-    4: {tmin:10, tmax:20, hum:60, wind:10, solarW:400, rain:2},
-    5: {tmin:14, tmax:24, hum:55, wind:8, solarW:500, rain:1},
-    6: {tmin:18, tmax:29, hum:50, wind:8, solarW:600, rain:1},
-    7: {tmin:21, tmax:32, hum:45, wind:8, solarW:700, rain:0.5},
-    8: {tmin:21, tmax:32, hum:50, wind:8, solarW:650, rain:1},
-    9: {tmin:17, tmax:27, hum:60, wind:8, solarW:450, rain:2},
-    10: {tmin:12, tmax:21, hum:65, wind:10, solarW:300, rain:3},
-    11: {tmin:7, tmax:15, hum:75, wind:10, solarW:180, rain:3},
-    12: {tmin:4, tmax:11, hum:75, wind:10, solarW:120, rain:3},
+    1: { tmin: 3, tmax: 10, hum: 75, wind: 8, solarW: 150, rain: 2 },
+    2: { tmin: 4, tmax: 12, hum: 70, wind: 8, solarW: 200, rain: 2 },
+    3: { tmin: 7, tmax: 16, hum: 65, wind: 10, solarW: 300, rain: 2 },
+    4: { tmin: 10, tmax: 20, hum: 60, wind: 10, solarW: 400, rain: 2 },
+    5: { tmin: 14, tmax: 24, hum: 55, wind: 8, solarW: 500, rain: 1 },
+    6: { tmin: 18, tmax: 29, hum: 50, wind: 8, solarW: 600, rain: 1 },
+    7: { tmin: 21, tmax: 32, hum: 45, wind: 8, solarW: 700, rain: 0.5 },
+    8: { tmin: 21, tmax: 32, hum: 50, wind: 8, solarW: 650, rain: 1 },
+    9: { tmin: 17, tmax: 27, hum: 60, wind: 8, solarW: 450, rain: 2 },
+    10: { tmin: 12, tmax: 21, hum: 65, wind: 10, solarW: 300, rain: 3 },
+    11: { tmin: 7, tmax: 15, hum: 75, wind: 10, solarW: 180, rain: 3 },
+    12: { tmin: 4, tmax: 11, hum: 75, wind: 10, solarW: 120, rain: 3 },
   };
   const defaults = seasonal[month];
 
@@ -6665,7 +6863,7 @@ function simBuildMeteoForSchedule(days, isIndoor, indoorLive) {
         rain: daily.precipitation_sum[d] || 0,
       });
     } else {
-      meteo.push({...defaults});
+      meteo.push({ ...defaults });
     }
   }
   return meteo;
@@ -6683,7 +6881,7 @@ async function buildSimWateringSchedule() {
       const res = await apiFetch('/api/forecast');
       const data = await res.json();
       if (!data.error && data.daily) _simForecast = data;
-    } catch {}
+    } catch { }
   }
 
   // Prefetch umidità live per vasi con sensore + dati WN31 indoor
@@ -6700,7 +6898,7 @@ async function buildSimWateringSchedule() {
       // Legge anche temperatura/umidità ambiente interno dal WN31 CH1
       indoorLive = meteoGetIndoorData(json, 1);
     }
-  } catch {}
+  } catch { }
 
   const horizonDays = 14;  // Pianifica 2 settimane avanti
   // Costruisci due meteo paralleli: uno outdoor (stagionale/forecast) e uno indoor
@@ -6708,7 +6906,7 @@ async function buildSimWateringSchedule() {
   const meteoOutdoor = simBuildMeteoForSchedule(horizonDays, false);
   const meteoIndoor = simBuildMeteoForSchedule(horizonDays, true, indoorLive);
   const today = new Date();
-  today.setHours(0,0,0,0);
+  today.setHours(0, 0, 0, 0);
 
   inv.forEach(item => {
     const p = getPlantById(item.plantTypeIdx);
@@ -6779,8 +6977,8 @@ function simRenderTimeline(r) {
   const today = new Date();
   const rows = r.results.map((x, i) => {
     const d = new Date(today.getTime() + i * 86400000);
-    const date = d.getDate() + '/' + (d.getMonth()+1);
-    const dow = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'][d.getDay()];
+    const date = d.getDate() + '/' + (d.getMonth() + 1);
+    const dow = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'][d.getDay()];
     const stressBadge = x.Ks < 1 ? `<span style="color:#c04040;font-weight:600">stress Ks=${x.Ks.toFixed(2)}</span>` : '';
     const rainBadge = x.rain_L > 0 ? `<span style="color:#3a6abf">💧 ${x.rain_L.toFixed(2)}L</span>` : '';
     const irrigBadge = x.irrig_L > 0 ? `<span style="color:#2a6a2a;font-weight:600">🔻 ${x.irrig_L.toFixed(2)}L</span>` : '';
