@@ -20,7 +20,32 @@
   --warn:#c17a3a; --warn-light:#fdf0e0; --reduce:#7a6a3a; --reduce-light:#faf5e0;
   --radius:12px; --nav-h:64px;
 }
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+/* ══════════════════════════════════════════════════════════════════
+   SFONDO STAGIONALE GLOBALE
+   L'immagine di sfondo è scelta a runtime in base alla stagione e al
+   dispositivo (mobile o desktop) tramite la CSS variable --bg-image,
+   impostata da uno script inline nell'<head>. La applichiamo sul body
+   anziché su una singola sezione, così funge da "tappeto" comune a
+   tutte le tab dell'app: passando da Schede a Mensile a Diario ecc.
+   l'immagine resta visibile dietro al contenuto, dando coerenza visiva
+   con la stagione corrente. background-attachment: fixed mantiene
+   l'immagine ferma durante lo scroll, dando l'effetto di un fondale
+   che non si muove mentre il contenuto scorre sopra di esso.
+   ══════════════════════════════════════════════════════════════════ */
+body {
+  font-family: 'DM Sans', sans-serif;
+  /* Il color resta come fallback: se le CSS variables non si caricano
+     o l'immagine non è disponibile, il body è comunque un avorio
+     coerente con il brand invece di un rettangolo bianco. */
+  background-color: var(--bg);
+  background-image: var(--bg-image);
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  color: var(--text);
+  min-height: 100vh;
+}
 /* PWA standalone: safe areas per notch/barra di stato */
 @media (display-mode: standalone) {
   body{padding-top:env(safe-area-inset-top)}
@@ -30,28 +55,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .section.active{display:block}
 
 /* ══════════════════════════════════════════════════════════════════
-   SFONDO SEZIONE SCHEDE
-   L'immagine di sfondo è scelta a runtime in base alla stagione e al
-   dispositivo (mobile o desktop) tramite la CSS variable --bg-image.
-   La variable viene impostata da uno script inline nell'<head> del
-   documento, prima ancora che il browser inizi a disegnare il body,
-   così la schermata appare con lo sfondo giusto fin dal primo frame.
-   Sopra l'immagine sovrappongo un overlay con gradient chiaro che
-   attenua i contrasti e migliora la leggibilità delle card.
+   OVERLAY SEZIONE SCHEDE
+   La sezione Schede merita un trattamento extra rispetto alle altre:
+   è la "home" dell'app e ha contenuto poco denso (prevalentemente
+   spazio aperto + qualche card), quindi l'immagine vi è dominante.
+   L'overlay ::before applica un gradient chiarissimo che ammorbidisce
+   i contrasti e fa emergere meglio le card al centro, senza coprire
+   la fotografia. Le altre sezioni (Mensile, Giorni, Diario, ecc.)
+   non hanno questo overlay perché il loro contenuto è già denso —
+   tabelle, calendari, form — e le card già coprono l'immagine nelle
+   zone dove serve concentrazione visiva.
    Il pseudo-elemento ::before è la tecnica standard per applicare
    un overlay che non interferisce con il contenuto: vive a livello
    z-index 0 dietro al contenuto reale (z-index 1).
    ══════════════════════════════════════════════════════════════════ */
 #sec-schede {
   position: relative;
-  background-image: var(--bg-image);
-  background-size: cover;
-  background-position: center top;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-  /* Fallback se la variable non è ancora settata (es. JS disabilitato):
-     il colore di base dell'app evita il rettangolo bianco brutto. */
-  background-color: var(--bg);
 }
 #sec-schede::before {
   content: '';

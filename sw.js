@@ -25,7 +25,7 @@
 // primo accesso, così la stagione corrente diventa disponibile offline
 // dopo il primo utilizzo, e le altre stagioni si aggiungeranno alla
 // cache man mano che arriveranno i loro mesi nel calendario.
-const CACHE_NAME = 'giardino-v7';
+const CACHE_NAME = 'giardino-v8';
 
 // Log diagnostico al livello globale dello script SW. Questo viene
 // eseguito una volta sola quando il browser parsa il file sw.js, e
