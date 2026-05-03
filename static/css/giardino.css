@@ -78,13 +78,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 /* ══════════════════════════════════════════════════════════════════
    SPLASH SCREEN
    La schermata di apertura "The Pot". L'immagine è scelta a runtime
-   in base al dispositivo (mobile o desktop) tramite la CSS variable
-   --splash-image, settata dallo stesso script inline che setta
-   --bg-image. La splash NON cambia in base alla stagione: l'immagine
-   è la stessa per tutto l'anno, perché l'identità visiva del marchio
-   è elemento costante. Cambia solo la variante mobile/desktop perché
-   il taglio dell'immagine deve adattarsi al rapporto d'aspetto dello
-   schermo.
+   in base a stagione e dispositivo (mobile o desktop) tramite la CSS
+   variable --splash-image, settata dallo stesso script inline che
+   setta --bg-image. La splash segue lo stesso calendario meteorologico
+   dello sfondo: primavera fiorita da marzo a maggio, estate verde
+   rigogliosa da giugno ad agosto, autunno color rame da settembre a
+   novembre, inverno con la brina da dicembre a febbraio. Cambia anche
+   la variante mobile/desktop perché il taglio dell'immagine deve
+   adattarsi al rapporto d'aspetto dello schermo.
    ══════════════════════════════════════════════════════════════════ */
 #splash-screen {
   position: fixed;

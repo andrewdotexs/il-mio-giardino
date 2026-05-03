@@ -60,12 +60,17 @@
   // path immagine, e li scrive nelle CSS variables sull'elemento <html>.
   // Le scrivo su :root (cioè documentElement) perché da lì cascano sia
   // sul body che su qualsiasi altro elemento che voglia usarle.
+  // Sia lo sfondo che la splash seguono lo stesso schema "stagione +
+  // dispositivo" — la splash è cambiata da statica a stagionale nella
+  // versione v6, dopo aver ricevuto le quattro varianti illustrate
+  // (primavera fiorita, estate verde rigogliosa, autunno con foglie
+  // rosse, inverno con la brina).
   window.updateSeasonalImages = function() {
     const season = currentSeason();
     const v = variant();
     const root = document.documentElement;
     root.style.setProperty('--bg-image',     `url('/static/images/${season}_bg_${v}.png')`);
-    root.style.setProperty('--splash-image', `url('/static/images/splash_screen_${v}.png')`);
+    root.style.setProperty('--splash-image', `url('/static/images/${season}_splash_screen_${v}.png')`);
   };
 
   // Prima chiamata immediata, prima del rendering del body.

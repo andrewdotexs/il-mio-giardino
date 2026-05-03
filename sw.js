@@ -9,10 +9,11 @@
 // (come la separazione di CSS e JS in file dedicati introdotta in v2,
 // la rimozione delle 26 piante native introdotta in v3, la pulizia
 // delle ultime strutture native + dropdown del diario popolati a runtime
-// introdotta in v4, o l'introduzione del sistema di immagini stagionali
-// introdotta in v5 — l'HTML cambia perché c'è uno script inline nuovo
-// nell'<head>, e il CSS cambia perché lo splash è stato spostato dal
-// markup a una regola di stile vera e propria).
+// introdotta in v4, l'introduzione del sistema di immagini stagionali
+// per lo sfondo della sezione Schede e per la splash screen v5, oppure
+// l'estensione delle splash a quattro varianti stagionali invece di una
+// sola statica, introdotta in v6 — oltre alla rimozione del vecchio
+// file the_pot_spring_bg.png ormai non più referenziato).
 //
 // Le immagini stagionali in /static/images/ NON sono in PRECACHE_URLS:
 // sarebbero 27 MB di download al primo install per asset di cui solo
@@ -21,7 +22,7 @@
 // primo accesso, così la stagione corrente diventa disponibile offline
 // dopo il primo utilizzo, e le altre stagioni si aggiungeranno alla
 // cache man mano che arriveranno i loro mesi nel calendario.
-const CACHE_NAME = 'giardino-v5';
+const CACHE_NAME = 'giardino-v6';
 
 // File da precaricare nella cache.
 // L'inserimento di /static/css/giardino.css, /static/js/splash.js e
