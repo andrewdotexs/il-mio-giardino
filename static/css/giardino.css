@@ -561,3 +561,215 @@ body {
 .fi-plant-row .fi-mini-field{display:flex;align-items:center;gap:3px;font-size:10px;color:var(--muted)}
 .fi-plant-row .fi-mini-field input,.fi-plant-row .fi-mini-field select{border:1px solid var(--border);border-radius:5px;padding:3px 5px;font-size:11px;width:55px;font-family:'DM Sans',sans-serif;background:#fff}
 .fi-plant-row .fi-mini-field select{width:70px}
+
+/* ════════════════════════════════════════════════════════════════════
+   CALENDARIO · LEGENDA COLLAPSABILE (refactor "livello ambizioso")
+   ════════════════════════════════════════════════════════════════════
+   Le quattro legende del calendario (fertilizzazioni, annaffiature,
+   BioBizz, trattamenti) sono adesso collassabili. Di default partono
+   chiuse e mostrano solo l'header con titolo, counter di stato (per le
+   due legende piante), pulsanti di azione massiva e chevron. Cliccando
+   sull'header si espandono mostrando i chip; un altro click le richiude.
+
+   Le regole sono organizzate in tre famiglie:
+
+   1) WRAPPER (.legend-collapsible): contenitore esterno con sfondo
+      bianco semi-opaco, backdrop blur per staccarsi dall'immagine
+      decorativa di sfondo, e padding interno costante.
+
+   2) HEADER (.legend-header e figli): la riga sempre visibile con
+      titolo, counter, pulsanti, chevron. Layout flex con titolo a
+      sinistra (centrato nel suo spazio) e azioni a destra.
+
+   3) BODY (.legend-body): contenitore animato che ospita la griglia
+      dei chip. Si espande/comprime tramite transizione di max-height,
+      che è il pattern canonico per animare un cambio di altezza in
+      CSS senza ricorrere a JavaScript per misurare l'altezza reale. */
+
+/* ── Wrapper esterno ────────────────────────────────────────────── */
+.legend-collapsible {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);     /* Safari/iOS */
+  border-radius: 12px;
+  margin: 4px auto 6px;
+  max-width: 920px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  /* Padding orizzontale costante; quello verticale dipende dallo stato
+     (collapsed vs aperto) ed è gestito dalla regola sotto in modo da
+     stringere il wrapper quando è chiuso, dando una compattezza
+     ulteriore all'occhio. */
+  padding: 0 12px;
+  /* Animazione del padding e di tutto il resto: l'apertura/chiusura
+     è morbida, non "scatta". 0.32s è una durata che si percepisce
+     come reattiva ma non frettolosa. */
+  transition: padding 0.32s ease;
+}
+.legend-collapsible:not(.collapsed) {
+  padding: 4px 12px 8px;
+}
+
+/* ── Header sempre visibile ─────────────────────────────────────── */
+.legend-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  padding: 8px 0;
+  /* Su hover il cursor a "pointer" è già attivo; non aggiungo altro
+     feedback visivo qui per non disturbare la calma del riposo. */
+}
+
+.legend-title {
+  flex: 1;
+  text-align: center;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  /* Su mobile il titolo può andare a capo per via dei pulsanti che
+     occupano spazio: uso line-height stretto così se va a capo
+     l'header non cresce eccessivamente. */
+  line-height: 1.3;
+}
+
+/* Counter "X visibili" / "X / N visibili" — accanto al titolo della
+   legenda piante. Quando non ci sono filtri attivi è grigio chiaro
+   come il titolo (passa quasi inosservato). Quando la classe
+   "filtered" è presente — applicata da gUpdateLegendCounter quando
+   visible !== total — il counter passa a un colore caldo per
+   segnalare che stai vedendo solo una parte delle piante. */
+.legend-counter {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 4px;
+  opacity: 0.7;
+  transition: color 0.2s, opacity 0.2s;
+}
+.legend-counter.filtered {
+  color: #b88030;     /* Arancione caldo: c'è un filtro attivo */
+  opacity: 1;
+  font-weight: 600;
+}
+
+/* Container delle azioni a destra dell'header: pulsanti + chevron */
+.legend-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Chevron animato che indica lo stato. Punta in giù (▼) quando la
+   legenda è chiusa, suggerendo "click per espandere". Quando aperta
+   ruota di 180° diventando una freccia verso l'alto (▲) che suggerisce
+   "click per chiudere". L'animazione 0.2s è leggermente più rapida di
+   quella del body per dare una sensazione di feedback immediato. */
+.legend-chevron {
+  font-size: 9px;
+  color: var(--muted);
+  margin-left: 2px;
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+.legend-collapsible:not(.collapsed) .legend-chevron {
+  transform: rotate(180deg);
+}
+
+/* ── Body collassabile ──────────────────────────────────────────── */
+.legend-body {
+  /* Limite di altezza concreto per evitare che le legende espanse
+     spingano troppo in basso il calendario quando il numero di piante
+     cresce. Con 26 piante in formato "emoji + nome" su desktop il
+     contenuto reale è circa 100-130px (4-5 righe), quindi sotto il
+     limite e niente scroll. Sopra le ~50 piante si attiva lo scroll
+     verticale interno per mantenere l'header del calendario visibile.
+
+     Nota tecnica sull'animazione: usare un valore di max-height
+     concreto (240px) invece dell'irraggiungibile 1000px ha un piccolo
+     effetto collaterale cosmetico. Quando il contenuto è più piccolo
+     del limite (caso quasi sempre vero con le 26 piante attuali),
+     l'animazione percepita di apertura termina prima di 0.32s perché
+     l'altezza renderizzata si stabilizza appena raggiunge l'altezza
+     naturale. È un comportamento "logico" (contenuti piccoli si aprono
+     rapidamente) e non disturba l'esperienza, ma è il motivo per cui
+     l'animazione di apertura sembra leggermente più rapida di quella
+     di chiusura. */
+  max-height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: max-height 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.legend-collapsible.collapsed .legend-body {
+  max-height: 0;
+}
+
+/* Scrollbar discreta per .legend-body, attiva solo quando serve.
+   Stile WebKit (Safari, Chrome, browser Chromium) e Firefox separato.
+   Su scroll attivo la scrollbar appare sottile e nei toni del grigio
+   della UI, evitando l'aspetto "pesante" della scrollbar di sistema. */
+.legend-body::-webkit-scrollbar {
+  width: 6px;
+}
+.legend-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.legend-body::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 3px;
+}
+.legend-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+.legend-body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.18) transparent;  /* Firefox */
+}
+
+/* ── Chip pianta in formato "emoji + nome" ───────────────────────── */
+/* I chip mostrano sia l'icona-emoji sia il nome della pianta. La
+   dimensione del font è 11px, leggermente più grande dei 10px originali
+   per migliorare la leggibilità ma non così tanto da gonfiare i chip.
+   Il tooltip nativo HTML resta come fallback per nomi troncati su
+   layout stretti (mobile). Le regole originali a riga 174 (.wa-legend-item)
+   e 408 (.g-legend-item) restano valide; queste sotto le sovrascrivono
+   solo per le proprietà che cambiano. */
+.g-legend-item,
+.wa-legend-item {
+  padding: 3px 9px;
+  font-size: 11px;
+  gap: 4px;
+  line-height: 1.2;
+}
+
+/* ── Pulsanti "Tutte" / "Nessuna" sopra le legende piante ────────── */
+/* Stile minimale coerente con il resto dell'UI: testo piccolo grigio
+   scuro, bordo grigio sottile, sfondo bianco semi-trasparente che si
+   armonizza con il backdrop blur del wrapper. Hover rinforza lo sfondo
+   per dare il segnale "qui puoi cliccare" senza essere invadente. */
+.legend-bulk-btn {
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.13s ease;
+  user-select: none;
+  white-space: nowrap;   /* Evita che "Nessuna" vada a capo su mobile */
+}
+.legend-bulk-btn:hover {
+  background: var(--surface);
+  border-color: var(--border2);
+  color: var(--text);
+}
+.legend-bulk-btn:active {
+  transform: scale(0.96);
+}

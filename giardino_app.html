@@ -215,25 +215,84 @@
     <button class="ctrl-btn" id="gf-tratt"   onclick="gSetFilter('tratt')"   style="flex:1;max-width:160px">🛡️ Trattamenti</button>
     <button class="ctrl-btn" id="gf-acqua"   onclick="gSetFilter('acqua')"   style="flex:1;max-width:160px">💧 Annaffiature</button>
   </div>
-  <!-- Legenda piante (fertilizzazioni) -->
-  <div id="g-legend-wrap">
-    <div style="font-size:10px;color:var(--muted);text-align:center;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">Fertilizzazioni · piante</div>
-    <div class="g-legend" id="g-legend"></div>
+  <!-- Legenda piante (fertilizzazioni) — versione collapsabile.
+       Il wrapper ha classi "legend-collapsible collapsed". La prima
+       definisce il comportamento collapsabile (header cliccabile, body
+       che si anima in altezza); la seconda è lo stato corrente. Toggle
+       collassato/espanso avviene aggiungendo/togliendo la classe
+       "collapsed" tramite la funzione toggleLegend().
+
+       Nell'header il counter "X / 26 visibili" è dinamico: quando filtri
+       piante singolarmente o usi "Nessuna", il numero a sinistra dello
+       slash diminuisce per mostrare quante piante sono attualmente
+       attive. Se non hai filtri attivi mostra solo "26 visibili" (senza
+       slash) per non sovraccaricare la lettura.
+
+       I pulsanti "Tutte" / "Nessuna" hanno event.stopPropagation così
+       il loro click esegue l'azione richiesta senza far scattare anche
+       il toggle del collapsable della legenda. Lo stesso vale per il
+       chevron, che invece cambia stato ed è quindi *all'interno* della
+       parte cliccabile dell'header. -->
+  <div id="g-legend-wrap" class="legend-collapsible collapsed">
+    <div class="legend-header" onclick="toggleLegend('g-legend-wrap')">
+      <div class="legend-title">Fertilizzazioni · piante <span class="legend-counter" id="g-legend-counter">26 visibili</span></div>
+      <div class="legend-actions">
+        <button onclick="event.stopPropagation();gShowAllPlants()" title="Mostra tutte le piante" class="legend-bulk-btn">Tutte</button>
+        <button onclick="event.stopPropagation();gHideAllPlants()" title="Nascondi tutte le piante" class="legend-bulk-btn">Nessuna</button>
+        <span class="legend-chevron">▼</span>
+      </div>
+    </div>
+    <div class="legend-body">
+      <div class="g-legend" id="g-legend"></div>
+    </div>
   </div>
-  <!-- Legenda prodotti BioBizz -->
-  <div id="bb-legend-wrap">
-    <div style="font-size:10px;color:var(--muted);text-align:center;margin:6px 0 4px;text-transform:uppercase;letter-spacing:.4px">BioBizz · prodotti</div>
-    <div class="bb-prod-legend" id="bb-prod-legend"></div>
+  <!-- Legenda prodotti BioBizz — collapsabile come le altre.
+       Niente counter né pulsanti "Tutte"/"Nessuna" perché i prodotti
+       sono pochi (sette) e raramente si filtrano in massa: chi vuole
+       isolare un prodotto specifico clicca direttamente il chip.
+       Il chevron è comunque presente per coerenza visiva con le altre
+       legende. -->
+  <div id="bb-legend-wrap" class="legend-collapsible collapsed">
+    <div class="legend-header" onclick="toggleLegend('bb-legend-wrap')">
+      <div class="legend-title">BioBizz · prodotti</div>
+      <div class="legend-actions">
+        <span class="legend-chevron">▼</span>
+      </div>
+    </div>
+    <div class="legend-body">
+      <div class="bb-prod-legend" id="bb-prod-legend"></div>
+    </div>
   </div>
-  <!-- Legenda trattamenti preventivi -->
-  <div id="tr-legend-wrap">
-    <div style="font-size:10px;color:var(--muted);text-align:center;margin:6px 0 4px;text-transform:uppercase;letter-spacing:.4px">Trattamenti · prodotti</div>
-    <div class="tr-prod-legend" id="tr-prod-legend"></div>
+  <!-- Legenda trattamenti — collapsabile, stessa logica di BioBizz. -->
+  <div id="tr-legend-wrap" class="legend-collapsible collapsed">
+    <div class="legend-header" onclick="toggleLegend('tr-legend-wrap')">
+      <div class="legend-title">Trattamenti · prodotti</div>
+      <div class="legend-actions">
+        <span class="legend-chevron">▼</span>
+      </div>
+    </div>
+    <div class="legend-body">
+      <div class="tr-prod-legend" id="tr-prod-legend"></div>
+    </div>
   </div>
-  <!-- Legenda annaffiature -->
-  <div id="wa-legend-wrap">
-    <div style="font-size:10px;color:var(--muted);text-align:center;margin:6px 0 4px;text-transform:uppercase;letter-spacing:.4px">Annaffiature · piante</div>
-    <div class="wa-legend" id="wa-legend"></div>
+  <!-- Legenda annaffiature — versione collapsabile, parallela a quella
+       fertilizzazioni. Le funzioni waShowAllPlants / waHideAllPlants
+       agiscono sul set waHiddenPlants e sui chip della legenda
+       annaffiature, mantenendo i due gruppi di filtri (fertilizzazioni
+       e annaffiature) indipendenti tra loro come prima. Anche il counter
+       è dinamico e parallelo a quello delle fertilizzazioni. -->
+  <div id="wa-legend-wrap" class="legend-collapsible collapsed">
+    <div class="legend-header" onclick="toggleLegend('wa-legend-wrap')">
+      <div class="legend-title">Annaffiature · piante <span class="legend-counter" id="wa-legend-counter">26 visibili</span></div>
+      <div class="legend-actions">
+        <button onclick="event.stopPropagation();waShowAllPlants()" title="Mostra tutte le piante" class="legend-bulk-btn">Tutte</button>
+        <button onclick="event.stopPropagation();waHideAllPlants()" title="Nascondi tutte le piante" class="legend-bulk-btn">Nessuna</button>
+        <span class="legend-chevron">▼</span>
+      </div>
+    </div>
+    <div class="legend-body">
+      <div class="wa-legend" id="wa-legend"></div>
+    </div>
   </div>
   <div class="ctrl-row">
     <button class="ctrl-btn" onclick="gChangeMonth(-1)">← Prec.</button>

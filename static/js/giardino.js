@@ -579,15 +579,38 @@ function gInitGiorni() {
       .map(([k])=>{const[y,m,d]=k.split('-');return new Date(+y,+m-1,+d);})
       .sort((a,b)=>a-b);
   });
-  // Plant legend
+  // Plant legend (fertilizzazioni)
+  // Svuoto il contenitore prima del loop di append. Senza questo, una
+  // seconda chiamata a gInitGiorni — che oggi può accadere quando
+  // loadCustomPlants invalida sectionInited dopo aver ricaricato i dati
+  // dal backend — accoderebbe i chip nuovi a quelli vecchi senza
+  // sostituirli, raddoppiando visivamente la legenda. Lo svuotamento
+  // rende la funzione idempotente, che è la proprietà che ci aspettiamo.
   const legend=document.getElementById('g-legend');
+  legend.innerHTML='';
   gPlants.forEach(p=>{
-    const item=document.createElement('div');item.className='g-legend-item';item.id='gl-'+p.id;
+    const item=document.createElement('div');
+    item.className='g-legend-item';
+    item.id='gl-'+p.id;
+    // Tooltip nativo HTML: il browser mostra il nome al hover (desktop)
+    // e al long-press (mobile). Lo manteniamo anche se il nome è già
+    // visibile come testo: serve da fallback per il caso in cui il
+    // chip venga troncato per via di nomi molto lunghi (max-width nel
+    // CSS) o di layout stretti su mobile.
+    item.title=p.name;
     item.innerHTML=`<div class="g-legend-dot" style="background:${p.color}"></div>${p.icon} ${p.name}`;
-    item.onclick=()=>gTogglePlant(p.id);legend.appendChild(item);
+    item.onclick=()=>gTogglePlant(p.id);
+    legend.appendChild(item);
   });
   // BioBizz product legend
+  // Sui prodotti BioBizz manteniamo la dicitura completa "Bio·Grow",
+  // "CalMag" eccetera invece di solo emoji. Sono pochi (sette) e le
+  // sigle dei nomi commerciali non sono universalmente note: il rischio
+  // di non saper distinguere a colpo d'occhio è alto se diventano solo
+  // pittogrammi astratti. Ridurre questi chip darebbe poca compattezza
+  // a fronte di una perdita di chiarezza.
   const pl=document.getElementById('bb-prod-legend');
+  pl.innerHTML='';
   Object.entries(BB_PRODUCTS).forEach(([k,p])=>{
     const c=document.createElement('div');c.className='bb-prod-chip';c.id='bpc-'+k;
     c.style.background=p.color;c.textContent=p.label;
@@ -616,8 +639,11 @@ function gInitGiorni() {
       .map(([k])=>{const[y,m,d]=k.split('-');return new Date(+y,+m-1,+d);})
       .sort((a,b)=>a-b);
   });
-  // Treatment product legend
+  // Treatment product legend (stessa filosofia dei BioBizz: pochi
+  // prodotti specifici con etichette non auto-esplicative, manteniamo
+  // l'etichetta completa).
   const tl=document.getElementById('tr-prod-legend');
+  tl.innerHTML='';
   Object.entries(TR_PRODUCTS).forEach(([k,p])=>{
     const c=document.createElement('div');c.className='tr-prod-chip';c.id='tpc-'+k;
     c.style.background=p.color;c.innerHTML='<div class="tr-diamond"></div>'+p.label;
@@ -653,13 +679,40 @@ function gInitGiorni() {
     buildSimWateringSchedule();
   }
   // Watering plant legend
+  // Stessa logica della legenda fertilizzazioni: pulisco prima del loop
+  // per essere idempotente, e mostro icona + nome con tooltip come
+  // fallback. Il dot ha forma a goccia (vedi CSS .wa-legend-dot)
+  // per richiamare il tema acqua, distinto dal cerchietto delle
+  // fertilizzazioni.
   const wl=document.getElementById('wa-legend');
+  wl.innerHTML='';
   waPlants.forEach(p=>{
-    const item=document.createElement('div');item.className='wa-legend-item';item.id='wl-'+p.id;
+    const item=document.createElement('div');
+    item.className='wa-legend-item';
+    item.id='wl-'+p.id;
+    item.title=p.name;
     item.innerHTML='<div class="wa-legend-dot"></div>'+p.icon+' '+p.name;
-    item.onclick=()=>{if(waHiddenPlants.has(p.id))waHiddenPlants.delete(p.id);else waHiddenPlants.add(p.id);item.classList.toggle('hidden-plant');gRenderCalendar();};
+    item.onclick=()=>{
+      if(waHiddenPlants.has(p.id))waHiddenPlants.delete(p.id);
+      else waHiddenPlants.add(p.id);
+      item.classList.toggle('hidden-plant');
+      // Aggiorno il counter dell'header e ridisegno il calendario.
+      // Il counter va aggiornato qui perché il toggle dello stato è
+      // inline (non passa per una funzione separata come gTogglePlant
+      // delle fertilizzazioni), e senza questa chiamata il numero "X
+      // visibili" nell'header resterebbe disallineato dallo stato reale.
+      waUpdateLegendCounter();
+      gRenderCalendar();
+    };
     wl.appendChild(item);
   });
+  // Inizializzo i due counter delle legende piante. Devono essere
+  // chiamati DOPO che i chip sono stati popolati, perché leggono
+  // gPlants.length e waPlants.length per calcolare il totale. Al primo
+  // boot della pagina nessuna pianta è in gHiddenPlants, quindi i
+  // counter mostreranno semplicemente "26 visibili" (o quante ne hai).
+  gUpdateLegendCounter();
+  waUpdateLegendCounter();
   // Build curative events from inventory diseases
   buildCurativeEvents();
   // Set initial filter button style
@@ -669,6 +722,108 @@ function gInitGiorni() {
 function gTogglePlant(id){
   if(gHiddenPlants.has(id))gHiddenPlants.delete(id);else gHiddenPlants.add(id);
   document.getElementById('gl-'+id).classList.toggle('hidden-plant');
+  gUpdateLegendCounter();
+  gRenderCalendar();
+}
+
+// ── Toggle collapsabile della legenda ────────────────────────────────
+// Tutte le legende del calendario (fertilizzazioni, annaffiature,
+// BioBizz, trattamenti) sono collapsabili: hanno un wrapper con classe
+// "legend-collapsible collapsed" all'avvio, e un click sull'header
+// rimuove la classe "collapsed" facendole espandere. Click successivi
+// la rimettono. La funzione è generica e accetta l'id del wrapper così
+// può servire tutti e quattro i blocchi senza duplicare codice.
+//
+// Nota tecnica sull'animazione: l'altezza del body viene gestita da CSS
+// usando max-height con valore alto (vedi giardino.css). Non serve qui
+// in JavaScript leggere o impostare l'altezza esplicita: l'aggiunta o
+// rimozione della classe basta a far partire la transizione.
+function toggleLegend(wrapId) {
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  wrap.classList.toggle('collapsed');
+}
+
+// ── Aggiornamento del counter "X visibili" / "X / Y visibili" ────────
+// Il counter nell'header della legenda mostra quante piante sono
+// attualmente attive (cioè non in gHiddenPlants). Se sono tutte attive,
+// mostra solo "N visibili" (formato pulito); se ce ne sono di nascoste
+// mostra "X / N visibili" per evidenziare lo stato di filtraggio
+// parziale. Questo permette all'utente di sapere se ha filtri attivi
+// anche con la legenda chiusa, senza doverla aprire per controllare.
+function gUpdateLegendCounter() {
+  const el = document.getElementById('g-legend-counter');
+  if (!el) return;
+  const total = gPlants.length;
+  const visible = total - gHiddenPlants.size;
+  el.textContent = (visible === total) ? `${total} visibili` : `${visible} / ${total} visibili`;
+  // Aggiungo una classe "filtered" al counter quando c'è un filtro
+  // attivo, così posso colorarlo diversamente in CSS (utile come
+  // segnale visivo quando la legenda è chiusa).
+  el.classList.toggle('filtered', visible !== total);
+}
+
+function waUpdateLegendCounter() {
+  const el = document.getElementById('wa-legend-counter');
+  if (!el) return;
+  const total = waPlants.length;
+  const visible = total - waHiddenPlants.size;
+  el.textContent = (visible === total) ? `${total} visibili` : `${visible} / ${total} visibili`;
+  el.classList.toggle('filtered', visible !== total);
+}
+
+// ── Selezione e deselezione in massa per la legenda fertilizzazioni ──
+// gShowAllPlants svuota il set delle nascoste e ripulisce visivamente
+// tutti i chip rimuovendo la classe 'hidden-plant'. gHideAllPlants fa
+// l'operazione speculare: popola il set con tutti gli id e applica la
+// classe a tutti i chip. In entrambi i casi si chiama gRenderCalendar
+// una sola volta alla fine, invece di una volta per ogni pianta come
+// farebbe un loop di gTogglePlant: ridisegnare ventisei volte il
+// calendario sarebbe rallentamento gratuito.
+function gShowAllPlants() {
+  gHiddenPlants.clear();
+  document.querySelectorAll('#g-legend .g-legend-item').forEach(el => {
+    el.classList.remove('hidden-plant');
+  });
+  gUpdateLegendCounter();
+  gRenderCalendar();
+}
+
+function gHideAllPlants() {
+  // Aggiungo al set ogni id presente in gPlants, non solo quelli che
+  // hanno chip visibili nel DOM. La struttura logica è gPlants come
+  // sorgente di verità, mentre il DOM è la sua proiezione visiva: se
+  // c'è una desincronizzazione (per qualche bug futuro), affidarsi alla
+  // struttura logica garantisce comunque il comportamento atteso.
+  gPlants.forEach(p => gHiddenPlants.add(p.id));
+  document.querySelectorAll('#g-legend .g-legend-item').forEach(el => {
+    el.classList.add('hidden-plant');
+  });
+  gUpdateLegendCounter();
+  gRenderCalendar();
+}
+
+// ── Selezione e deselezione in massa per la legenda annaffiature ──
+// Logica parallela alle due funzioni sopra ma per il set waHiddenPlants
+// e i chip della legenda annaffiature. Tengo i due gruppi di funzioni
+// separati perché i due filtri sono indipendenti: l'utente può nascondere
+// alcune piante dalla vista fertilizzazioni e averle ancora visibili
+// nella vista annaffiature, e viceversa.
+function waShowAllPlants() {
+  waHiddenPlants.clear();
+  document.querySelectorAll('#wa-legend .wa-legend-item').forEach(el => {
+    el.classList.remove('hidden-plant');
+  });
+  waUpdateLegendCounter();
+  gRenderCalendar();
+}
+
+function waHideAllPlants() {
+  waPlants.forEach(p => waHiddenPlants.add(p.id));
+  document.querySelectorAll('#wa-legend .wa-legend-item').forEach(el => {
+    el.classList.add('hidden-plant');
+  });
+  waUpdateLegendCounter();
   gRenderCalendar();
 }
 
