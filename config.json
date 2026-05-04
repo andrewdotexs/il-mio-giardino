@@ -1,36 +1,70 @@
 {
-    "ecowitt": {
-        "application_key": "BA35F68249F53F5AE8E8F518F8616AEC",
-        "api_key": "cce31b53-3be0-4495-bb7e-8bc7b02b4e09",
-        "mac": "88:13:BF:CB:5A:AF",
-        "units": {
-            "temperature": "celsius",
-            "pressure": "hpa",
-            "wind": "kmh",
-            "rain": "mm"
-        }
+  "ecowitt": {
+    "application_key": "BA35F68249F53F5AE8E8F518F8616AEC",
+    "api_key": "cce31b53-3be0-4495-bb7e-8bc7b02b4e09",
+    "mac": "88:13:BF:CB:5A:AF"
+  },
+  "posizione": {
+    "latitudine": 45.6345,
+    "longitudine": 9.0324,
+    "nome": "Saronno"
+  },
+  "sms": {
+    "metodo": "notifica",
+    "telefono": "",
+    "riepilogo_mattutino": true,
+    "allerta_gelo": true,
+    "allerta_terreno_secco": true,
+    "allerta_pioggia": true
+  },
+  "soglie_umidita": {
+    "succulente": {
+      "secco": 10,
+      "ok_min": 10,
+      "ok_max": 35,
+      "umido": 40
     },
-    "posizione": {
-        "latitudine": 45.6288,
-        "longitudine": 9.0357,
-        "nome": "Saronno"
+    "tropicali": {
+      "secco": 25,
+      "ok_min": 25,
+      "ok_max": 55,
+      "umido": 65
     },
-    "sms": {
-        "metodo": "notifica",
-        "telefono": "",
-        "riepilogo_mattutino": true,
-        "allerta_gelo": true,
-        "allerta_terreno_secco": true,
-        "allerta_pioggia": true
+    "mediterranee": {
+      "secco": 15,
+      "ok_min": 15,
+      "ok_max": 40,
+      "umido": 50
     },
-    "soglie_umidita": {
-        "succulente":    {"secco": 10, "ok_min": 10, "ok_max": 35, "umido": 40},
-        "tropicali":     {"secco": 25, "ok_min": 25, "ok_max": 55, "umido": 65},
-        "mediterranee":  {"secco": 15, "ok_min": 15, "ok_max": 40, "umido": 50},
-        "agrumi":        {"secco": 20, "ok_min": 20, "ok_max": 50, "umido": 60},
-        "bonsai":        {"secco": 20, "ok_min": 20, "ok_max": 50, "umido": 60},
-        "orchidee":      {"secco": 15, "ok_min": 15, "ok_max": 40, "umido": 50},
-        "aromatiche":    {"secco": 8,  "ok_min": 8,  "ok_max": 30, "umido": 35},
-        "universale":    {"secco": 20, "ok_min": 20, "ok_max": 50, "umido": 60}
+    "agrumi": {
+      "secco": 20,
+      "ok_min": 20,
+      "ok_max": 50,
+      "umido": 60
+    },
+    "bonsai": {
+      "secco": 20,
+      "ok_min": 20,
+      "ok_max": 50,
+      "umido": 60
+    },
+    "orchidee": {
+      "secco": 15,
+      "ok_min": 15,
+      "ok_max": 40,
+      "umido": 50
+    },
+    "aromatiche": {
+      "secco": 8,
+      "ok_min": 8,
+      "ok_max": 30,
+      "umido": 35
+    },
+    "universale": {
+      "secco": 20,
+      "ok_min": 20,
+      "ok_max": 50,
+      "umido": 60
     }
+  }
 }

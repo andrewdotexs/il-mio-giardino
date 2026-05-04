@@ -1495,6 +1495,19 @@ const wSubstrates = [
   { id:'kyodama',     name:'Kyodama',                whc: 0.40, color:'#b0905a' },
   { id:'torba',       name:'Torba',                  whc: 0.65, color:'#5a3818' },
   { id:'vermiculite', name:'Vermiculite',            whc: 0.55, color:'#c0a868' },
+  // Il carbone vegetale (biochar) ha porosità elevata che gli conferisce
+  // sia capacità di ritenzione idrica che capacità di scambio cationico:
+  // trattiene acqua e nutrienti rilasciandoli gradualmente. Particolarmente
+  // utile in piccola percentuale (5-15%) nei mix per orchidee e bonsai
+  // come "regolatore" della microflora. Il valore whc=0.50 è una stima
+  // conservativa per granulometria media (5-10 mm).
+  { id:'carbone_veg', name:'Carbone vegetale',       whc: 0.50, color:'#2a1f1a' },
+  // Il carbone di bambù ha porosità ancora maggiore del carbone vegetale
+  // standard, e una stabilità chimica nel tempo che lo rende quasi inerte.
+  // Whc=0.60 riflette la ritenzione effettiva nel substrato (in laboratorio
+  // si misurano valori fino a 0.70 ma parte della porosità è occupata da
+  // aria nel mix con altri componenti).
+  { id:'carbone_bam', name:'Carbone di bambù',       whc: 0.60, color:'#1f1a18' },
 ];
 
 // WHC media per preset substrato (globale: usata sia dal calcolatore acqua che dal simulatore)
@@ -2669,18 +2682,37 @@ function invSubLoadMix(mix) {
 }
 
 async function invInit() {
-  // Ping API
+  console.time('[perf] invInit totale');
+
+  // Step 1: ping rapido per stabilire se l'API è raggiungibile.
+  // Timeout 1.2s, quindi al peggio aggiunge poco più di un secondo.
+  console.time('[perf] invPingAPI');
   await invPingAPI();
-  await invLoadFromAPI();
-  // Carico le piante custom prima di popolare la dropdown.
-  // Senza questa chiamata, se l'utente apre la sezione Vasi prima che
-  // loadCustomPlants() iniziale sia completato, la dropdown mostrerebbe
-  // solo le 26 native e i vasi che riferiscono custom non verrebbero
-  // renderizzati (getPlantById restituisce null).
-  // La funzione è idempotente, quindi chiamarla più volte non duplica nulla.
-  if (typeof loadCustomPlants === 'function') {
-    await loadCustomPlants();
-  }
+  console.timeEnd('[perf] invPingAPI');
+
+  // Step 2: parallelizzo le due chiamate indipendenti.
+  // - invLoadFromAPI: scarica l'inventario dei vasi
+  // - loadCustomPlants: scarica le piante custom dal database
+  // Sono operazioni indipendenti (nessuna usa il risultato dell'altra),
+  // quindi farle in serie sarebbe spreco. Promise.all le lancia in
+  // parallelo e aspetta che entrambe abbiano finito; il tempo totale è
+  // il massimo dei due, non la somma.
+  //
+  // Se loadCustomPlants è già in volo (perché la chiamata di avvio
+  // dell'app è ancora in corso), il sistema di memoization in
+  // loadCustomPlants aggancia questa await alla stessa Promise invece
+  // di lanciarne una nuova. Quindi al peggio la chiamata si fonde con
+  // quella esistente, al meglio ne risparmia una completamente.
+  console.time('[perf] inv+plants in parallelo');
+  await Promise.all([
+    invLoadFromAPI(),
+    typeof loadCustomPlants === 'function' ? loadCustomPlants() : Promise.resolve(),
+  ]);
+  console.timeEnd('[perf] inv+plants in parallelo');
+
+  // Step 3: rendering UI. Questo è solo manipolazione del DOM e dovrebbe
+  // essere quasi istantaneo (decine di millisecondi al massimo).
+  console.time('[perf] inv render UI');
   // Populate plant type dropdown.
   // IMPORTANTE: il value dell'option è p.id (l'identificativo reale della
   // pianta), NON l'indice di posizione nell'array. Per le 26 native questi
@@ -2694,6 +2726,9 @@ async function invInit() {
   // Populate fertilizer grid
   invRenderFertGrid();
   invRender();
+  console.timeEnd('[perf] inv render UI');
+
+  console.timeEnd('[perf] invInit totale');
 }
 
 function invRenderFertGrid(filter='') {
@@ -3127,15 +3162,25 @@ function meteoGetVal(data, section, key) {
 }
 
 // ── Lettura dati WH52 (moisture + temperatura + EC) ──────────────────
-// Le API Ecowitt per WH52 restituiscono:
-// - soilmoisture<ch>   (come WH51) → %
-// - tf_ch<ch> oppure soil_temperature<ch> → °C
-// - soilad<ch> oppure ec_ch<ch> → µS/cm
+// Le API Ecowitt per WH52 restituiscono questi campi nel payload realtime,
+// tutti dentro la sezione "soil_ch<N>" o "soil" (dipende dalla versione
+// dell'API):
+//   - soilmoisture<ch>      (anche WH51 ce l'ha)  → %
+//   - soiltemp<ch> / tf_ch<ch> (solo WH52)         → °C
+//   - soilad<ch> / soilec<ch> / ec_ch<ch> (WH52)   → µS/cm
+//
+// IMPORTANTE: la temperatura del WH52 è SEMPRE nella sezione "soil" del
+// payload, non nelle sezioni "temp_and_humidity_ch<N>" o "tf_ch<N>" che
+// invece appartengono a sensori ambientali completamente diversi (WH31,
+// WH32 e simili). Confondere queste sezioni produce un bug fastidioso:
+// se hai un WH51 nel canale 1 del suolo E un WH31 nel canale 1
+// dell'ambiente, il sistema vede la temperatura ambiente e classifica
+// erroneamente il WH51 come WH52. Questa funzione legge solo dalla
+// sezione "soil" per evitare quel falso positivo.
 function meteoGetSoilData(data, ch) {
   const result = {moisture: null, temp: null, ec: null};
   if (!data || !data.data) return result;
 
-  // Moisture: cerca in section 'soil'
   const getV = (sec, key) => {
     try {
       const s = data.data[sec]; if (!s) return null;
@@ -3145,12 +3190,15 @@ function meteoGetSoilData(data, ch) {
     } catch { return null; }
   };
 
+  // Moisture: nei payload Ecowitt il moisture vive sempre nella sezione
+  // soil (vecchio formato) o soil_ch<N> (nuovo formato). Provo entrambi.
   result.moisture = getV('soil', 'soilmoisture'+ch) || getV('soil_ch'+ch, 'soilmoisture') || getV('soil', 'soil_ch'+ch);
 
-  // Temp: il WH52 usa tf_ch<N> nella sezione temp_and_humidity_ch<N> oppure soil section
-  result.temp = getV('soil', 'soiltemp'+ch) || getV('soil', 'tf_ch'+ch) || getV('tf_ch'+ch, 'temperature') || getV('temp_and_humidity_ch'+ch, 'temperature');
+  // Temp: solo dalla sezione soil o soil_ch<N>. NON dalle sezioni
+  // temp_and_humidity_ch<N> o tf_ch<N>, che sono sensori diversi.
+  result.temp = getV('soil', 'soiltemp'+ch) || getV('soil', 'tf_ch'+ch) || getV('soil_ch'+ch, 'soiltemp') || getV('soil_ch'+ch, 'temperature');
 
-  // EC: soilad<N> o ec_ch<N>
+  // EC: stessa filosofia, solo sezione soil.
   result.ec = getV('soil', 'soilad'+ch) || getV('soil', 'ec_ch'+ch) || getV('soil', 'soilec'+ch) || getV('soil_ch'+ch, 'ec');
 
   return result;
@@ -3308,10 +3356,31 @@ function meteoRenderSoil() {
     cards.push({it, p, ch, data, status, statusText, barColor, thresh, ecThresh, isWH52, cat});
   });
 
-  // Aggiungi anche i canali attivi senza associazione
+  // Aggiungi anche i canali attivi senza associazione.
+  // Per la decisione "è un WH52 o un WH51?": l'unico modo davvero
+  // affidabile è guardare l'inventario, dove l'utente ha dichiarato
+  // esplicitamente il tipo. Senza inventario possiamo solo fare un
+  // best-effort: se ci sono dati di EC, sono inequivocabilmente WH52
+  // (il WH51 non misura EC nemmeno per sbaglio). Se invece c'è solo
+  // temperatura senza EC, non basta come prova: la temperatura
+  // potrebbe trapelare da altri sensori condivideenti il numero di
+  // canale, o da firmware del gateway che riporta valori di default.
+  // In dubbio, etichettiamo come WH51 (caso comune, non rischia
+  // falsi positivi) e mostriamo solo il dato di moisture.
   Object.entries(soilByCh).forEach(([ch, data]) => {
     if (!cards.find(c => c.ch === parseInt(ch))) {
-      cards.push({it:null, p:null, ch:parseInt(ch), data, status:'ok', statusText:'Non associato a un vaso', barColor:'#aaa', thresh:SOGLIE_DEFAULT.universale, isWH52: data.temp !== null || data.ec !== null});
+      const detectedAsWH52 = data.ec !== null;  // EC = prova certa di WH52
+      cards.push({
+        it: null, p: null, ch: parseInt(ch),
+        // Se non è WH52, scarto temp e EC dalla card per non mostrare
+        // valori che non appartengono al sensore reale. Questo è il
+        // motivo per cui non basta il flag isWH52: dobbiamo anche
+        // pulire i dati che il render mostrerebbe.
+        data: detectedAsWH52 ? data : {moisture: data.moisture, temp: null, ec: null},
+        status: 'ok', statusText: 'Non associato a un vaso',
+        barColor: '#aaa', thresh: SOGLIE_DEFAULT.universale,
+        isWH52: detectedAsWH52
+      });
     }
   });
 
@@ -4469,8 +4538,30 @@ async function paramsSaveConfig() {
       : '✅ Configurazione salvata';
     status.style.color = '#5a8050';
   } catch (e) {
-    status.textContent = '❌ ' + e.message;
+    // Distinguo i tipi di errore più comuni per dare un messaggio
+    // utile invece dell'errore criptico del browser. Il caso più
+    // probabile e fastidioso è AbortError (la fetch è andata in
+    // timeout dopo gli 8 secondi di apiFetch); il messaggio nativo
+    // sarebbe "signal is aborted without reason" che non aiuta a
+    // diagnosticare. Altre possibilità: TypeError se il server è
+    // irraggiungibile (rete giù, server fermo, mismatch HTTPS), e
+    // gli Error custom lanciati dal blocco sopra.
+    let msg;
+    if (e.name === 'AbortError') {
+      msg = 'Timeout dopo 8 secondi: il server non ha risposto. Verifica che sia attivo e riprova. Apri la console (F12) per dettagli.';
+    } else if (e instanceof TypeError) {
+      // TypeError di fetch significa che la richiesta non è nemmeno
+      // partita: server irraggiungibile, problema di rete, mismatch
+      // di protocollo HTTP/HTTPS, blocco CORS, eccetera.
+      msg = 'Impossibile contattare il server. Controlla che sia in esecuzione e che l\'URL sia corretto.';
+    } else {
+      msg = e.message || 'Errore sconosciuto';
+    }
+    status.textContent = '❌ ' + msg;
     status.style.color = '#c04030';
+    // Logga in console per diagnostica avanzata: l'errore originale
+    // è più ricco di quello che mostriamo all'utente.
+    console.error('[paramsSaveConfig] errore:', e);
   }
 
   // Il messaggio svanisce dopo 5 secondi per non restare a schermo.
@@ -5191,7 +5282,39 @@ function buildCustomFIPlant(row) {
 // Questo è importante perché viene chiamata sia all'avvio sia dopo ogni
 // add/edit/delete, e dobbiamo sempre avere lo stato in memoria coerente
 // con quello del database.
+// Promise "in volo" della loadCustomPlants. Se due chiamanti invocano
+// la funzione simultaneamente prima che la prima abbia completato (caso
+// tipico: showSection iniziale + invInit dell'utente che apre subito
+// "I miei vasi"), il secondo riceve la STESSA Promise del primo invece
+// di lanciare un'altra fetch in parallelo. Questo dimezza il traffico di
+// rete in scenari di apertura rapida ed è il pattern canonico per
+// "deduplicare" le chiamate asincrone.
+let _loadCustomPlantsInflight = null;
+
 async function loadCustomPlants() {
+  // Se c'è già una chiamata in volo, aspetta quella invece di farne
+  // una nuova. La variabile viene resettata a null nel finally, così
+  // chiamate future (per esempio dopo un form di aggiunta pianta)
+  // possono ripartire normalmente.
+  if (_loadCustomPlantsInflight) {
+    return _loadCustomPlantsInflight;
+  }
+  _loadCustomPlantsInflight = (async () => {
+    console.time('[perf] loadCustomPlants');
+    try {
+      return await _loadCustomPlantsImpl();
+    } finally {
+      console.timeEnd('[perf] loadCustomPlants');
+      _loadCustomPlantsInflight = null;
+    }
+  })();
+  return _loadCustomPlantsInflight;
+}
+
+// Implementazione interna di loadCustomPlants. Estratta in una funzione
+// separata così loadCustomPlants() può occuparsi solo della deduplicazione
+// delle chiamate concorrenti, senza appesantire la logica vera.
+async function _loadCustomPlantsImpl() {
   let items = [];
   try {
     const res = await apiFetch('/api/plants');

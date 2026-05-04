@@ -11,6 +11,10 @@ import sqlite3
 import json
 import os
 from http.server import HTTPServer, BaseHTTPRequestHandler
+import ssl  # Solo per HTTPS opzionale (vedi la sezione "Avvio" in fondo
+            # al file). Lo importiamo sempre anche se HTTPS non è attivo:
+            # ssl è un modulo della stdlib quindi non c'è costo di
+            # installazione, e un import non usato non rallenta il server.
 from urllib.parse import urlparse, parse_qs, urlencode
 from urllib.request import urlopen, Request
 from urllib.error import URLError
@@ -1603,14 +1607,70 @@ class Handler(BaseHTTPRequestHandler):
 # ── Avvio ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     init_db()
+
+    # Rilevamento automatico HTTPS. Se nella stessa cartella di server.py
+    # esistono i due file cert.pem (certificato) e key.pem (chiave privata),
+    # il server parte in modalità HTTPS sulla stessa porta. Se mancano,
+    # parte in HTTP come ha sempre fatto. Questo è un design opt-in che
+    # non rompe nessuno: chi non genera i certificati continua a usare
+    # HTTP esattamente come prima, chi vuole HTTPS deve solo creare i
+    # due file (vedi le istruzioni in cima a questo blocco) e riavviare.
+    #
+    # Il motivo principale per attivare HTTPS è far funzionare le API
+    # privilegiate del browser (Geolocation, Notifiche, Service Worker,
+    # eccetera) per gli utenti che accedono da dispositivi diversi via
+    # IP della LAN. Su localhost queste API funzionano anche su HTTP per
+    # un'eccezione esplicita dei browser, ma su qualsiasi altro indirizzo
+    # richiedono HTTPS o vengono bloccate silenziosamente.
+    #
+    # Il certificato deve essere generato con il SAN (Subject Alternative
+    # Name) che includa l'IP da cui ti collegherai, altrimenti i browser
+    # moderni rifiutano la connessione anche se il file è valido. Comando
+    # per generarlo (eseguire una volta nella cartella di server.py):
+    #
+    #   openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+    #     -keyout key.pem -out cert.pem \
+    #     -subj "/CN=giardino" \
+    #     -addext "subjectAltName=DNS:localhost,IP:127.0.0.1,IP:192.168.1.42"
+    #
+    # Sostituire 192.168.1.42 con l'IP reale del dispositivo che ospita
+    # il server. Se il tuo amico si collega da più reti (casa, ufficio)
+    # con IP diversi, includi tutti gli IP separati da virgola.
+    cert_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cert.pem")
+    key_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "key.pem")
+    use_https = os.path.exists(cert_file) and os.path.exists(key_file)
+
     # Bind su 0.0.0.0 = raggiungibile da tutta la LAN (necessario per
     # Tailscale, Cloudflare Tunnel, accesso da altri device). Se preferisci
     # limitare al solo localhost per ragioni di sicurezza, cambia in "localhost".
     server = HTTPServer(("0.0.0.0", PORT), Handler)
+
+    # Se HTTPS è attivo, wrappiamo il socket del server con uno strato
+    # SSL. Il pattern moderno (Python 3.6+) è creare un SSLContext con
+    # le impostazioni di default per server, caricare il certificato e
+    # la chiave, e poi sostituire il socket nudo con la versione TLS.
+    # Il server.serve_forever() chiamato dopo non si accorge della
+    # differenza: per lui è un socket come un altro, e legge richieste
+    # cifrate trasparentemente.
+    if use_https:
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ssl_context.load_cert_chain(certfile=cert_file, keyfile=key_file)
+        server.socket = ssl_context.wrap_socket(server.socket, server_side=True)
+
+    protocol = "https" if use_https else "http"
     print(f"\n🌿 Giardino App Server avviato")
-    print(f"   Locale:              http://localhost:{PORT}")
-    print(f"   LAN:                 http://<ip-del-dispositivo>:{PORT}")
+    print(f"   Locale:              {protocol}://localhost:{PORT}")
+    print(f"   LAN:                 {protocol}://<ip-del-dispositivo>:{PORT}")
     print(f"   Database:            {DB_FILE}")
+    if use_https:
+        print(f"   🔒 HTTPS:             Attivo (cert.pem + key.pem rilevati)")
+        print(f"      Nota: il certificato è auto-firmato. Al primo accesso")
+        print(f"            il browser mostrerà un avviso di sicurezza:")
+        print(f"            cliccare 'Avanzate' poi 'Procedi comunque'.")
+    else:
+        print(f"   ⚠️  HTTPS:             Non attivo (cert.pem o key.pem mancanti)")
+        print(f"      La geolocalizzazione e altre API browser privilegiate")
+        print(f"      funzioneranno solo via localhost, non da IP della LAN.")
     if ECOWITT_ENABLED:
         print(f"   🌤️  Ecowitt:          Attivo (MAC: {ECOWITT_MAC[:8]}...)")
     else:
