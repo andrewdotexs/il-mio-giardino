@@ -328,7 +328,7 @@ body {
 #sec-schede input[type=text]{width:100%;padding:9px 14px;border-radius:10px;border:1px solid var(--border);font-size:13px;margin-bottom:6px;background:var(--surface);font-family:'DM Sans',sans-serif}
 .count-label{font-size:12px;color:var(--muted);margin-bottom:10px}
 .plant-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px}
-.plant-card{background:var(--surface);border:1px solid #e8e6e0;border-radius:14px;padding:.9rem 1.1rem;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.plant-card{position:relative;background:var(--surface);border:1px solid #e8e6e0;border-radius:14px;padding:.9rem 1.1rem;cursor:pointer;transition:border-color .15s,box-shadow .15s}
 .plant-card:hover{border-color:var(--border2);box-shadow:0 2px 12px rgba(0,0,0,.06)}
 .card-header{display:flex;align-items:center;gap:10px;margin-bottom:7px}
 .plant-icon{width:38px;height:38px;border-radius:10px;background:#f5f4ef;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}

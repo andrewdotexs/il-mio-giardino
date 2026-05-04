@@ -267,27 +267,52 @@ function sMenuEdit() {
 // dare un po' di contesto in più alla domanda, riporto il nome della
 // pianta nel testo della conferma — riduce drasticamente la possibilità
 // che l'utente cancelli la pianta sbagliata per disattenzione.
+//
+// La guardia su sCurrentPlant.isCustom è stata rimossa per le stesse
+// ragioni storiche di sMenuEdit: oggi tutte le piante sono cancellabili.
 async function sMenuDelete() {
-  if (!sCurrentPlant || !sCurrentPlant.isCustom) return;
-  const id = sCurrentPlant.customId;
+  if (!sCurrentPlant) return;
+  const id = sCurrentPlant.id;
   const name = sCurrentPlant.name;
   if (!confirm(`Eliminare definitivamente "${name}"?\n\nL'operazione non è reversibile.`)) return;
   try {
     const res = await apiFetch(`/api/plants/${id}`, { method: 'DELETE' });
+    if (res.status === 409) {
+      // Eliminazione bloccata: ci sono dipendenze (vasi nell'inventario o
+      // voci di diario). Mostro la lista come fa cpDeletePlantById, in
+      // modo da dare all'utente il dettaglio di cosa è bloccante e quindi
+      // poter sciogliere il blocco autonomamente.
+      const data = await res.json();
+      const pots = data.blocking?.pots || [];
+      const diaryCount = data.blocking?.diary_entries || 0;
+      let msg = `Non posso eliminare "${name}" perché è ancora in uso.\n\n`;
+      if (pots.length) {
+        msg += `🪴 Vasi che la usano (${pots.length}):\n`;
+        pots.slice(0, 5).forEach(p => msg += `  • ${p.nickname || 'senza nome'} (id ${p.id})\n`);
+        if (pots.length > 5) msg += `  ... e altri ${pots.length - 5}\n`;
+        msg += '\n';
+      }
+      if (diaryCount > 0) {
+        msg += `📓 Voci diario che la nominano: ${diaryCount}\n\n`;
+      }
+      msg += `Per eliminare questa pianta, prima rimuovi i vasi associati dalla sezione Vasi.\nLe voci diario possono restare: si riferiranno solo al nome storico.`;
+      alert(msg);
+      return;
+    }
     if (!res.ok) {
       const err = await res.json().catch(() => ({error: 'Errore sconosciuto'}));
       // Riuso il toast del modulo custom-plants se è disponibile, così il
-      // feedback ha lo stesso look-and-feel del resto delle azioni custom.
+      // feedback ha lo stesso look-and-feel del resto delle azioni.
       if (typeof cpToast === 'function') cpToast(err.error || 'Errore nell\'eliminazione', 'error');
       else alert('Errore nell\'eliminazione: ' + (err.error || 'sconosciuto'));
       return;
     }
     if (typeof cpToast === 'function') cpToast(`✅ ${name} eliminata`, 'success');
     sCloseDetail();
-    // Ricarico le piante custom: la fusione idempotente di loadCustomPlants
-    // aggiorna sia la cache che le strutture native in memoria, e poi
-    // re-inizializzo la sezione Schede così la card sparisce subito senza
-    // che l'utente debba navigare avanti e indietro.
+    // Ricarico le piante: la fusione idempotente di loadCustomPlants
+    // aggiorna la cache e le strutture in memoria, e poi re-inizializzo
+    // la sezione Schede così la card sparisce subito senza che l'utente
+    // debba navigare avanti e indietro.
     if (typeof loadCustomPlants === 'function') await loadCustomPlants();
     if (typeof sInitSchede === 'function') sInitSchede();
   } catch (e) {
@@ -4548,13 +4573,12 @@ function buildCustomSPlant(row) {
     isNew:     false,
     tags:      tags,
     tc:        tc,
-    isCustom:  true,          // Flag interno: usato dalla scheda dettaglio
-                              // per decidere se mostrare il menù modifica/
-                              // elimina (oggi tutte le piante sono custom,
-                              // ma teniamo il flag per robustezza futura).
-    customId:  row.id,        // Riferimento esplicito al record DB. Più
-                              // leggibile che riusare row.id quando la UI
-                              // chiama cpOpenEditForm e cpDeletePlant.
+    // Storicamente qui c'erano due campi aggiuntivi: isCustom (flag che
+    // distingueva le piante create dall'utente dalle 26 native cablate
+    // nel codice) e customId (alias di id). Adesso che la distinzione
+    // native/custom è stata abolita e che id è il campo standard usato
+    // ovunque, entrambi sono stati rimossi: il flag era sempre true e il
+    // campo customId era un duplicato di id.
 
     // Le cinque sezioni native. Se card[sezione] è {} (perché l'utente non ha
     // compilato nessun campo di quella sezione), il renderer mostrerà la
@@ -4611,7 +4635,6 @@ function buildCustomGPlant(row) {
       interval: row.fert_interval || 21,
     }],
     startDate: new Date(2026, firstMonth - 1, 5),
-    isCustom: true,   // Flag per distinguere le custom in UI/leggenda
   };
 }
 
@@ -4651,7 +4674,6 @@ function buildCustomBbPlant(row) {
       dose: s.dose || '',
       note: s.note || '',
     })),
-    isCustom: true,
   };
 }
 
@@ -4679,7 +4701,6 @@ function buildCustomTrPlant(row) {
       dose: s.dose || '',
       note: s.note || '',
     })),
-    isCustom: true,
   };
 }
 
@@ -4828,7 +4849,10 @@ function buildCustomCPlant(row) {
   return {
     id:      row.id,    // Identificativo standard. Necessario perché la sezione
                         // Mensile, come tutte le altre, usa getPlantById per
-                        // recuperare la pianta corrispondente.
+                        // recuperare la pianta corrispondente. Storicamente
+                        // qui c'erano anche isCustom (sempre true) e customId
+                        // (duplicato di id), entrambi rimossi col refactor
+                        // che ha abolito la distinzione native/custom.
     name:    row.name,
     latin:   row.latin || '',
     icon:    row.icon || '🌱',
@@ -4836,8 +4860,6 @@ function buildCustomCPlant(row) {
     freq:    freq,
     concime: concime,
     notes:   notes,
-    isCustom: true,
-    customId: row.id,   // Per il pulsante "modifica" nei dettagli mensili
   };
 }
 
@@ -4951,7 +4973,6 @@ function buildCustomWaPlant(row) {
     color:     CUSTOM_GROUP_COLORS[row.sim_group] || '#5a7a4a',
     method:    method,
     schedules: profile.schedules.map(s => ({...s})),  // Copia per evitare mutation indiretta
-    isCustom:  true,
   };
 }
 
@@ -5004,7 +5025,6 @@ function buildCustomFIPlant(row) {
     loc:        loc,
     waterMl:    profile.waterMl,
     doseFactor: profile.doseFactor,
-    isCustom:   true,
   };
 }
 

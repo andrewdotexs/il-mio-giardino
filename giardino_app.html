@@ -120,16 +120,17 @@
     <button id="pwa-install-btn" onclick="pwaInstall()" style="display:none;margin-top:6px;padding:6px 14px;font-size:11px;border:1px solid var(--accent);background:var(--accent-light);color:var(--accent);border-radius:20px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500">📲 Installa app</button>
   </div>
   <input type="text" placeholder="Cerca pianta o caratteristica..." oninput="sFilter(this.value)" />
-  <!-- Riga del contatore + pulsante Aggiungi.
-       Il pulsante "Aggiungi pianta" vive qui, semanticamente accanto al
-       contatore "N piante" che ti dice quante piante hai: l'azione di
-       aggiungerne una nuova è esattamente quella che fa cambiare quel
-       numero, quindi i due elementi sono naturali compagni. Ho usato
-       flexbox per allinearli sulla stessa riga senza dover toccare la
-       classe count-label esistente. -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0">
+  <!-- Header della griglia: contatore di piante a sinistra, pulsante per
+       aggiungere una nuova pianta a destra. Storicamente "+ Aggiungi"
+       viveva dentro il pannello "Le mie piante personalizzate" che era
+       una sezione separata sopra alla griglia delle schede. Quel pannello
+       è stato rimosso nel refactor che ha abolito la distinzione tra
+       piante native e personalizzate, e il pulsante è stato spostato
+       qui in cima alla sezione Schede così resta accessibile in modo
+       ovvio senza una sezione dedicata. -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 14px 0">
     <p class="count-label" id="s-count" style="margin:0">20 piante</p>
-    <button class="ctrl-btn" style="padding:4px 12px;font-size:12px" onclick="cpOpenAddForm()">➕ Aggiungi pianta</button>
+    <button class="ctrl-btn" onclick="cpOpenAddForm()" style="padding:6px 14px;font-size:13px">➕ Aggiungi pianta</button>
   </div>
 
   <div class="plant-grid" id="s-grid"></div>
