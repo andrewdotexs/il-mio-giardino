@@ -10,7 +10,7 @@ Requisiti: solo Python 3.6+ (nessun pip install necessario)
 import sqlite3
 import json
 import os
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import HTTPServer, ThreadingHTTPServer, BaseHTTPRequestHandler
 import ssl  # Solo per HTTPS opzionale (vedi la sezione "Avvio" in fondo
             # al file). Lo importiamo sempre anche se HTTPS non è attivo:
             # ssl è un modulo della stdlib quindi non c'è costo di
@@ -1648,7 +1648,26 @@ if __name__ == "__main__":
     # Bind su 0.0.0.0 = raggiungibile da tutta la LAN (necessario per
     # Tailscale, Cloudflare Tunnel, accesso da altri device). Se preferisci
     # limitare al solo localhost per ragioni di sicurezza, cambia in "localhost".
-    server = HTTPServer(("0.0.0.0", PORT), Handler)
+    #
+    # ThreadingHTTPServer invece di HTTPServer: ogni richiesta viene gestita
+    # in un thread separato, così quando una richiesta blocca su una API
+    # esterna lenta (Ecowitt cloud, Open-Meteo) le altre richieste possono
+    # comunque procedere.
+    #
+    # Storia del bug: con HTTPServer single-thread, una chiamata a
+    # /api/ecowitt/realtime che impiegava 5+ secondi (per via di Ecowitt
+    # cloud lenta dall'Italia) bloccava tutto il server, e nel frattempo
+    # le altre fetch dell'app (inventory, forecast) cadevano in
+    # ERR_CONNECTION_REFUSED perché il TCP backlog si saturava. L'app
+    # cadeva quindi in modalità localStorage anche se il server era acceso.
+    # Con il threading, ogni endpoint risponde indipendentemente e il
+    # blocco di Ecowitt non impatta l'inventory.
+    #
+    # SQLite con threading: SQLite ha un limite di un solo writer alla
+    # volta, ma più reader concorrenti sono ok. Le scritture nel database
+    # sono brevi e non in serie, quindi il lock di SQLite non costituisce
+    # un problema pratico per questo workload.
+    server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
 
     # Se HTTPS è attivo, wrappiamo il socket del server con uno strato
     # SSL. Il pattern moderno (Python 3.6+) è creare un SSLContext con

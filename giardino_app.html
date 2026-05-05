@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#5a7a4a">
+<!-- Tag PWA per il display "standalone" (icona aggiunta alla home, niente
+     barra del browser). Apple usa il suo prefisso storico
+     "apple-mobile-web-app-capable", lo standard W3C più recente è
+     "mobile-web-app-capable". I browser moderni come Chrome stampano un
+     warning di deprecazione se vedono solo il tag Apple, quindi li metto
+     entrambi: Apple legge il suo, gli altri browser il nuovo. -->
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Giardino">
@@ -126,25 +133,35 @@
     <p class="d-mode-indicator" style="color: white;font-size:11px;margin-top:4px">⏳ Connessione al database...</p>
   </div>
 
-  <!-- ── BLOCCO METEO E SENSORI ────────────────────────────────────
-       Aggregato dei contenuti della vecchia tab "Meteo" che è stata
-       smantellata e accorpata qui in Dashboard. La struttura interna è:
-       1. status di connessione Ecowitt (visibile solo durante il loading
-          o in caso di errore)
-       2. widget meteo con i dati live della stazione (visibile solo se
-          Ecowitt è configurato)
-       3. pulsante per aprire la dialog "Trend sensori" con i grafici
-          storici (visibile solo se Ecowitt è configurato e ci sono
-          sensori associati a vasi)
-       4. previsioni 7 giorni (Open-Meteo, indipendenti da Ecowitt,
-          quindi visibili anche senza stazione configurata)
-       5. allerte meteo predittive
-       Il blocco intero ha display='none' quando l'utente non ha
-       Ecowitt configurato E non ci sono previsioni Open-Meteo: in pratica
-       è quasi sempre visibile per via delle previsioni che funzionano
-       sempre. -->
+  <!-- Switch tra le due viste della Dashboard.
+       La Dashboard mostra due gruppi distinti di informazioni: lo stato
+       dei vasi (con allerte ed eventi per pianta) e i dati meteo della
+       stazione Ecowitt (più previsioni e allerte meteo). Su desktop
+       avere tutto sulla stessa pagina è già al limite dello spazio; su
+       mobile diventa scomodo da scorrere. Lo switch separa le due viste
+       e l'utente sceglie quale vedere in base a cosa gli serve.
+
+       Lo stato corrente viene salvato in localStorage così persiste
+       tra sessioni (chiave: dashboard_view, valori: 'vasi' | 'meteo').
+       Default 'vasi' perché è la vista più centrale al progetto. -->
+  <div style="display:flex;justify-content:center;gap:6px;max-width:520px;margin:0 auto 14px;background:rgba(255,255,255,0.7);padding:4px;border-radius:10px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)">
+    <button class="ctrl-btn p-view-btn active" id="dashboard-view-vasi-btn"
+      onclick="dashboardSwitchView('vasi')"
+      style="flex:1;padding:8px 12px;font-size:12px">🪴 I miei vasi</button>
+    <button class="ctrl-btn p-view-btn" id="dashboard-view-meteo-btn"
+      onclick="dashboardSwitchView('meteo')"
+      style="flex:1;padding:8px 12px;font-size:12px">🌤️ Meteo e sensori</button>
+  </div>
+
+  <!-- VISTA METEO E SENSORI ────────────────────────────────────────
+       Nascosta di default. Aggregato dei contenuti della vecchia tab
+       Meteo: widget Ecowitt, pulsante trend sensori, previsioni e
+       allerte. Quando Ecowitt non è configurato e Open-Meteo non
+       risponde, restano comunque visibili eventuali allerte derivate
+       (raramente, dato che dipendono dalle previsioni). -->
+  <div id="dashboard-view-meteo" style="display:none">
   <div id="dashboard-meteo-block" style="max-width:920px;margin:0 auto 14px">
-    <div id="dashboard-meteo-status" style="text-align:center;font-size:11px;margin-bottom:10px;color:var(--muted);display:none"></div>
+    <div id="dashboard-meteo-status" style="text-align:center;font-size:11px;margin-bottom:10px;color:#fff;display:none"></div>
 
     <!-- Riga superiore: widget meteo + pulsante trend sensori.
          Il pulsante è a destra, allineato verticalmente coi widget.
@@ -167,15 +184,20 @@
 
     <!-- Previsioni 7 giorni (Open-Meteo). -->
     <div id="dashboard-meteo-forecast-wrap" style="display:none">
-      <div style="font-family:'Playfair Display',serif;font-size:14px;font-weight:500;margin-bottom:4px">🔮 Previsioni 7 giorni</div>
-      <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Fonte: Open-Meteo (modelli ECMWF, DWD, NOAA)</div>
+      <div style="font-family:'Playfair Display',serif;font-size:14px;font-weight:500;margin-bottom:4px;color:#fff">🔮 Previsioni 7 giorni</div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.8);margin-bottom:8px">Fonte: Open-Meteo (modelli ECMWF, DWD, NOAA)</div>
       <div id="dashboard-meteo-forecast" style="margin-bottom:10px"></div>
     </div>
 
     <!-- Allerte predittive da Open-Meteo. -->
     <div id="dashboard-meteo-forecast-alerts" style="margin-bottom:8px"></div>
   </div>
+  </div><!-- /dashboard-view-meteo -->
 
+  <!-- VISTA VASI ───────────────────────────────────────────────────
+       Contiene il riassunto numerico, le card pianta con i dettagli
+       per vaso, e lo stato vuoto. È la vista di default. -->
+  <div id="dashboard-view-vasi">
   <!-- Riassunto numerico: aiuta a vedere lo stato di salute generale
        a colpo d'occhio prima di entrare nei dettagli per pianta. -->
   <div id="dashboard-summary" style="max-width:920px;margin:0 auto 14px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center"></div>
@@ -186,6 +208,7 @@
     <div style="font-size:48px;margin-bottom:12px">🪴</div>
     <div style="font-size:14px;line-height:1.5">Non hai ancora aggiunto vasi al giardino.<br>Vai in <a href="#" onclick="showSection('vasi');return false" style="color:var(--accent)">"I miei vasi"</a> per crearne uno e iniziare a vedere la panoramica.</div>
   </div>
+  </div><!-- /dashboard-view-vasi -->
 </div>
 
 <!-- Overlay della dialog "Trend sensori" — apre i grafici storici dei
@@ -1273,9 +1296,17 @@
             <label>Materiale</label>
             <select id="inv-pot-mat">
               <option value="plastica">Plastica</option>
+              <option value="resina">Resina / composito</option>
               <option value="terracotta">Terracotta</option>
+              <option value="terracotta_spessa">Terracotta non smaltata spessa</option>
               <option value="ceramica">Ceramica smaltata</option>
               <option value="bonsai">Vaso bonsai</option>
+              <option value="cemento">Cemento / Calcestruzzo</option>
+              <option value="vetro">Vetro</option>
+              <option value="metallo">Metallo (rame, zinco, ferro)</option>
+              <option value="legno">Legno / Fioriera in legno</option>
+              <option value="geotessuto">Geotessuto / Smart pot</option>
+              <option value="sottovaso">Vaso senza drenaggio / con sottovaso fisso</option>
             </select>
           </div>
         </div>
@@ -1483,7 +1514,7 @@
      primo apertura; gli altri due si aprono cliccando i loro header.
 -->
 <div class="overlay" id="cp-overlay" onclick="if(event.target===this)cpCloseForm()">
-  <div class="panel" style="max-width:680px;max-height:92vh;overflow-y:auto">
+  <div class="panel" style="max-width:680px">
     <div class="panel-header">
       <div style="flex:1;min-width:0">
         <div class="panel-title" id="cp-form-title">🌱 Nuova pianta</div>
@@ -1855,7 +1886,7 @@
 
 <!-- ── MODAL: SIMULATORE BILANCIO IDRICO ─────────────────────────── -->
 <div class="overlay" id="sim-overlay" onclick="if(event.target===this)simClose()">
-  <div class="panel" style="max-width:720px;max-height:92vh;overflow-y:auto">
+  <div class="panel" style="max-width:720px">
     <div class="panel-header">
       <div style="flex:1;min-width:0">
         <div class="panel-title">🔮 Simulazione bilancio idrico</div>
@@ -1985,7 +2016,10 @@
     <span class="nav-icon">📊</span>Dashboard
   </button>
   <button class="nav-tab" id="tab-schede" data-sec="schede" onclick="showSection('schede')">
-    <span class="nav-icon">🌿</span>Schede
+    <span class="nav-icon">🌿</span>Piante
+  </button>
+  <button class="nav-tab" id="tab-vasi" data-sec="vasi" onclick="showSection('vasi')">
+    <span class="nav-icon">📦</span>Vasi
   </button>
   <button class="nav-tab" id="tab-pianificazione" data-sec="pianificazione" onclick="showSection('pianificazione')">
     <span class="nav-icon">📅</span>Pianificazione
@@ -1995,9 +2029,6 @@
   </button>
   <button class="nav-tab" id="tab-acqua" data-sec="acqua" onclick="showSection('acqua')">
     <span class="nav-icon">💧</span>Calcolatori
-  </button>
-  <button class="nav-tab" id="tab-vasi" data-sec="vasi" onclick="showSection('vasi')">
-    <span class="nav-icon">📦</span>Vasi
   </button>
   <button class="nav-tab" id="tab-params" data-sec="params" onclick="showSection('params')">
     <span class="nav-icon">⚙️</span>Parametri

@@ -1569,7 +1569,39 @@ const SUBSTRATE_WHC = {
   tropicali_mix: 0.40, acidofile_mix: 0.38, arbusti_mix: 0.36, custom: 0.30
 };
 // Fattore materiale vaso (globale)
-const POT_MAT_FACTOR = {plastica:1.0, ceramica:1.0, terracotta:0.88, bonsai:1.0};
+// Fattori di evaporazione per materiale del vaso, usati dal calendario
+// fertirrigazione (fiOpenFromCalendar) e altrove. Valore 1.0 = vaso
+// "neutro" (riferimento plastica liscia). Valori sotto 1.0 indicano
+// vasi più trattenenti di acqua (la pianta consuma effettivamente meno
+// per via della traspirazione del vaso stesso). Valori sopra 1.0
+// indicano vasi che evaporano di più del riferimento.
+//
+// Riferimenti agronomici:
+// - Terracotta: la porosità del cotto fa evaporare ~12% extra dalla
+//   parete, quindi il vaso "consuma" più acqua del riferimento. Fattore
+//   ridotto a 0.88 sull'acqua disponibile per la pianta.
+// - Terracotta non smaltata spessa (Impruneta tradizionale): pareti
+//   spesse riducono l'effetto di porosità, ma comunque significativo.
+// - Geotessuto / smart pot: traspirazione laterale molto alta, le
+//   radici "air-prune" e il substrato asciuga rapidamente.
+// - Cemento: porosità modesta ma elevata inerzia termica, mantiene
+//   temperature più stabili (tendenzialmente più fresco in estate).
+// - Sottovaso fisso / vaso senza foro: ristagno aumenta umidità
+//   apparente del substrato, fattore >1.0.
+const POT_MAT_FACTOR = {
+  plastica:           1.0,
+  resina:             1.0,
+  ceramica:           1.0,
+  bonsai:             1.0,   // dipende dal materiale specifico, default neutro
+  vetro:              1.0,
+  metallo:            1.05,  // si scalda al sole, evaporazione superiore
+  cemento:            0.92,  // leggermente poroso, inerzia termica alta
+  legno:              0.90,  // semipermeabile come terracotta sottile
+  terracotta:         0.88,
+  terracotta_spessa:  0.82,
+  geotessuto:         0.78,  // traspirante, asciuga rapidamente
+  sottovaso:          1.05,  // ristagno
+};
 // Fattore pianta (globale)
 const PLANT_WATER_FACTOR = {
   0:0.55, 12:0.55, 24:0.55,
@@ -1974,12 +2006,23 @@ function calcET0(temp, humidity, solarWm2, windKmh) {
 // la modalità "Da vasi esistenti" dove dobbiamo dedurre i factor dal
 // record del vaso invece di leggerli dai select. I valori devono
 // restare sincronizzati con le option degli stessi select nell'HTML.
+// Mappa parallela a POT_MAT_FACTOR ma usata dal Calcolatore Acqua.
+// I valori sono sincronizzati con POT_MAT_FACTOR; tenerli in due
+// strutture separate per ora preserva la flessibilità di calibrare
+// in modo diverso i due contesti se in futuro emergerà un bisogno.
 const W_POT_MAT_FACTORS = {
-  'plastica': 1.0,
-  'ceramica': 1.0,
-  'terracotta': 0.88,
+  'plastica':          1.0,
+  'resina':            1.0,
+  'ceramica':          1.0,
+  'bonsai':            1.0,
+  'vetro':             1.0,
+  'metallo':           1.05,
+  'cemento':           0.92,
+  'legno':             0.90,
+  'terracotta':        0.88,
   'terracotta_spessa': 0.82,
-  'sottovaso': 1.05,
+  'geotessuto':        0.78,
+  'sottovaso':         1.05,
 };
 // Mappa da gruppo simulazione (sim_group della pianta) al fattore della
 // categoria del calcolatore. I gruppi nuovi (acidofila, rampicante,
@@ -2988,11 +3031,31 @@ function invDbToJs(row) {
   };
 }
 
+// Ping iniziale dell'API: serve a stabilire se possiamo usare il backend
+// (invUseAPI=true) o se dobbiamo cadere sul fallback localStorage.
+//
+// Storia del timeout: in versioni precedenti era 1.2 secondi. Era troppo
+// poco: in scenari Tailscale (rete privata cifrata che aggiunge latenza)
+// o Raspberry Pi sotto carico moderato, anche un backend perfettamente
+// sano impiegava 2-3 secondi a rispondere alla prima fetch del giorno
+// (il database SQLite deve "scaldarsi" dalla cache disco). Risultato:
+// l'app cadeva sistematicamente sul fallback localStorage, mostrando
+// dati cached invece di quelli freschi dal backend, e l'utente aveva
+// l'impressione di "caricamento perpetuo" che non funzionava mai.
+// Adesso il timeout è 5 secondi: abbastanza generoso per coprire la
+// maggior parte degli scenari reali, ma non così lungo da bloccare
+// l'app in caso di server davvero offline.
 async function invPingAPI() {
   try {
-    const res = await apiFetch(INV_API, {signal: AbortSignal.timeout(1200)});
+    const res = await apiFetch(INV_API, {signal: AbortSignal.timeout(5000)});
     invUseAPI = res.ok;
-  } catch { invUseAPI = false; }
+    if (!res.ok) {
+      console.warn('[invPingAPI] Backend ha risposto con status', res.status);
+    }
+  } catch (e) {
+    invUseAPI = false;
+    console.warn('[invPingAPI] Backend non raggiungibile:', e.name, e.message);
+  }
 }
 
 function invLoad() {
@@ -3193,6 +3256,28 @@ async function invInit() {
   invRenderFertGrid();
   invRender();
   console.timeEnd('[perf] inv render UI');
+
+  // Trigger meteoRefresh se i dati live non sono ancora stati scaricati.
+  // Questo copre il caso in cui l'utente entra in "Vasi" prima ancora
+  // che la Dashboard abbia avuto tempo di scaricare i dati Ecowitt
+  // (es. apre l'app e va dritto in Vasi). Senza questo trigger, i badge
+  // dei sensori restavano "offline" finché l'utente non passava per
+  // Dashboard manualmente.
+  // meteoRefresh è idempotente (non fa nulla se non c'è config Ecowitt
+  // o se è in corso), e quando arrivano i dati chiama meteoUpdateInvBadges
+  // che aggiorna i badge dei vasi automaticamente.
+  if (typeof meteoData === 'undefined' || !meteoData) {
+    if (typeof meteoConfig === 'undefined' || !meteoConfig) {
+      // Carica anche la config se mancante (caso primo accesso da Vasi)
+      if (typeof meteoInit === 'function') {
+        meteoInit().then(() => {
+          if (typeof meteoRefresh === 'function') meteoRefresh().catch(() => {});
+        }).catch(() => {});
+      }
+    } else if (typeof meteoRefresh === 'function') {
+      meteoRefresh().catch(() => {});
+    }
+  }
 
   console.timeEnd('[perf] invInit totale');
 }
@@ -3543,6 +3628,14 @@ function invRender() {
     html = `<div class="inv-empty"><span class="empty-icon">📦</span>Nessun vaso ancora registrato.<br>Inizia ad aggiungere le tue piante!</div>` + html;
   }
   grid.innerHTML = html;
+  // Subito dopo aver renderizzato le card, aggiorno i badge dei sensori
+  // se i dati meteo live sono già disponibili. Senza questo, i badge
+  // restano su "in attesa dati..." finché non scatta il prossimo
+  // meteoRefresh (5 minuti). meteoUpdateInvBadges è idempotente: se i
+  // dati non ci sono ancora, non fa niente di danno.
+  if (typeof meteoUpdateInvBadges === 'function') {
+    try { meteoUpdateInvBadges(); } catch {}
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -3605,6 +3698,15 @@ async function meteoRefresh() {
       statusEl.textContent = '❌ Errore API: '+(meteoData.msg||meteoData.message||'sconosciuto');
       return;
     }
+    // Diagnostica: stampa la struttura top-level della risposta Ecowitt.
+    // Utile per capire come il backend struttura i dati (soil vs soil_ch1
+    // vs altre varianti dell'API). Questa stampa è poco rumorosa (una
+    // riga ogni 5 minuti, sempre uguale) e serve come riferimento per
+    // debug del bug "sensore offline" quando il dato in realtà c'è.
+    if (meteoData.data) {
+      console.log('[meteoRefresh] sezioni top-level del payload:',
+        Object.keys(meteoData.data));
+    }
     const now = new Date();
     statusEl.textContent = '🟢 Ultimo aggiornamento: '+now.toLocaleTimeString('it-IT');
     if (rowEl) rowEl.style.display = 'flex';
@@ -3612,6 +3714,25 @@ async function meteoRefresh() {
     meteoRenderAlerts();
     meteoUpdateInvBadges();
     meteoFetchForecast();
+
+    // Adesso che meteoData è popolato, ri-renderizzo le card dei vasi
+    // della Dashboard, perché al primo render erano stati disegnati
+    // SENZA i dati live dei sensori (la fetch era ancora in corso).
+    //
+    // Storia del bug: dashboardRender è sincrono e non aspetta che
+    // meteoRefresh finisca, quindi al primo accesso le card mostravano
+    // il vaso ma senza umidità live. Andando in un'altra tab e tornando,
+    // dashboardRender rieseguiva e a quel punto meteoData era arrivato.
+    // Adesso forziamo un secondo render qui, così il dato appare
+    // automaticamente non appena la fetch arriva.
+    //
+    // Uso _dashboardSecondaryRender che fa SOLO il render delle card
+    // (NON richiama meteoRefresh) per evitare loop infinito.
+    if (typeof _dashboardSecondaryRender === 'function' &&
+        sectionInited && sectionInited.dashboard) {
+      _dashboardSecondaryRender();
+    }
+
     // Auto-refresh ogni 5 minuti
     if (meteoTimer) clearInterval(meteoTimer);
     meteoTimer = setInterval(meteoRefresh, 300000);
@@ -3671,16 +3792,19 @@ function meteoGetSoilData(data, ch) {
     } catch { return null; }
   };
 
-  // Moisture: nei payload Ecowitt il moisture vive sempre nella sezione
-  // soil (vecchio formato) o soil_ch<N> (nuovo formato). Provo entrambi.
-  result.moisture = getV('soil', 'soilmoisture'+ch) || getV('soil_ch'+ch, 'soilmoisture') || getV('soil', 'soil_ch'+ch);
+  // Moisture: nei payload Ecowitt v3 il moisture vive sotto soil_chN
+  // come chiave 'soilmoisture'. Nei payload v1/v2 invece c'era una
+  // singola sezione 'soil' con chiave 'soilmoistureN'. Provo prima il
+  // formato v3 perché è quello attuale del cloud, poi fallback v1/v2.
+  result.moisture = getV('soil_ch'+ch, 'soilmoisture') || getV('soil', 'soilmoisture'+ch) || getV('soil', 'soil_ch'+ch);
 
-  // Temp: solo dalla sezione soil o soil_ch<N>. NON dalle sezioni
-  // temp_and_humidity_ch<N> o tf_ch<N>, che sono sensori diversi.
-  result.temp = getV('soil', 'soiltemp'+ch) || getV('soil', 'tf_ch'+ch) || getV('soil_ch'+ch, 'soiltemp') || getV('soil_ch'+ch, 'temperature');
+  // Temp: per WH52 (3-in-1), formato v3 sotto soil_chN.soiltemp,
+  // formato v1/v2 sotto soil.soiltempN o soil.tf_chN.
+  result.temp = getV('soil_ch'+ch, 'soiltemp') || getV('soil_ch'+ch, 'temperature') || getV('soil', 'soiltemp'+ch) || getV('soil', 'tf_ch'+ch);
 
-  // EC: stessa filosofia, solo sezione soil.
-  result.ec = getV('soil', 'soilad'+ch) || getV('soil', 'ec_ch'+ch) || getV('soil', 'soilec'+ch) || getV('soil_ch'+ch, 'ec');
+  // EC: per WH52, formato v3 sotto soil_chN.ec o soil_chN.soilad,
+  // formato v1/v2 sotto soil.soiladN, soil.ec_chN o soil.soilecN.
+  result.ec = getV('soil_ch'+ch, 'ec') || getV('soil_ch'+ch, 'soilad') || getV('soil', 'soilad'+ch) || getV('soil', 'ec_ch'+ch) || getV('soil', 'soilec'+ch);
 
   return result;
 }
@@ -3999,11 +4123,47 @@ function meteoUpdateInvBadges() {
   const inv = invLoad();
   const soglie = PARAMS.soglie || SOGLIE_DEFAULT;
 
+  // Decodifica del payload Ecowitt v3.
+  //
+  // Storia del bug "sensori sempre offline": la struttura del payload
+  // Ecowitt v3 (cloud unificato) NON mette i dati di umidità del suolo
+  // sotto data.soil come faceva la v1/v2, ma li nidifica in sezioni
+  // separate per canale: data.soil_ch1, data.soil_ch2, ecc., ognuna con
+  // chiave 'soilmoisture' al loro interno. Questo è il formato che vedi
+  // nei log diagnostici (sezioni top-level: ['outdoor','indoor',...,
+  // 'soil_ch1','soil_ch2','soil_ch3','soil_ch4','soil_ch5',...]).
+  // Il vecchio codice cercava data.soil[soilmoisture1] che non esiste,
+  // e tutti i sensori risultavano offline.
+  //
+  // Mantengo i fallback sulle chiavi vecchie (data.soil) per
+  // retrocompatibilità con altri payload, nel caso in cui il backend
+  // Ecowitt cambi di nuovo struttura o ci siano installazioni con
+  // firmware diversi.
   const soilData = {};
   for (let ch=1; ch<=16; ch++) {
-    let val = meteoGetVal(meteoData,'soil','soilmoisture'+ch);
-    if (val === null) val = meteoGetVal(meteoData,'soil','soil_ch'+ch);
+    let val = null;
+    // Formato v3 (corrente): data.soil_chN.soilmoisture
+    val = meteoGetVal(meteoData, 'soil_ch'+ch, 'soilmoisture');
+    // Fallback formato v1/v2: data.soil.soilmoistureN
+    if (val === null) val = meteoGetVal(meteoData, 'soil', 'soilmoisture'+ch);
+    // Fallback ulteriore: data.soil.soil_chN
+    if (val === null) val = meteoGetVal(meteoData, 'soil', 'soil_ch'+ch);
     if (val !== null) soilData[ch] = parseFloat(val);
+  }
+
+  // Diagnostica: se ci sono vasi con sensore associato ma il canale
+  // non è stato trovato nei dati Ecowitt, logga la struttura della
+  // prima sezione soil_ch trovata, così si capisce se le chiavi
+  // attese sono diverse da quelle provate sopra.
+  const hasMissing = inv.some(it => it.wh51Ch && soilData[parseInt(it.wh51Ch)] === undefined);
+  if (hasMissing) {
+    const sample = meteoData.data.soil_ch1 || meteoData.data.soil_ch2 || meteoData.data.soil;
+    if (sample) {
+      console.log('[meteoUpdateInvBadges] chiavi nella prima sezione soil_chN trovata:',
+        Object.keys(sample),
+        '— valore di soilmoisture:', sample.soilmoisture);
+    }
+    console.log('[meteoUpdateInvBadges] soilData decodificato:', soilData);
   }
 
   inv.forEach(it => {
@@ -4351,7 +4511,7 @@ async function meteoFetchForecast() {
     }
 
     if (alertsEl) {
-      alertsEl.innerHTML = '<div style="font-family:\'Playfair Display\',serif;font-size:14px;font-weight:500;margin-bottom:6px">🔮 Allerte predittive</div>' +
+      alertsEl.innerHTML = '<div style="font-family:\'Playfair Display\',serif;font-size:14px;font-weight:500;margin-bottom:6px;color:#fff">🔮 Allerte predittive</div>' +
         alerts.map(a => `<div class="alert-card ${a.type}"><span class="alert-icon">${a.icon}</span><span class="alert-text">${a.text}</span></div>`).join('');
     }
 
@@ -8001,6 +8161,14 @@ let _dashboardRefreshTimer = null;
 // Fa il primo render e imposta un refresh periodico per tenere i dati
 // dei sensori aggiornati senza richiedere all'utente di ricaricare.
 async function dashboardInit() {
+  // Applico la preferenza di vista salvata in localStorage. Se non c'è
+  // (primo accesso) parte 'vasi' come default.
+  const savedView = (() => {
+    try { return localStorage.getItem('dashboard_view') || 'vasi'; }
+    catch { return 'vasi'; }
+  })();
+  dashboardSwitchView(savedView, /* skipSave */ true);
+
   // Carico la config Ecowitt una volta sola: serve per sapere se
   // mostrare il blocco widget meteo + pulsante trend, oppure mostrare
   // solo le previsioni (che non dipendono da Ecowitt). meteoInit è
@@ -8021,6 +8189,35 @@ async function dashboardInit() {
   }, 300000);  // 5 minuti
 }
 
+// Switch tra le due viste della Dashboard ("vasi" e "meteo"). La
+// preferenza viene persistita in localStorage chiave 'dashboard_view'
+// così sopravvive ai reload della pagina e all'apertura su nuova
+// finestra. Il parametro skipSave serve per la chiamata iniziale che
+// applica la preferenza già salvata: in quel caso non vogliamo
+// ri-scriverla nel localStorage (sarebbe ridondante).
+function dashboardSwitchView(view, skipSave) {
+  if (view !== 'vasi' && view !== 'meteo') view = 'vasi';
+  const vasiEl = document.getElementById('dashboard-view-vasi');
+  const meteoEl = document.getElementById('dashboard-view-meteo');
+  const vasiBtn = document.getElementById('dashboard-view-vasi-btn');
+  const meteoBtn = document.getElementById('dashboard-view-meteo-btn');
+  if (!vasiEl || !meteoEl) return;
+  if (view === 'vasi') {
+    vasiEl.style.display = '';
+    meteoEl.style.display = 'none';
+    if (vasiBtn) vasiBtn.classList.add('active');
+    if (meteoBtn) meteoBtn.classList.remove('active');
+  } else {
+    vasiEl.style.display = 'none';
+    meteoEl.style.display = '';
+    if (vasiBtn) vasiBtn.classList.remove('active');
+    if (meteoBtn) meteoBtn.classList.add('active');
+  }
+  if (!skipSave) {
+    try { localStorage.setItem('dashboard_view', view); } catch {}
+  }
+}
+
 // Render principale. Recupera tutti i dati necessari, li raggruppa per
 // pianta, calcola allerte ed eventi imminenti, e popola il DOM.
 function dashboardRender() {
@@ -8028,15 +8225,35 @@ function dashboardRender() {
   // alla Dashboard. La funzione meteoRefresh è asincrona ma non la
   // aspetto: il rendering del resto della Dashboard è indipendente
   // dai dati meteo, e quando i dati arrivano si aggiornano da soli
-  // i loro DOM dedicati.
+  // i loro DOM dedicati. In più, alla fine di meteoRefresh viene
+  // chiamato _dashboardSecondaryRender per ri-disegnare le card dei
+  // vasi quando i dati live sono finalmente arrivati.
   if (typeof meteoRefresh === 'function') {
     meteoRefresh().catch(() => { /* fail-soft */ });
   }
+  // Render delle card. Al primo passaggio meteoData potrebbe essere
+  // null perché la fetch è asincrona; le card si aggiorneranno
+  // automaticamente quando meteoRefresh chiamerà _dashboardSecondaryRender.
+  _dashboardSecondaryRender();
+}
 
+// Re-rendering delle card della Dashboard SENZA innescare un nuovo
+// meteoRefresh. Usato per due casi:
+// 1. Refresh secondario quando meteoData arriva (chiamato da
+//    meteoRefresh al termine della fetch, vedi sopra).
+// 2. Refresh periodico ogni 5 minuti per aggiornare gli eventi
+//    imminenti senza fare un nuovo fetch meteo.
+//
+// La separazione tra dashboardRender (che innesca la fetch) e
+// _dashboardSecondaryRender (che si limita a disegnare) evita il loop
+// infinito: meteoRefresh chiama _dashboardSecondaryRender, NON
+// dashboardRender, quindi non ricorsionare.
+function _dashboardSecondaryRender() {
   const inv = (typeof invLoad === 'function') ? invLoad() : [];
   const summaryEl = document.getElementById('dashboard-summary');
   const cardsEl = document.getElementById('dashboard-cards');
   const emptyEl = document.getElementById('dashboard-empty');
+  if (!summaryEl || !cardsEl || !emptyEl) return;
 
   if (!inv || inv.length === 0) {
     summaryEl.innerHTML = '';
@@ -8123,12 +8340,22 @@ function dashboardComputePotDetail(item, plant) {
   };
 
   // Sensori live: cerco il dato del canale del sensore associato.
-  // Il dato meteo cached vive in window._meteoLatestData se Meteo è
-  // stata visitata almeno una volta. Se no, mostriamo solo i dati
-  // statici (eventi imminenti) senza allerte sensori.
+  // Il dato meteo live vive nella variabile globale `meteoData` che viene
+  // popolata da meteoRefresh (chiamata in ciclo automatico ogni 5 minuti
+  // dalla Dashboard). Se l'utente è appena entrato in app e meteoRefresh
+  // non ha ancora completato la prima fetch, meteoData è ancora null:
+  // in quel caso non mostriamo i dati per-vaso e ci affidiamo solo agli
+  // eventi imminenti del calendario.
+  //
+  // Storia del bug: in una versione precedente questo codice cercava
+  // `window._meteoLatestData`, una variabile che non esiste perché in
+  // tutto il resto dell'app il dato live vive in `meteoData` (senza
+  // prefisso). Risultato: il check fallisce sempre, e i dati dei vasi
+  // appaiono come "in attesa" anche quando il meteo era arrivato e
+  // veniva mostrato correttamente nei widget in cima alla Dashboard.
   const channelId = item.wh51Ch;
-  if (channelId && window._meteoLatestData && typeof meteoGetSoilData === 'function') {
-    const data = meteoGetSoilData(window._meteoLatestData, channelId);
+  if (channelId && typeof meteoData !== 'undefined' && meteoData && meteoData.data && typeof meteoGetSoilData === 'function') {
+    const data = meteoGetSoilData(meteoData, parseInt(channelId));
     if (data.moisture !== null) {
       detail.sensorMoisture = data.moisture;
       detail.sensorTemp = data.temp;
@@ -8479,9 +8706,33 @@ async function dashboardRenderTrendDialog() {
   try {
     const res = await apiFetch(`/api/ecowitt/history?start_date=${dateStr(yesterday)}&end_date=${dateStr(today)}&call_back=soil`);
     const json = await res.json();
-    if (!json.configured || json.code !== 0) {
-      body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:2rem;font-size:12px">Storico non disponibile — verifica configurazione Ecowitt</div>';
+
+    // Log diagnostico: utile per capire perché la dialog mostra "non
+    // disponibile" quando si presume che lo storico ci sia. Lascialo qui
+    // per il debug futuro (è poco rumoroso e non interferisce con l'UI).
+    console.log('[trend dialog] Risposta Ecowitt history:', {
+      configured: json.configured,
+      code: json.code,
+      msg: json.msg,
+      dataKeys: json.data ? Object.keys(json.data) : null,
+    });
+
+    if (!json.configured) {
+      body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:2rem;font-size:12px">Stazione Ecowitt non configurata.</div>';
       return;
+    }
+    // Anche se code !== 0, provo a renderizzare quello che c'è. L'API
+    // Ecowitt ogni tanto restituisce code diversi da zero per finestre
+    // temporali strette o intervalli senza dati, ma può comunque avere
+    // dati parziali utili. Se data.soil è proprio vuoto cadremo sotto
+    // nel ramo "dati storici in attesa".
+    if (json.code !== 0 && json.code !== undefined) {
+      console.warn('[trend dialog] Ecowitt ha restituito code', json.code, 'msg:', json.msg);
+      // Solo se non c'è proprio data, mostro errore. Altrimenti procedo.
+      if (!json.data) {
+        body.innerHTML = `<div style="text-align:center;color:var(--muted);padding:2rem;font-size:12px">Storico non disponibile — Ecowitt ha risposto: ${json.msg || 'errore sconosciuto'}</div>`;
+        return;
+      }
     }
 
     const soilHistory = json.data && json.data.soil ? json.data.soil : {};
@@ -8638,12 +8889,41 @@ showSection('dashboard');
     : Promise.resolve();
   await Promise.all([plantsPromise, invPromise]);
 
+  // Popola le mappe degli eventi del calendario (gDateMap, bbDateMap,
+  // trDateMap, waDateMap) anche al bootstrap iniziale, non solo quando
+  // l'utente apre la tab Pianificazione.
+  //
+  // Storia del bug: la Dashboard al primo render mostrava le card delle
+  // piante senza eventi imminenti perché le mappe erano vuote (popolate
+  // solo all'apertura di Pianificazione). Ricaricando la pagina dopo aver
+  // visitato Pianificazione, le mappe persistevano in memoria e gli
+  // eventi apparivano. Adesso le popoliamo proattivamente al boot.
+  //
+  // gInitGiorni fa anche rendering di chip e calendario che vivono in
+  // DOM nascosti (la sezione Pianificazione non è visibile a questo
+  // punto), il che è innocuo: il DOM viene popolato e quando l'utente
+  // aprirà Pianificazione lo vedrà già pronto. Nessun fetch di rete
+  // qui, è tutta logica in memoria.
+  if (typeof gInitGiorni === 'function') {
+    try {
+      // Marco sectionInited.pianificazione=true così quando l'utente aprirà
+      // la tab Pianificazione, showSection non rifarà l'init (sarebbe
+      // ridondante e potrebbe duplicare chip nel DOM senza il guard).
+      // Chiamo anche cInitMensile per coerenza, così entrambe le viste
+      // della Pianificazione sono pronte quando l'utente la apre.
+      gInitGiorni();
+      if (typeof cInitMensile === 'function') cInitMensile();
+      sectionInited.pianificazione = true;
+    } catch (e) { console.warn('[bootstrap] init Pianificazione fallita:', e); }
+  }
+
   // Re-inizializzo la sezione Schede per mostrare le piante caricate
   // (anche se non siamo lì in questo momento, le strutture sPlants etc.
   // sono ora popolate, e all'apertura della sezione vedremo i dati).
   if (typeof sInitSchede === 'function') sInitSchede();
   // Ricalcolo la Dashboard se è quella che si vede adesso, perché
-  // entrambe le sue dipendenze (specie + vasi) sono ora arrivate.
+  // tutte le sue dipendenze (specie + vasi + mappe eventi) sono ora
+  // arrivate.
   if (sectionInited.dashboard && typeof dashboardRender === 'function') {
     dashboardRender();
   }

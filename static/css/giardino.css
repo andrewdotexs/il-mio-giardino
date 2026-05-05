@@ -83,16 +83,24 @@ body {
    un overlay che non interferisce con il contenuto: vive a livello
    z-index 0 dietro al contenuto reale (z-index 1).
    ══════════════════════════════════════════════════════════════════ */
-#sec-schede {
+/* Overlay che opacizza l'immagine di sfondo del giardino dietro tutte
+   le sezioni dell'app. Originariamente questa regola era applicata solo
+   a #sec-schede; è stata generalizzata a .section perché il problema
+   era trasversale: lo sfondo rendeva poco leggibile il contenuto in
+   tutte le tab, non solo in Piante.
+
+   Il gradient verticale è meno scuro in alto (per vedere il logo) e più
+   scuro in basso (per coprire le zone con riflessi sull'acqua dello
+   sfondo, che sono la parte più rumorosa dell'immagine). Pointer-events
+   none così non intercetta i click; z-index 0 così sta sotto al
+   contenuto. */
+.section {
   position: relative;
 }
-#sec-schede::before {
+.section::before {
   content: '';
   position: absolute;
   inset: 0;
-  /* Gradient verticale: meno scuro in alto (per vedere il logo) e
-     più scuro in basso (per coprire le zone con riflessi sull'acqua,
-     che sono la parte più "rumorosa" dell'immagine). */
   background: linear-gradient(180deg,
     rgba(245, 240, 230, 0.3) 0%,
     rgba(245, 240, 230, 0.35) 30%,
@@ -103,7 +111,7 @@ body {
 /* Tutto il contenuto della sezione deve stare SOPRA l'overlay.
    Forziamo z-index relative su tutti i figli diretti per evitare
    che alcuni elementi finiscano dietro l'overlay. */
-#sec-schede > * {
+.section > * {
   position: relative;
   z-index: 1;
 }
@@ -304,9 +312,16 @@ body {
 .app-header p{font-size:12px;color:var(--muted);margin-top:4px;font-weight:300}
 
 /* ── SHARED OVERLAY / PANEL ────────────────────────────────────────── */
-.overlay{display:none;position:fixed;inset:0;background:rgba(42,38,32,.45);z-index:200;align-items:center;justify-content:center;padding:1rem}
+/* Overlay full-screen per le dialog modali. Il padding-bottom riserva
+   spazio per la app-nav fissa in basso (z-index 300) che vive sopra
+   tutto. Senza questo padding, le dialog (specialmente quelle alte come
+   "Simulazione bilancio idrico") avevano la parte inferiore coperta
+   dalla nav bar, tagliando i pulsanti d'azione finali.
+   1rem di padding già esisteva su tutti i lati; aggiungo l'altezza nav
+   solo in basso così l'esperienza è naturale anche con safe-area mobile. */
+.overlay{display:none;position:fixed;inset:0;background:rgba(42,38,32,.45);z-index:200;align-items:center;justify-content:center;padding:1rem;padding-bottom:calc(var(--nav-h) + 1rem)}
 .overlay.open{display:flex}
-.panel{background:var(--surface);border-radius:16px;max-width:500px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.panel{background:var(--surface);border-radius:16px;max-width:500px;width:100%;max-height:100%;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
 .panel-header{padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);border-radius:16px 16px 0 0}
 .panel-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:600}
 .panel-subtitle{font-size:12px;color:var(--muted);margin-top:2px}
