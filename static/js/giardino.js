@@ -3000,19 +3000,35 @@ function invLoad() {
   return invLSLoad();
 }
 
+// Promise "in volo" di invLoadFromAPI. Stesso pattern di
+// _loadCustomPlantsInflight: se due chiamanti invocano la fetch dei
+// vasi simultaneamente prima che la prima abbia completato (caso
+// tipico: caricamento iniziale dell'app + utente che apre subito la
+// tab Vasi), il secondo riceve la STESSA Promise del primo invece di
+// lanciare un'altra fetch in parallelo.
+let _invLoadFromAPIInflight = null;
+
 async function invLoadFromAPI() {
-  if (invUseAPI) {
+  if (_invLoadFromAPIInflight) return _invLoadFromAPIInflight;
+  _invLoadFromAPIInflight = (async () => {
     try {
-      const res = await apiFetch(INV_API);
-      const data = await res.json();
-      const items = (data.items||[]).map(invDbToJs);
-      invCache = items;
-      invLSSave(items);
-      return items;
-    } catch { invUseAPI = false; }
-  }
-  invCache = invLSLoad();
-  return invCache;
+      if (invUseAPI) {
+        try {
+          const res = await apiFetch(INV_API);
+          const data = await res.json();
+          const items = (data.items||[]).map(invDbToJs);
+          invCache = items;
+          invLSSave(items);
+          return items;
+        } catch { invUseAPI = false; }
+      }
+      invCache = invLSLoad();
+      return invCache;
+    } finally {
+      _invLoadFromAPIInflight = null;
+    }
+  })();
+  return _invLoadFromAPIInflight;
 }
 
 async function invAPIAdd(entry) {
@@ -8589,18 +8605,49 @@ function pwaInstall() {
 // re-inizializzate alla prossima visita. Il caricamento iniziale ridisegna
 // anche la sezione Schede così l'utente vede subito la sua griglia di piante.
 showSection('dashboard');
-loadCustomPlants().then(() => {
+
+// Bootstrap dei dati principali dell'app.
+//
+// Sequenza importante: prima invPingAPI (che setta il flag invUseAPI a
+// true se il backend risponde), poi invLoadFromAPI in parallelo con
+// loadCustomPlants. Senza il ping iniziale, invLoadFromAPI cade nel
+// ramo "leggi da localStorage" perché invUseAPI parte a false di
+// default — questo era il bug che faceva apparire la Dashboard vuota
+// al primo accesso, salvo poi popolarsi quando l'utente passava per la
+// tab Vasi (perché invInit fa il ping al suo interno).
+//
+// Il ping ha timeout di 1.2s, quindi nel caso peggiore aggiunge poco
+// più di un secondo prima che parta il fetch dei vasi. È un costo
+// accettabile per garantire che la Dashboard veda sempre i dati veri
+// dal backend invece di una cache localStorage potenzialmente vecchia.
+//
+// Nota: ho lasciato invPingAPI fuori dal Promise.all perché il flag
+// invUseAPI deve essere settato PRIMA che parta invLoadFromAPI.
+// loadCustomPlants invece non dipende da quel flag, quindi può
+// partire subito in parallelo con il ping.
+(async () => {
+  const pingPromise = (typeof invPingAPI === 'function')
+    ? invPingAPI()
+    : Promise.resolve();
+  const plantsPromise = loadCustomPlants();
+  // Aspetta il ping prima di lanciare invLoadFromAPI, ma loadCustomPlants
+  // gira in parallelo per non perdere tempo.
+  await pingPromise;
+  const invPromise = (typeof invLoadFromAPI === 'function')
+    ? invLoadFromAPI()
+    : Promise.resolve();
+  await Promise.all([plantsPromise, invPromise]);
+
   // Re-inizializzo la sezione Schede per mostrare le piante caricate
   // (anche se non siamo lì in questo momento, le strutture sPlants etc.
   // sono ora popolate, e all'apertura della sezione vedremo i dati).
   if (typeof sInitSchede === 'function') sInitSchede();
-  // Ricalcolo anche la Dashboard se è quella che si vede adesso,
-  // perché i dati delle piante potrebbero essere arrivati dopo
-  // l'inizializzazione iniziale.
+  // Ricalcolo la Dashboard se è quella che si vede adesso, perché
+  // entrambe le sue dipendenze (specie + vasi) sono ora arrivate.
   if (sectionInited.dashboard && typeof dashboardRender === 'function') {
     dashboardRender();
   }
-});
+})();
 
 // Ping al server per determinare se il database SQLite è raggiungibile.
 // Questo aggiorna dUseAPI e tutti gli indicatori .d-mode-indicator nelle
