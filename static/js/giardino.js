@@ -57,7 +57,7 @@ async function apiFetch(url, options = {}) {
 // apertura della tab perché popolano DOM disgiunti che vivono nei due
 // div figli p-view-mese e p-view-giorno.
 // ══════════════════════════════════════════════════════════════════════
-const sectionInited = {dashboard:false, schede:false, pianificazione:false, diario:false, acqua:false, vasi:false, meteo:false, params:false};
+const sectionInited = {dashboard:false, schede:false, pianificazione:false, diario:false, acqua:false, vasi:false, params:false};
 
 function showSection(name) {
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -79,12 +79,10 @@ function showSection(name) {
     else if (name==='diario') dInitDiario();
     else if (name==='acqua') wInitCalc();
     else if (name==='vasi') invInit();
-    else if (name==='meteo') meteoInit();
     else if (name==='params') paramsInit();
     sectionInited[name] = true;
   }
   if (name==='diario') dRender();
-  if (name==='meteo') meteoRefresh();
   // La Dashboard mostra dati live (sensori, eventi prossimi). Ogni volta
   // che ci si torna ricalcoliamo perché i dati possono essere cambiati
   // (un evento aggiunto al diario, un sensore con un nuovo valore, ecc.).
@@ -126,7 +124,7 @@ function pianificazioneSwitchView(view) {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key==='Escape') { sCloseDetail(); cCloseOverlay(); gClosePanel(); invCloseForm(); simClose(); cpCloseForm(); }
+  if (e.key==='Escape') { sCloseDetail(); cCloseOverlay(); gClosePanel(); invCloseForm(); simClose(); cpCloseForm(); dashboardCloseTrendDialog(); }
 });
 
 // ══════════════════════════════════════════════════════════════════════
@@ -3559,16 +3557,30 @@ async function meteoInit() {
 }
 
 async function meteoRefresh() {
-  const statusEl = document.getElementById('meteo-status');
+  // Ridiretto sui nuovi DOM IDs della Dashboard dopo l'accorpamento.
+  // La vecchia sezione Meteo è stata smantellata: i widget meteo, le
+  // allerte e le previsioni vivono ora in cima alla Dashboard.
+  // I rendering di "umidità terreno in tempo reale" (meteo-soil) e
+  // "trend WH52 inline" (meteo-history) sono stati rimossi: il primo
+  // perché i dati di umidità sono già visibili nelle card per pianta
+  // della Dashboard, il secondo perché lo storico è ora dietro un
+  // pulsante che apre una dialog (dashboardOpenTrendDialog).
+  const statusEl = document.getElementById('dashboard-meteo-status');
+  const rowEl = document.getElementById('dashboard-meteo-row');
+  const blockEl = document.getElementById('dashboard-meteo-block');
+  if (!statusEl || !blockEl) return;  // Dashboard non ancora renderizzata
+
   if (!meteoConfig || !meteoConfig.configured) {
-    statusEl.innerHTML = '⚠️ Ecowitt non configurato — inserisci le chiavi API in <b>config.json</b> e riavvia il server';
-    document.getElementById('meteo-weather').innerHTML = meteoPlaceholderWidgets();
-    document.getElementById('meteo-soil').innerHTML = '<div style="text-align:center;color:var(--muted);padding:1rem;font-size:12px">Configura Ecowitt per vedere i dati dei sensori WH51</div>';
-    document.getElementById('meteo-alerts').innerHTML = '';
-    // Le previsioni Open-Meteo funzionano anche senza Ecowitt
+    // Ecowitt non configurato: nascondo widget e pulsante trend; lascio
+    // visibili previsioni (Open-Meteo, indipendenti) e allerte
+    // predittive che si basano sulle previsioni.
+    if (rowEl) rowEl.style.display = 'none';
+    statusEl.style.display = 'none';
+    document.getElementById('dashboard-meteo-alerts').innerHTML = '';
     meteoFetchForecast();
     return;
   }
+  statusEl.style.display = 'block';
   statusEl.textContent = '⏳ Caricamento dati...';
   try {
     const res = await apiFetch(METEO_API+'/realtime');
@@ -3579,12 +3591,11 @@ async function meteoRefresh() {
     }
     const now = new Date();
     statusEl.textContent = '🟢 Ultimo aggiornamento: '+now.toLocaleTimeString('it-IT');
+    if (rowEl) rowEl.style.display = 'flex';
     meteoRenderWeather();
-    meteoRenderSoil();
     meteoRenderAlerts();
     meteoUpdateInvBadges();
     meteoFetchForecast();
-    meteoRenderHistory();
     // Auto-refresh ogni 5 minuti
     if (meteoTimer) clearInterval(meteoTimer);
     meteoTimer = setInterval(meteoRefresh, 300000);
@@ -3763,7 +3774,7 @@ function meteoRenderWeather() {
   const press = meteoGetVal(meteoData,'pressure','relative');
   widgets.push({icon:'🌀', val:press!==null?parseFloat(press).toFixed(1)+' hPa':'--', label:'Pressione'});
 
-  document.getElementById('meteo-weather').innerHTML = widgets.map(w =>
+  document.getElementById('dashboard-meteo-weather').innerHTML = widgets.map(w =>
     `<div class="meteo-widget"><div class="mw-icon">${w.icon}</div><div class="mw-val">${w.val}</div><div class="mw-label">${w.label}</div>${w.sub?`<div style="font-size:9px;color:var(--muted);margin-top:2px">${w.sub}</div>`:''}</div>`
   ).join('');
 }
@@ -3962,7 +3973,7 @@ function meteoRenderAlerts() {
     alerts.push({type:'good', icon:'✅', text:'Tutto nella norma — nessuna allerta attiva.'});
   }
 
-  document.getElementById('meteo-alerts').innerHTML = alerts.map(a =>
+  document.getElementById('dashboard-meteo-alerts').innerHTML = alerts.map(a =>
     `<div class="alert-card ${a.type}"><span class="alert-icon">${a.icon}</span><span class="alert-text">${a.text}</span></div>`
   ).join('');
 }
@@ -4193,23 +4204,29 @@ function renderTrendChart(series, moistSeries, thresh, label, unit, color) {
 }
 
 async function meteoFetchForecast() {
-  const fcEl = document.getElementById('meteo-forecast');
-  const alertsEl = document.getElementById('meteo-forecast-alerts');
+  const fcEl = document.getElementById('dashboard-meteo-forecast');
+  const alertsEl = document.getElementById('dashboard-meteo-forecast-alerts');
+  const wrapEl = document.getElementById('dashboard-meteo-forecast-wrap');
   if (!fcEl) return;
 
   try {
     const res = await apiFetch('/api/forecast');
     const data = await res.json();
     if (data.error) {
-      fcEl.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:11px;padding:1rem">❌ ${data.error}</div>`;
+      // Open-Meteo non raggiungibile: nascondo l'intero blocco previsioni
+      // invece di mostrare un errore, perché l'errore non è azionabile
+      // dall'utente e il rumore visivo non aiuta.
+      if (wrapEl) wrapEl.style.display = 'none';
       return;
     }
 
     const daily = data.daily;
     if (!daily || !daily.time) {
-      fcEl.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:11px;padding:1rem">Nessun dato previsione disponibile</div>';
+      if (wrapEl) wrapEl.style.display = 'none';
       return;
     }
+
+    if (wrapEl) wrapEl.style.display = 'block';
 
     const todayStr = new Date().toISOString().slice(0,10);
 
@@ -4323,7 +4340,12 @@ async function meteoFetchForecast() {
     }
 
   } catch(e) {
-    fcEl.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:11px;padding:1rem">❌ Errore caricamento previsioni</div>`;
+    // Errore di rete o server non raggiungibile: nascondo silenziosamente
+    // il blocco delle previsioni invece di mostrare un errore visibile.
+    // Le previsioni non sono critiche per l'esperienza dashboard, e un
+    // messaggio di errore in cima alla home aggiungerebbe rumore visivo
+    // senza dare all'utente un'azione utile da intraprendere.
+    if (wrapEl) wrapEl.style.display = 'none';
   }
 }
 
@@ -7962,7 +7984,14 @@ let _dashboardRefreshTimer = null;
 // Inizializzazione: chiamata la prima volta che si entra nella Dashboard.
 // Fa il primo render e imposta un refresh periodico per tenere i dati
 // dei sensori aggiornati senza richiedere all'utente di ricaricare.
-function dashboardInit() {
+async function dashboardInit() {
+  // Carico la config Ecowitt una volta sola: serve per sapere se
+  // mostrare il blocco widget meteo + pulsante trend, oppure mostrare
+  // solo le previsioni (che non dipendono da Ecowitt). meteoInit è
+  // async: aspettiamo il caricamento prima di renderizzare.
+  if (typeof meteoInit === 'function') {
+    try { await meteoInit(); } catch { /* fail-soft */ }
+  }
   dashboardRender();
   // Refresh ogni 5 minuti dei dati dinamici (sensori, eventi).
   // Lo lascio attivo anche quando l'utente è su altre tab, perché i
@@ -7979,6 +8008,15 @@ function dashboardInit() {
 // Render principale. Recupera tutti i dati necessari, li raggruppa per
 // pianta, calcola allerte ed eventi imminenti, e popola il DOM.
 function dashboardRender() {
+  // Aggiorno il blocco meteo (widget + previsioni + allerte) in cima
+  // alla Dashboard. La funzione meteoRefresh è asincrona ma non la
+  // aspetto: il rendering del resto della Dashboard è indipendente
+  // dai dati meteo, e quando i dati arrivano si aggiornano da soli
+  // i loro DOM dedicati.
+  if (typeof meteoRefresh === 'function') {
+    meteoRefresh().catch(() => { /* fail-soft */ });
+  }
+
   const inv = (typeof invLoad === 'function') ? invLoad() : [];
   const summaryEl = document.getElementById('dashboard-summary');
   const cardsEl = document.getElementById('dashboard-cards');
@@ -8365,6 +8403,131 @@ function dashboardRenderUpcomingEvents(events) {
   return `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);display:flex;flex-direction:column;gap:4px">
     ${sections.join('')}
   </div>`;
+}
+
+// ── Dialog "Trend sensori" ───────────────────────────────────────────
+// Apre un overlay full-screen con i grafici storici degli ultimi 1-2
+// giorni dei sensori soil. La logica di disegno usa la stessa funzione
+// renderTrendChart già usata dal vecchio meteoRenderHistory; la
+// differenza è che adesso copro entrambe le tipologie di sensore:
+// - WH51 (sensore di sola umidità): un grafico di umidità.
+// - WH52 (sensore 3-in-1): tre grafici per umidità, EC, temperatura.
+
+function dashboardOpenTrendDialog() {
+  const overlay = document.getElementById('dashboard-trend-overlay');
+  if (!overlay) return;
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  // Render asincrono: l'utente vede subito uno stato di loading, poi
+  // i grafici arrivano dopo la fetch.
+  document.getElementById('dashboard-trend-body').innerHTML =
+    '<div style="text-align:center;color:var(--muted);padding:2rem;font-size:12px">⏳ Caricamento storico sensori...</div>';
+  dashboardRenderTrendDialog();
+}
+
+function dashboardCloseTrendDialog() {
+  const overlay = document.getElementById('dashboard-trend-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+async function dashboardRenderTrendDialog() {
+  const body = document.getElementById('dashboard-trend-body');
+  if (!body) return;
+
+  // Fetch della config Ecowitt se non già caricata.
+  if (!meteoConfig) {
+    try { await meteoInit(); } catch {}
+  }
+  if (!meteoConfig || !meteoConfig.configured) {
+    body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:2rem;font-size:12px">Stazione Ecowitt non configurata. Il grafico storico richiede la connessione alla stazione.</div>';
+    return;
+  }
+
+  // Filtro i vasi che hanno un sensore associato (sia WH51 che WH52).
+  // Il vecchio meteoRenderHistory filtrava solo i WH52, ma adesso voglio
+  // mostrare anche i WH51 con il loro grafico di umidità.
+  const inv = invLoad();
+  const sensorItems = inv.filter(it => it.wh51Ch);
+  if (!sensorItems.length) {
+    body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:2rem;font-size:12px">Nessun sensore associato a vasi nell\'inventario. Vai in "I miei vasi" e associa un canale soil a un vaso per vedere il suo storico.</div>';
+    return;
+  }
+
+  // Fetch storico ultime 24 ore.
+  const today = new Date();
+  const yesterday = new Date(today.getTime() - 86400000);
+  const dateStr = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+
+  try {
+    const res = await apiFetch(`/api/ecowitt/history?start_date=${dateStr(yesterday)}&end_date=${dateStr(today)}&call_back=soil`);
+    const json = await res.json();
+    if (!json.configured || json.code !== 0) {
+      body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:2rem;font-size:12px">Storico non disponibile — verifica configurazione Ecowitt</div>';
+      return;
+    }
+
+    const soilHistory = json.data && json.data.soil ? json.data.soil : {};
+
+    // Per ogni sensore disegno un blocco. WH51 mostra solo l'umidità,
+    // WH52 mostra umidità + EC + temperatura.
+    let html = '';
+    sensorItems.forEach(it => {
+      const ch = parseInt(it.wh51Ch);
+      const p = getPlantById(it.plantTypeIdx);
+      if (!p) return;
+      const name = it.nickname || p.name;
+      const cat = it.wh51Cat || 'universale';
+      const isWh52 = it.sensorType === 'wh52';
+
+      // Cerca le serie nei dati. Le chiavi possibili variano leggermente
+      // tra le versioni dell'API Ecowitt, quindi uso un helper che prova
+      // più alias.
+      const moistKeys = [`soilmoisture${ch}`, `soil_ch${ch}`];
+      const ecKeys = [`soilad${ch}`, `ec_ch${ch}`, `soilec${ch}`];
+      const tempKeys = [`soiltemp${ch}`, `tf_ch${ch}`];
+
+      const findSeries = keys => {
+        for (const k of keys) {
+          if (soilHistory[k] && soilHistory[k].list) return soilHistory[k].list;
+          if (json.data[k] && json.data[k].list) return json.data[k].list;
+        }
+        return null;
+      };
+
+      const moistSeries = findSeries(moistKeys);
+      const soglieMoist = (PARAMS.soglie || {})[cat] || PARAMS_DEFAULTS.soglie.universale;
+      const moistThresh = { min: soglieMoist.secco, max: soglieMoist.umido };
+
+      const sensorBadge = isWh52
+        ? '<span style="font-size:9px;background:#6a4a9a;color:#fff;padding:2px 6px;border-radius:8px;font-weight:600;margin-left:6px">WH52</span>'
+        : '<span style="font-size:9px;background:#3a7a8a;color:#fff;padding:2px 6px;border-radius:8px;font-weight:600;margin-left:6px">WH51</span>';
+
+      html += `<div class="soil-card" style="margin-bottom:10px">
+        <div class="soil-card-head">
+          <span class="soil-card-icon">${p.icon}</span>
+          <span class="soil-card-name">${name}${sensorBadge}</span>
+          <span class="soil-card-ch">CH${ch}</span>
+        </div>
+        ${renderTrendChart(moistSeries, null, moistThresh, 'Umidità', '%', '#3a7abf')}`;
+
+      if (isWh52) {
+        const ecSeries = findSeries(ecKeys);
+        const tempSeries = findSeries(tempKeys);
+        const ecThresh = (PARAMS.sogliEC || {})[cat] || PARAMS_DEFAULTS.sogliEC.universale;
+        html += `${renderTrendChart(ecSeries, null, ecThresh, 'EC', 'µS/cm', '#9a7a20')}
+                 ${renderTrendChart(tempSeries, null, {min:PARAMS.tempRadiciMin, max:PARAMS.tempRadiciMax}, 'Temp radici', '°C', '#c06040')}`;
+      }
+
+      html += '</div>';
+    });
+
+    body.innerHTML = html || '<div style="text-align:center;color:var(--muted);padding:2rem;font-size:12px">Dati storici in attesa — i sensori devono aver trasmesso per almeno 1-2 ore</div>';
+
+  } catch(e) {
+    body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:2rem;font-size:12px">Errore caricamento storico: server non raggiungibile</div>';
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════

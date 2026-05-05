@@ -125,8 +125,59 @@
     <p style="color: white;">Panoramica del tuo giardino · stato, allerte ed eventi imminenti</p>
     <p class="d-mode-indicator" style="color: white;font-size:11px;margin-top:4px">⏳ Connessione al database...</p>
   </div>
-  <!-- Riassunto numerico in cima: aiuta a vedere lo stato di salute
-       generale a colpo d'occhio prima di entrare nei dettagli. -->
+
+  <!-- ── BLOCCO METEO E SENSORI ────────────────────────────────────
+       Aggregato dei contenuti della vecchia tab "Meteo" che è stata
+       smantellata e accorpata qui in Dashboard. La struttura interna è:
+       1. status di connessione Ecowitt (visibile solo durante il loading
+          o in caso di errore)
+       2. widget meteo con i dati live della stazione (visibile solo se
+          Ecowitt è configurato)
+       3. pulsante per aprire la dialog "Trend sensori" con i grafici
+          storici (visibile solo se Ecowitt è configurato e ci sono
+          sensori associati a vasi)
+       4. previsioni 7 giorni (Open-Meteo, indipendenti da Ecowitt,
+          quindi visibili anche senza stazione configurata)
+       5. allerte meteo predittive
+       Il blocco intero ha display='none' quando l'utente non ha
+       Ecowitt configurato E non ci sono previsioni Open-Meteo: in pratica
+       è quasi sempre visibile per via delle previsioni che funzionano
+       sempre. -->
+  <div id="dashboard-meteo-block" style="max-width:920px;margin:0 auto 14px">
+    <div id="dashboard-meteo-status" style="text-align:center;font-size:11px;margin-bottom:10px;color:var(--muted);display:none"></div>
+
+    <!-- Riga superiore: widget meteo + pulsante trend sensori.
+         Il pulsante è a destra, allineato verticalmente coi widget.
+         Quando Ecowitt non è configurato, l'intera riga è nascosta. -->
+    <div id="dashboard-meteo-row" style="display:none;align-items:flex-start;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div id="dashboard-meteo-weather" style="flex:1;min-width:280px;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px"></div>
+      <button id="dashboard-trend-btn" onclick="dashboardOpenTrendDialog()"
+        style="flex-shrink:0;padding:10px 16px;border:1px solid var(--border);border-radius:10px;background:#fff;cursor:pointer;font-family:inherit;font-size:12px;color:var(--text);display:flex;align-items:center;gap:8px;box-shadow:0 1px 3px rgba(0,0,0,0.06);transition:all .2s">
+        <span style="font-size:18px">📊</span>
+        <div style="text-align:left;line-height:1.3">
+          <div style="font-weight:600">Trend sensori</div>
+          <div style="font-size:10px;color:var(--muted)">Storico 24h</div>
+        </div>
+      </button>
+    </div>
+
+    <!-- Allerte piante (basate su Ecowitt + soglie). Visibile se Ecowitt
+         è configurato e ha generato almeno un'allerta. -->
+    <div id="dashboard-meteo-alerts" style="margin-bottom:12px"></div>
+
+    <!-- Previsioni 7 giorni (Open-Meteo). -->
+    <div id="dashboard-meteo-forecast-wrap" style="display:none">
+      <div style="font-family:'Playfair Display',serif;font-size:14px;font-weight:500;margin-bottom:4px">🔮 Previsioni 7 giorni</div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Fonte: Open-Meteo (modelli ECMWF, DWD, NOAA)</div>
+      <div id="dashboard-meteo-forecast" style="margin-bottom:10px"></div>
+    </div>
+
+    <!-- Allerte predittive da Open-Meteo. -->
+    <div id="dashboard-meteo-forecast-alerts" style="margin-bottom:8px"></div>
+  </div>
+
+  <!-- Riassunto numerico: aiuta a vedere lo stato di salute generale
+       a colpo d'occhio prima di entrare nei dettagli per pianta. -->
   <div id="dashboard-summary" style="max-width:920px;margin:0 auto 14px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center"></div>
   <!-- Container delle card pianta. Una card per specie. -->
   <div id="dashboard-cards" style="max-width:920px;margin:0 auto"></div>
@@ -134,6 +185,23 @@
   <div id="dashboard-empty" style="display:none;text-align:center;padding:40px 20px;max-width:560px;margin:0 auto;color:var(--muted)">
     <div style="font-size:48px;margin-bottom:12px">🪴</div>
     <div style="font-size:14px;line-height:1.5">Non hai ancora aggiunto vasi al giardino.<br>Vai in <a href="#" onclick="showSection('vasi');return false" style="color:var(--accent)">"I miei vasi"</a> per crearne uno e iniziare a vedere la panoramica.</div>
+  </div>
+</div>
+
+<!-- Overlay della dialog "Trend sensori" — apre i grafici storici dei
+     sensori soil (WH51 umidità, WH52 EC + temp + umidità) raccolti
+     dall'API Ecowitt /history. Implementato come overlay full-screen
+     come gli altri dialog dell'app. -->
+<div class="overlay" id="dashboard-trend-overlay" onclick="if(event.target===this)dashboardCloseTrendDialog()">
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">📊 Trend sensori · ultime 24 ore</div>
+        <div class="panel-subtitle">Storico umidità (WH51) · umidità, EC e temperatura (WH52)</div>
+      </div>
+      <button class="close-btn" onclick="dashboardCloseTrendDialog()">✕</button>
+    </div>
+    <div class="panel-body" id="dashboard-trend-body"></div>
   </div>
 </div>
 
@@ -1137,44 +1205,6 @@
 </div>
 
 <!-- ── SECTION: METEO E SENSORI ────────────────────────────── -->
-<div id="sec-meteo" class="section">
-  <div class="app-header">
-    <h1 style="color: white;">Meteo e Sensori 🌤️</h1>
-    <p style="color: white;">Stazione Ecowitt · Umidità terreno · Allerte piante</p>
-    <p class="d-mode-indicator" style="color: white;font-size:11px;margin-top:4px">⏳ Connessione al database...</p>
-  </div>
-  <div id="meteo-status" style="text-align:center;font-size:11px;margin-bottom:12px;color:var(--muted)"></div>
-
-  <!-- Widget meteo -->
-  <div id="meteo-weather" style="max-width:900px;margin:0 auto 1rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px"></div>
-
-  <!-- Allerte piante -->
-  <div id="meteo-alerts" style="max-width:900px;margin:0 auto 1rem"></div>
-
-  <!-- Umidità terreno per pianta -->
-  <div style="max-width:900px;margin:0 auto .6rem">
-    <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:500;margin-bottom:8px">💧 Umidità terreno in tempo reale</div>
-  </div>
-  <div id="meteo-soil" style="max-width:900px;margin:0 auto 1rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px"></div>
-
-  <!-- Grafici storici -->
-  <div style="max-width:900px;margin:0 auto .6rem">
-    <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:500;margin-bottom:4px">📊 Trend WH52 — ultime 24 ore</div>
-    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Grafici EC e temperatura radici per sensori 3-in-1</div>
-  </div>
-  <div id="meteo-history" style="max-width:900px;margin:0 auto"></div>
-
-  <!-- Previsioni 7 giorni -->
-  <div style="max-width:900px;margin:1.2rem auto .6rem">
-    <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:500;margin-bottom:4px">🔮 Previsioni 7 giorni</div>
-    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Fonte: Open-Meteo (modelli ECMWF, DWD, NOAA)</div>
-  </div>
-  <div id="meteo-forecast" style="max-width:900px;margin:0 auto 10px"></div>
-
-  <!-- Allerte predittive -->
-  <div id="meteo-forecast-alerts" style="max-width:900px;margin:0 auto 1rem"></div>
-</div>
-
 <!-- ── SECTION: INVENTARIO VASI ────────────────────────────── -->
 <div id="sec-vasi" class="section">
   <div class="app-header">
@@ -1968,9 +1998,6 @@
   </button>
   <button class="nav-tab" id="tab-vasi" data-sec="vasi" onclick="showSection('vasi')">
     <span class="nav-icon">📦</span>Vasi
-  </button>
-  <button class="nav-tab" id="tab-meteo" data-sec="meteo" onclick="showSection('meteo')">
-    <span class="nav-icon">🌤️</span>Meteo
   </button>
   <button class="nav-tab" id="tab-params" data-sec="params" onclick="showSection('params')">
     <span class="nav-icon">⚙️</span>Parametri
