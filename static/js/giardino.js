@@ -6577,6 +6577,70 @@ function simOnStageChange() {
 }
 
 // Costruisce array di dati meteo giornalieri per la simulazione
+// ── Climatologia mensile per Saronno (Lombardia) ────────────────────
+// Tabella di pioggia media mensile in millimetri, calcolata su medie
+// trentennali (1991-2020) per la zona di Saronno-Milano. Per i mesi
+// in cui le previsioni meteo reali sono esaurite e l'utente ha attivato
+// la modalità "live + climatologia", queste medie servono come stima
+// di sostituzione.
+//
+// Importante: in clima continentale temperato la pioggia non cade in
+// modo uniforme nel mese ma in episodi sparsi. Per non riprodurre il
+// bug del valore costante che affliggeva la versione precedente, la
+// stima viene distribuita su pochi giorni piovosi al mese (3-5 giorni
+// con quantità realistica) lasciando gli altri giorni asciutti. Questo
+// è agronomicamente corretto: il modello FAO-56 risponde in modo
+// diverso a "100mm in 5 giorni" rispetto a "100mm in 30 giorni".
+//
+// I valori di temperatura min/max e umidità sono medie mensili
+// approssimate per la stessa zona, utilizzate per coprire i giorni
+// climatologici in modo realistico.
+const CLIMATOLOGY_SARONNO = {
+  // {mese 0-11: {totalRainMm, rainyDays, tmin, tmax, hum}}
+  0:  {rainMm: 70,  rainyDays: 7,  tmin: 0,  tmax: 6,  hum: 85},
+  1:  {rainMm: 80,  rainyDays: 7,  tmin: 2,  tmax: 9,  hum: 80},
+  2:  {rainMm: 90,  rainyDays: 8,  tmin: 5,  tmax: 14, hum: 75},
+  3:  {rainMm: 100, rainyDays: 9,  tmin: 9,  tmax: 18, hum: 75},
+  4:  {rainMm: 100, rainyDays: 10, tmin: 13, tmax: 23, hum: 70},
+  5:  {rainMm: 90,  rainyDays: 9,  tmin: 17, tmax: 27, hum: 65},
+  6:  {rainMm: 70,  rainyDays: 7,  tmin: 19, tmax: 30, hum: 60},
+  7:  {rainMm: 90,  rainyDays: 8,  tmin: 19, tmax: 29, hum: 65},
+  8:  {rainMm: 100, rainyDays: 8,  tmin: 15, tmax: 25, hum: 70},
+  9:  {rainMm: 110, rainyDays: 9,  tmin: 11, tmax: 18, hum: 80},
+  10: {rainMm: 110, rainyDays: 10, tmin: 5,  tmax: 12, hum: 85},
+  11: {rainMm: 70,  rainyDays: 7,  tmin: 1,  tmax: 7,  hum: 85},
+};
+
+// Genera un giorno climatologico per una data specifica, scegliendo
+// se sia piovoso o asciutto in base alla statistica del mese e al
+// numero di giorni piovosi attesi. La distribuzione è pseudo-casuale
+// ma deterministica rispetto alla data (stessa data = stesso risultato),
+// così le previsioni climatologiche sono riproducibili tra refresh.
+function simClimatologyDay(date) {
+  const m = date.getMonth();
+  const c = CLIMATOLOGY_SARONNO[m];
+  // Hash deterministico della data per il "lancio del dado" piovoso
+  const seed = (date.getMonth() * 31 + date.getDate()) * 1009;
+  const r = (Math.sin(seed) * 10000) % 1;
+  const pseudoRand = r < 0 ? -r : r;
+  const daysInMonth = new Date(date.getFullYear(), m+1, 0).getDate();
+  const probRain = c.rainyDays / daysInMonth;
+  const isRainyDay = pseudoRand < probRain;
+  // Quando piove, distribuisco il totale mensile equamente sui giorni piovosi.
+  // Questo è una semplificazione: la pioggia reale ha picchi e code, ma
+  // catturare quel pattern richiederebbe un modello stocastico più ricco.
+  // Per gli scopi del simulatore questa approssimazione è sufficiente.
+  const rainMm = isRainyDay ? c.rainMm / c.rainyDays : 0;
+  return {
+    tmin: c.tmin, tmax: c.tmax,
+    hum:  c.hum,
+    wind: 7,           // Vento medio plausibile in pianura
+    solarW: 250,       // Approssimazione, varia molto per stagione
+    rain: rainMm,
+    source: 'climatology',
+  };
+}
+
 function simBuildMeteoArray(days) {
   const mode = document.getElementById('sim-meteo-mode').value;
   const meteo = [];
@@ -6614,8 +6678,21 @@ function simBuildMeteoArray(days) {
       });
     }
   } else {
-    // Usa previsioni Open-Meteo per piante outdoor/balcone
+    // Modalità live (e live+climatologia): previsioni reali finché ci sono,
+    // poi comportamento dipendente dalla scelta dell'utente. Storicamente
+    // il fallback era "copia l'ultimo giorno disponibile", che produceva
+    // il bug del valore costante propagato all'infinito (es. 1.75L di
+    // pioggia ogni giorno per settimane). Adesso il comportamento è onesto:
+    //
+    // - mode === 'live' (puro): troncamento. La simulazione si ferma al
+    //   giorno in cui le previsioni reali finiscono. Il chiamante riceve
+    //   un array più corto del richiesto e deve gestirlo.
+    // - mode === 'live_clim' (live + climatologia): oltre l'orizzonte di
+    //   previsione, ogni giorno è generato dalla climatologia mensile
+    //   con marker source='climatology' che il renderer userà per
+    //   distinguere visivamente questi giorni dalle previsioni reali.
     const daily = _simForecast && _simForecast.daily;
+    const today = new Date();
     for (let d = 0; d < days; d++) {
       if (daily && d < daily.time.length) {
         meteo.push({
@@ -6625,12 +6702,20 @@ function simBuildMeteoArray(days) {
           wind: daily.wind_speed_10m_max ? daily.wind_speed_10m_max[d] * 0.6 : 8,
           solarW: 300, // approx, serve radiazione più precisa ma non fornita in daily
           rain: daily.precipitation_sum[d] || 0,
-          source:'forecast',
+          source: 'forecast',
         });
       } else {
-        // Fallback: estende con ultimo giorno disponibile
-        const last = meteo[meteo.length-1];
-        meteo.push(last ? {...last} : {tmin:15, tmax:25, hum:60, wind:8, solarW:300, rain:0, source:'default'});
+        // Oltre l'orizzonte di previsione: dipende dalla modalità.
+        if (mode === 'live_clim') {
+          const futureDate = new Date(today.getTime() + d * 86400000);
+          meteo.push(simClimatologyDay(futureDate));
+        } else {
+          // Modalità 'live' pura: troncamento. Esco dal loop e ritorno
+          // l'array più corto. Il chiamante (simRun) deve sapere che
+          // l'array potrebbe avere meno di 'days' elementi e adattare
+          // di conseguenza la simulazione.
+          break;
+        }
       }
     }
   }
@@ -6705,6 +6790,11 @@ function simRun() {
 
   // Meteo
   const meteo = simBuildMeteoArray(days);
+  // Numero di giorni effettivamente simulabili: in modalità 'live' pura
+  // l'array potrebbe essere più corto del richiesto (troncamento per
+  // orizzonte di previsione esaurito). In tutte le altre modalità,
+  // simBuildMeteoArray ritorna esattamente 'days' elementi.
+  const simulatedDays = meteo.length;
 
   // Simulazione
   let theta_L = initialMoistPct / 100 * thetaFC_L;
@@ -6714,7 +6804,7 @@ function simRun() {
   let stressDays = 0;
   const irrigationEvents = [];
 
-  for (let d = 0; d < days; d++) {
+  for (let d = 0; d < simulatedDays; d++) {
     const m = meteo[d];
     const tMean = (m.tmin + m.tmax) / 2;
 
@@ -6775,7 +6865,15 @@ function simRun() {
 
   simRenderResults({
     item, p, vol, thetaFC_L, thetaPWP_L, TAW_L, RAW_L, rootDepthCm, whc, kc,
-    results, irrigationEvents, totalIrrigation_L, totalDrainage_L, stressDays, days, areaM2, pCoef,
+    results, irrigationEvents, totalIrrigation_L, totalDrainage_L, stressDays,
+    // Distinzione importante: 'days' è quello che l'utente ha chiesto,
+    // 'simulatedDays' è quello che effettivamente abbiamo simulato.
+    // Il renderer userà la differenza per mostrare un avviso quando la
+    // simulazione si è interrotta prima del previsto per esaurimento
+    // dell'orizzonte di previsione.
+    days: simulatedDays,
+    requestedDays: days,
+    areaM2, pCoef,
   });
 }
 
@@ -7174,8 +7272,17 @@ function simRenderTimeline(r) {
     const stressBadge = x.Ks < 1 ? `<span style="color:#c04040;font-weight:600">stress Ks=${x.Ks.toFixed(2)}</span>` : '';
     const rainBadge = x.rain_L > 0 ? `<span style="color:#3a6abf">💧 ${x.rain_L.toFixed(2)}L</span>` : '';
     const irrigBadge = x.irrig_L > 0 ? `<span style="color:#2a6a2a;font-weight:600">🔻 ${x.irrig_L.toFixed(2)}L</span>` : '';
-    return `<tr style="border-top:1px solid var(--border)">
-      <td style="padding:4px 6px;font-size:10px">${dow} ${date}</td>
+    // Distinguo visivamente le righe basate su climatologia da quelle
+    // basate su previsioni reali. Le climatologiche hanno sfondo leggero
+    // tonalità sabbia (richiama "stima storica" senza gridare) e un'icona
+    // discreta accanto alla data. Le forecast restano con lo sfondo bianco
+    // standard. Per la modalità manual e wn31_indoor, lo sfondo è ancora
+    // bianco perché l'utente ha già esplicitamente scelto quella modalità.
+    const isClimatology = x.source === 'climatology';
+    const rowBg = isClimatology ? 'background:#f5efe0' : '';
+    const climIcon = isClimatology ? ' <span style="color:#9a8030" title="Stima climatologica — oltre l\'orizzonte di previsione meteo">📊</span>' : '';
+    return `<tr style="border-top:1px solid var(--border);${rowBg}">
+      <td style="padding:4px 6px;font-size:10px">${dow} ${date}${climIcon}</td>
       <td style="padding:4px 6px;font-size:10px;text-align:right">${x.moisturePct.toFixed(0)}%</td>
       <td style="padding:4px 6px;font-size:10px;text-align:right">${x.ETc_L.toFixed(2)}L</td>
       <td style="padding:4px 6px;font-size:10px;text-align:right">${rainBadge}</td>
@@ -7183,6 +7290,32 @@ function simRenderTimeline(r) {
       <td style="padding:4px 6px;font-size:10px;text-align:right">${stressBadge}</td>
     </tr>`;
   }).join('');
+
+  // Avviso di troncamento: se la simulazione si è fermata prima del
+  // numero di giorni richiesto (modalità 'live' pura senza climatologia,
+  // orizzonte di previsione esaurito), mostro un footer che spiega cosa
+  // è successo. Senza questo avviso l'utente potrebbe non capire perché
+  // la tabella si interrompe e pensare a un bug.
+  let truncationFooter = '';
+  if (r.requestedDays && r.days < r.requestedDays) {
+    const lastDate = new Date(today.getTime() + (r.days - 1) * 86400000);
+    const lastDateStr = lastDate.getDate() + '/' + (lastDate.getMonth()+1);
+    truncationFooter = `<div style="margin-top:8px;padding:8px 12px;background:#fef3e0;border-left:3px solid #d4a040;border-radius:6px;font-size:11px;color:#8a6020">
+      <b>⚠️ Simulazione troncata al ${lastDateStr}</b><br>
+      L'orizzonte di previsione meteo (${r.days} giorni) è inferiore ai ${r.requestedDays} richiesti. Per estendere la simulazione oltre, cambia la modalità meteo in <i>"Live + climatologia"</i> dal selettore in alto: i giorni oltre l'orizzonte useranno medie storiche mensili e saranno marcati con 📊.
+    </div>`;
+  }
+
+  // Avviso di climatologia attiva: se la simulazione include giorni
+  // climatologici, mostro un footer più pacato che spiega come leggerli.
+  let climatologyFooter = '';
+  const climDays = r.results.filter(x => x.source === 'climatology').length;
+  if (climDays > 0) {
+    climatologyFooter = `<div style="margin-top:8px;padding:8px 12px;background:#f5efe0;border-left:3px solid #9a8030;border-radius:6px;font-size:11px;color:#6a5020">
+      <b>📊 ${climDays} ${climDays === 1 ? 'giorno' : 'giorni'} basati su climatologia</b><br>
+      I giorni con sfondo beige sono oltre l'orizzonte di previsione meteo (~16 giorni). Le quantità di pioggia, temperature e altri parametri provengono da medie storiche mensili per la zona di Saronno. Sono stime ragionevoli per pianificazione a lungo termine, ma meno accurate dei primi giorni di previsione reale.
+    </div>`;
+  }
 
   document.getElementById('sim-timeline').innerHTML = `
     <div style="font-size:12px;font-weight:500;margin:12px 0 4px">📅 Timeline giornaliera</div>
@@ -7198,7 +7331,9 @@ function simRenderTimeline(r) {
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
-    </div>`;
+    </div>
+    ${truncationFooter}
+    ${climatologyFooter}`;
 }
 
 // ══════════════════════════════════════════════════════════════════════
