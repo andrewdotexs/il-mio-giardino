@@ -835,9 +835,14 @@ class Handler(BaseHTTPRequestHandler):
         plant_idx = data.get("plantTypeIdx")
         if plant_idx is None or plant_idx == "":
             raise ValueError("plantTypeIdx mancante o nullo nel payload")
+        # Nota: la colonna DB `qty` esiste ancora nello schema (CREATE TABLE
+        # alla creazione iniziale del DB) per compatibilità con installazioni
+        # esistenti. Strategia A della rimozione del campo "Esemplari": non
+        # leggiamo più qty dal payload e non lo scriviamo, ma lasciamo la
+        # colonna nel DB con il suo DEFAULT=1 così i record vecchi che
+        # avessero qty>1 restano nel DB ma vengono ignorati dall'app.
         return {
             "plant_type_idx": plant_idx,
-            "qty": data.get("qty", 1),
             "nickname": data.get("nickname", ""),
             "location": data.get("location", "indoor"),
             "pot_shape": data.get("potShape", "cylinder"),

@@ -2591,7 +2591,14 @@ async function fiOpenFromCalendar() {
         const plantFactor = PLANT_WATER_FACTOR[pm.id] || 1.0;
         const normalWater = vol * 1000 * whc * PARAMS.drenaggio * potFactor * plantFactor;
         const waterMl = Math.round(normalWater * (PARAMS.fertiReduction / 100));
-        const pots = it.qty || 1;
+        // Modello vasi-centrico: ogni record di inventario rappresenta
+        // un singolo vaso fisico. Il vecchio campo qty (utenti che
+        // dichiaravano "ho 3 oleandri tutti uguali" in un solo record)
+        // è stato rimosso. Per il calendario fertirrigazione questo
+        // significa pots=1 fisso: se un utente vuole rappresentare più
+        // esemplari deve creare più record nell'inventario, e il
+        // calendario li sommerà naturalmente.
+        const pots = 1;
         const label = it.nickname || (invItems.length > 1 ? pm.name + ' #' + (idx+1) : pm.name);
         const dimsStr = it.potShape === 'square'
           ? `${it.potW||25}×${it.potD||25}×${it.potHSq||22}cm`
@@ -2963,7 +2970,7 @@ function invDbToJs(row) {
     return v;
   };
   return {
-    id: row.id, plantTypeIdx: row.plant_type_idx, qty: row.qty, nickname: row.nickname||'',
+    id: row.id, plantTypeIdx: row.plant_type_idx, nickname: row.nickname||'',
     location: row.location, potShape: row.pot_shape, potMat: row.pot_mat,
     potDiam: row.pot_diam, potH: row.pot_h, potVol: row.pot_vol,
     potDiamTop: row.pot_diam_top, potDiamBot: row.pot_diam_bot,
@@ -3248,7 +3255,6 @@ function invOpenAdd() {
   document.getElementById('inv-form-title').textContent = 'Aggiungi vaso';
   document.getElementById('inv-edit-id').value = '';
   document.getElementById('inv-plant-type').value = '';
-  document.getElementById('inv-qty').value = 1;
   document.getElementById('inv-nickname').value = '';
   document.getElementById('inv-location').value = 'indoor';
   document.getElementById('inv-pot-shape').value = 'cylinder';
@@ -3297,7 +3303,6 @@ function invOpenEdit(id) {
   document.getElementById('inv-form-title').textContent = 'Modifica vaso';
   document.getElementById('inv-edit-id').value = id;
   document.getElementById('inv-plant-type').value = item.plantTypeIdx;
-  document.getElementById('inv-qty').value = item.qty||1;
   document.getElementById('inv-nickname').value = item.nickname||'';
   document.getElementById('inv-location').value = item.location||'indoor';
   document.getElementById('inv-pot-shape').value = item.potShape||'cylinder';
@@ -3354,7 +3359,6 @@ async function invSave() {
   const shape = document.getElementById('inv-pot-shape').value;
   const entry = {
     plantTypeIdx: +plantIdx,
-    qty: +(document.getElementById('inv-qty').value)||1,
     nickname: document.getElementById('inv-nickname').value.trim(),
     location: document.getElementById('inv-location').value,
     potShape: shape,
@@ -3474,8 +3478,14 @@ function invRender() {
     return nameMatch && locMatch;
   });
   const countEl = document.getElementById('inv-count');
-  const totalPots = filtered.reduce((s,it)=>s+(it.qty||1),0);
-  if (countEl) countEl.textContent = filtered.length+' piante · '+totalPots+' vasi';
+  // Modello vasi-centrico: ogni record è un singolo vaso fisico.
+  // Prima il totale "vasi" era una somma di qty (un record con qty=3
+  // contava 3); adesso il totale è semplicemente il numero di record.
+  // Il count "piante" non ha più molto senso (record = vaso, non
+  // pianta), ma conto le specie distinte come informazione utile.
+  const totalPots = filtered.length;
+  const distinctPlants = new Set(filtered.map(it => it.plantTypeIdx)).size;
+  if (countEl) countEl.textContent = totalPots+' vas'+(totalPots===1?'o':'i')+' · '+distinctPlants+' '+(distinctPlants===1?'pianta':'piante');
   const grid = document.getElementById('inv-grid');
   let html = '';
   filtered.forEach(it => {
@@ -3497,7 +3507,6 @@ function invRender() {
           <div class="inv-card-sub">${p.name}${p.latin?' · '+p.latin:''}</div>
         </div>
       </div>
-      ${it.qty>1?`<div class="inv-card-qty">×${it.qty} vasi</div>`:''}
       <div class="inv-detail-row"><span class="inv-lbl">Posizione</span><span class="inv-val">${INV_LOC_LABELS[it.location]||it.location}</span></div>
       <div class="inv-detail-row"><span class="inv-lbl">Vaso</span><span class="inv-val">${dimsLabel} · ${vol.toFixed(1)} L · ${it.potMat}</span></div>
       <div class="inv-detail-row"><span class="inv-lbl">Substrato</span><span class="inv-val">${it.substrate==='custom'&&it.customSubstrate ? 'Personalizzato: '+Object.entries(it.customSubstrate).map(([k,v])=>{const s=wSubstrates.find(x=>x.id===k);return (s?s.name:k)+' '+v+'%';}).join(', ') : INV_SUB_LABELS[it.substrate]||it.substrate}</span></div>
