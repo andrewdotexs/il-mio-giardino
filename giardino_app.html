@@ -112,6 +112,31 @@
   <span>📡 Offline — i dati meteo e le modifiche non saranno sincronizzate</span>
 </div>
 
+<!-- ── SECTION: DASHBOARD ────────────────────────────────────────────
+     Panoramica del giardino raggruppata per pianta. Per ogni specie con
+     vasi nell'inventario viene mostrata una card che contiene la lista
+     dei vasi di quella specie, con per ognuno: stato dell'umidità dai
+     sensori, allerte attive, ed eventi imminenti. Le card sono ordinate
+     mettendo in cima quelle che contengono almeno un'allerta attiva,
+     poi le altre in ordine alfabetico per nome della pianta. -->
+<div id="sec-dashboard" class="section active">
+  <div class="app-header">
+    <h1 style="color: white;">Dashboard 📊</h1>
+    <p style="color: white;">Panoramica del tuo giardino · stato, allerte ed eventi imminenti</p>
+    <p class="d-mode-indicator" style="color: white;font-size:11px;margin-top:4px">⏳ Connessione al database...</p>
+  </div>
+  <!-- Riassunto numerico in cima: aiuta a vedere lo stato di salute
+       generale a colpo d'occhio prima di entrare nei dettagli. -->
+  <div id="dashboard-summary" style="max-width:920px;margin:0 auto 14px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center"></div>
+  <!-- Container delle card pianta. Una card per specie. -->
+  <div id="dashboard-cards" style="max-width:920px;margin:0 auto"></div>
+  <!-- Stato vuoto: mostrato solo se non ci sono vasi nell'inventario. -->
+  <div id="dashboard-empty" style="display:none;text-align:center;padding:40px 20px;max-width:560px;margin:0 auto;color:var(--muted)">
+    <div style="font-size:48px;margin-bottom:12px">🪴</div>
+    <div style="font-size:14px;line-height:1.5">Non hai ancora aggiunto vasi al giardino.<br>Vai in <a href="#" onclick="showSection('vasi');return false" style="color:var(--accent)">"I miei vasi"</a> per crearne uno e iniziare a vedere la panoramica.</div>
+  </div>
+</div>
+
 <!-- ── SECTION: SCHEDE ─────────────────────────────────────────────── -->
 <div id="sec-schede" class="section">
   <div class="app-header">
@@ -488,10 +513,57 @@
 <!-- ── SECTION: CALCOLATORE ACQUA ─────────────────────────────── -->
 <div id="sec-acqua" class="section">
   <div class="app-header">
-    <h1 style="color: white;">Calcolatore Acqua 💧</h1>
+    <h1 style="color: white;">Calcolatori 💧🧪</h1>
+    <p style="color: white;">Acqua e fertirrigazione · in base ai tuoi vasi</p>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────────────
+       CALCOLATORE ACQUA
+  ───────────────────────────────────────────────────────── -->
+  <div class="app-header" style="margin-top:.4rem;padding:1rem">
+    <h1 style="color:white; font-size:clamp(18px,4vw,26px)">Calcolatore Acqua 💧</h1>
     <p style="color: white;">Quantità d'acqua ottimale in base al vaso e al substrato</p>
   </div>
 
+  <!-- Switch modalità calcolatore.
+       "Da vasi esistenti" (default) chiede all'utente di selezionare uno o
+       più vasi dell'inventario; volume, substrato, materiale del vaso e
+       categoria della pianta vengono dedotti automaticamente. Restano
+       modificabili solo i parametri "situazionali" che non vivono nel
+       record del vaso (stagione, esposizione, stadio della pianta).
+       "Calcolo libero" mostra i blocchi originali per il caso "what-if"
+       di vasi non ancora in inventario. -->
+  <div style="max-width:520px;margin:0 auto 14px;display:flex;gap:6px;background:rgba(255,255,255,0.7);padding:4px;border-radius:10px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)">
+    <button class="ctrl-btn p-view-btn active" id="w-mode-pots-btn"
+      onclick="wSwitchMode('pots')"
+      style="flex:1;padding:8px 12px;font-size:12px">📦 Da vasi esistenti</button>
+    <button class="ctrl-btn p-view-btn" id="w-mode-free-btn"
+      onclick="wSwitchMode('free')"
+      style="flex:1;padding:8px 12px;font-size:12px">🧪 Calcolo libero</button>
+  </div>
+
+  <!-- Modalità "Da vasi esistenti": multi-selezione di vasi. -->
+  <div id="w-mode-pots" class="w-mode-block">
+    <div class="calc-card">
+      <div class="calc-card-title">📦 Vasi da calcolare</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Seleziona uno o più vasi: i parametri (volume, substrato, materiale) verranno dedotti automaticamente dall'inventario.</div>
+      <!-- Pulsanti di selezione massiva, simili a quelli delle legende
+           del calendario per coerenza visiva. -->
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+        <button class="legend-bulk-btn" onclick="wPotsSelectAll()" type="button">Tutti</button>
+        <button class="legend-bulk-btn" onclick="wPotsSelectNone()" type="button">Nessuno</button>
+      </div>
+      <div id="w-pots-list" style="display:flex;flex-direction:column;gap:4px;max-height:280px;overflow-y:auto"></div>
+      <div id="w-pots-empty" style="display:none;text-align:center;padding:20px;color:var(--muted);font-size:12px;font-style:italic">
+        Non hai vasi nell'inventario. Vai in <a href="#" onclick="showSection('vasi');return false" style="color:var(--accent)">"I miei vasi"</a> per crearne uno, oppure usa la modalità "Calcolo libero".
+      </div>
+      <div id="w-pots-selected-count" style="margin-top:8px;font-size:11px;color:var(--muted);text-align:right"></div>
+    </div>
+  </div>
+
+  <!-- Modalità "Calcolo libero": i tre blocchi originali, mostrati solo
+       quando questa modalità è attiva. -->
+  <div id="w-mode-free" class="w-mode-block" style="display:none">
   <!-- Volume vaso -->
   <div class="calc-card">
     <div class="calc-card-title">📦 Volume del vaso</div>
@@ -541,9 +613,15 @@
     <div class="sub-total" id="w-sub-total">Totale: 0%</div>
   </div>
 
-  <!-- Fattori aggiuntivi -->
+  <!-- Fattori aggiuntivi (parte legata al vaso/pianta).
+       Visibile solo in modalità "Calcolo libero" perché in modalità
+       "Da vasi esistenti" Materiale vaso e Categoria pianta vengono
+       dedotti automaticamente dal record del vaso e dalla pianta
+       associata. Le option qui presenti restano sincronizzate con
+       quelle del codice JS che imposta i valori in modalità "vasi"
+       (vedi wPotsApplyDeductedValues nel giardino.js). -->
   <div class="calc-card">
-    <div class="calc-card-title">⚙️ Fattori aggiuntivi</div>
+    <div class="calc-card-title">⚙️ Fattori del vaso</div>
     <div class="calc-row">
       <div class="calc-field">
         <label>Materiale vaso</label>
@@ -552,14 +630,6 @@
           <option value="0.88">Terracotta (assorbe acqua)</option>
           <option value="0.82">Terracotta non smaltata spessa</option>
           <option value="1.05">Vaso con sottovaso / senza drenaggio</option>
-        </select>
-      </div>
-      <div class="calc-field">
-        <label>Stagione / Temperatura</label>
-        <select id="w-season">
-          <option value="1.0">Estate (>25°C)</option>
-          <option value="0.75" selected>Primavera / Autunno</option>
-          <option value="0.45">Inverno (<15°C)</option>
         </select>
       </div>
       <div class="calc-field">
@@ -574,7 +644,27 @@
         </select>
       </div>
     </div>
-    <div class="calc-row" style="margin-top:8px">
+  </div>
+
+  </div><!-- /w-mode-free -->
+
+  <!-- Parametri situazionali, visibili in entrambe le modalità.
+       Stagione, Esposizione e Stadio dipendono dal momento e dal contesto,
+       non dal vaso, quindi l'utente li compila al momento del calcolo
+       indipendentemente dalla modalità scelta. Quando il toggle "ET₀ live"
+       è attivo, Stagione ed Esposizione vengono ignorati (sostituiti dal
+       calcolo Penman-Monteith dai dati Ecowitt). -->
+  <div class="calc-card">
+    <div class="calc-card-title">🌡️ Condizioni del momento</div>
+    <div class="calc-row">
+      <div class="calc-field">
+        <label>Stagione / Temperatura</label>
+        <select id="w-season">
+          <option value="1.0">Estate (>25°C)</option>
+          <option value="0.75" selected>Primavera / Autunno</option>
+          <option value="0.45">Inverno (<15°C)</option>
+        </select>
+      </div>
       <div class="calc-field">
         <label>Esposizione / Ventilazione</label>
         <select id="w-exposure" onchange="wCheckET0Override()">
@@ -645,6 +735,16 @@
       <div class="result-item" id="r-et0-item" style="display:none;border-color:#b0c8e8"><div class="result-item-label">ET₀ live</div><div class="result-item-val" id="r-et0">—</div></div>
     </div>
     <div class="result-tips" id="r-tips"></div>
+  </div>
+
+  <!-- Dettaglio per vaso (visibile solo in modalità "Da vasi esistenti"
+       quando si selezionano due o più vasi). Mostra una riga compatta per
+       ciascun vaso con la quota di acqua e la sua percentuale rispetto al
+       totale, così l'utente può poi distribuire la soluzione totale in
+       modo proporzionale tra i vasi. -->
+  <div id="w-pots-breakdown" style="display:none;max-width:760px;margin:14px auto 0;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden">
+    <div style="padding:10px 14px;background:var(--bg);border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text)">Distribuzione per vaso</div>
+    <div id="w-pots-breakdown-body"></div>
   </div>
 
   <!-- ─────────────────────────────────────────────────────────
@@ -731,8 +831,8 @@
        CALCOLATORE FERTIRRIGAZIONE
   ───────────────────────────────────────────────────────── -->
   <div class="app-header" style="margin-top:1.5rem">
-    <h1 style="color:white; font-size:clamp(18px,4vw,26px)">Fertirrigazione 🧪💧</h1>
-    <p style="color: white;">Prepara una soluzione unica ottimizzata per più piante</p>
+    <h1 style="color:white; font-size:clamp(18px,4vw,26px)">Calcolatore Fertirrigazione 🧪💧</h1>
+    <p style="color: white;">Prepara una soluzione unica ottimizzata per più vasi</p>
   </div>
 
   <div class="calc-card">
@@ -770,15 +870,18 @@
   </div>
 
   <div class="calc-card">
-    <div class="calc-card-title">🌿 Piante da fertirrigare</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Seleziona le piante e regola la dose e l'acqua per ciascuna</div>
+    <div class="calc-card-title">🪴 Vasi da fertirrigare</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Seleziona i vasi e regola la dose e l'acqua per ciascuno. La lista è quella dell'inventario "I miei vasi".</div>
     <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
-      <button class="ctrl-btn" onclick="fiSelectAll()" style="font-size:11px;padding:5px 10px">✅ Tutte</button>
-      <button class="ctrl-btn" onclick="fiSelectNone()" style="font-size:11px;padding:5px 10px">❌ Nessuna</button>
-      <button class="ctrl-btn" onclick="fiSelectIndoor()" style="font-size:11px;padding:5px 10px">🏠 Interne</button>
-      <button class="ctrl-btn" onclick="fiSelectOutdoor()" style="font-size:11px;padding:5px 10px">☀️ Esterne</button>
+      <button class="ctrl-btn" onclick="fiSelectAll()" style="font-size:11px;padding:5px 10px">✅ Tutti</button>
+      <button class="ctrl-btn" onclick="fiSelectNone()" style="font-size:11px;padding:5px 10px">❌ Nessuno</button>
+      <button class="ctrl-btn" onclick="fiSelectIndoor()" style="font-size:11px;padding:5px 10px">🏠 Interni</button>
+      <button class="ctrl-btn" onclick="fiSelectOutdoor()" style="font-size:11px;padding:5px 10px">☀️ Esterni</button>
     </div>
     <div id="fi-plant-list" style="display:flex;flex-direction:column;gap:4px"></div>
+    <div id="fi-plant-list-empty" style="display:none;text-align:center;padding:20px;color:var(--muted);font-size:12px;font-style:italic">
+      Non hai vasi nell'inventario. Vai in <a href="#" onclick="showSection('vasi');return false" style="color:var(--accent)">"I miei vasi"</a> per crearne uno.
+    </div>
   </div>
 
   <!-- Risultato fertirrigazione -->
@@ -1009,6 +1112,19 @@
       <div>
         <div style="font-size:12px;font-weight:500">Attiva annaffiature predittive</div>
         <div class="param-hint">Sostituisce gli intervalli statici con le previsioni del simulatore (richiede vasi nell'inventario)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="calc-card" style="max-width:700px;margin:0 auto 10px">
+    <div class="calc-card-title">📊 Dashboard</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Configura il comportamento della tab "Dashboard" che mostra una panoramica raggruppata per pianta con stato dei vasi, allerte ed eventi imminenti.</div>
+    <div class="form-row">
+      <div class="form-field" style="max-width:200px">
+        <label>Eventi imminenti per categoria</label>
+        <input type="number" id="p-dashboard-max-upcoming" value="6" min="1" max="50">
+        <div class="param-hint">Numero massimo di eventi mostrati per ogni categoria (fertilizzazioni, trattamenti, annaffiature, diario) all'interno di ogni card pianta. Default: 6.</div>
       </div>
     </div>
   </div>
@@ -1839,7 +1955,10 @@
 
 <!-- ── BOTTOM NAV ─────────────────────────────────────────────────── -->
 <nav class="app-nav">
-  <button class="nav-tab active" id="tab-schede" data-sec="schede" onclick="showSection('schede')">
+  <button class="nav-tab active" id="tab-dashboard" data-sec="dashboard" onclick="showSection('dashboard')">
+    <span class="nav-icon">📊</span>Dashboard
+  </button>
+  <button class="nav-tab" id="tab-schede" data-sec="schede" onclick="showSection('schede')">
     <span class="nav-icon">🌿</span>Schede
   </button>
   <button class="nav-tab" id="tab-pianificazione" data-sec="pianificazione" onclick="showSection('pianificazione')">
@@ -1849,7 +1968,7 @@
     <span class="nav-icon">📓</span>Diario
   </button>
   <button class="nav-tab" id="tab-acqua" data-sec="acqua" onclick="showSection('acqua')">
-    <span class="nav-icon">💧</span>Acqua
+    <span class="nav-icon">💧</span>Calcolatori
   </button>
   <button class="nav-tab" id="tab-vasi" data-sec="vasi" onclick="showSection('vasi')">
     <span class="nav-icon">📦</span>Vasi

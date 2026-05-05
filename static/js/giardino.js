@@ -57,7 +57,7 @@ async function apiFetch(url, options = {}) {
 // apertura della tab perché popolano DOM disgiunti che vivono nei due
 // div figli p-view-mese e p-view-giorno.
 // ══════════════════════════════════════════════════════════════════════
-const sectionInited = {schede:false, pianificazione:false, diario:false, acqua:false, vasi:false, meteo:false, params:false};
+const sectionInited = {dashboard:false, schede:false, pianificazione:false, diario:false, acqua:false, vasi:false, meteo:false, params:false};
 
 function showSection(name) {
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -65,7 +65,8 @@ function showSection(name) {
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.toggle('active', t.dataset.sec===name));
   window.scrollTo(0,0);
   if (!sectionInited[name]) {
-    if (name==='schede') sInitSchede();
+    if (name==='dashboard') dashboardInit();
+    else if (name==='schede') sInitSchede();
     else if (name==='pianificazione') {
       // Inizializzo entrambe le viste della pianificazione. Le due
       // funzioni popolano DOM disgiunti (la prima dentro p-view-mese,
@@ -84,6 +85,21 @@ function showSection(name) {
   }
   if (name==='diario') dRender();
   if (name==='meteo') meteoRefresh();
+  // La Dashboard mostra dati live (sensori, eventi prossimi). Ogni volta
+  // che ci si torna ricalcoliamo perché i dati possono essere cambiati
+  // (un evento aggiunto al diario, un sensore con un nuovo valore, ecc.).
+  if (name==='dashboard' && sectionInited.dashboard) dashboardRender();
+  // I Calcolatori mostrano la lista dei vasi dell'inventario in due
+  // posti (Calcolatore Acqua → "Vasi da calcolare", Calcolatore
+  // Fertirrigazione → "Vasi da fertirrigare"). Se l'utente aggiunge o
+  // modifica un vaso e poi torna sui Calcolatori, le due liste devono
+  // essere aggiornate. Le funzioni sono idempotenti: ricostruiscono il
+  // DOM da zero leggendo invLoad() corrente, quindi chiamarle è
+  // sicuro anche se non ci sono modifiche.
+  if (name==='acqua' && sectionInited.acqua) {
+    if (typeof wRenderPotsList === 'function') wRenderPotsList();
+    if (typeof fiInit === 'function') fiInit();
+  }
 }
 
 // Switch tra vista MESE e vista GIORNO dentro la sezione Pianificazione.
@@ -1604,6 +1620,16 @@ function wApplyPreset(presetId) {
   wUpdateTotal();
 }
 
+// ── Stato del calcolatore acqua ──────────────────────────────────────
+// Modalità di calcolo: 'pots' (default, deduce parametri dai vasi
+// selezionati nell'inventario) o 'free' (l'utente compila tutti i campi
+// a mano). Lo switch tra le due modalità è esposto in cima al
+// calcolatore con due pulsanti.
+let wMode = 'pots';
+// Set degli id dei vasi selezionati in modalità 'pots'. Uso un Set per
+// avere lookup O(1) e operazioni di selezione massiva pulite.
+const wSelectedPotIds = new Set();
+
 function wInitCalc() {
   // Render presets
   const presetsEl = document.getElementById('w-presets');
@@ -1620,6 +1646,101 @@ function wInitCalc() {
   // Imposta il preset default
   wApplyPreset('universale_mix');
   wCalcVol();
+  // Popola la lista vasi della modalità "Da vasi esistenti".
+  // È idempotente: chiamarla più volte non rompe nulla.
+  wRenderPotsList();
+}
+
+// ── Switch tra le modalità del calcolatore ──────────────────────────
+// In modalità 'pots' (default) l'utente sceglie uno o più vasi e i
+// parametri di volume/substrato/materiale vengono dedotti dal vaso.
+// In modalità 'free' l'utente compila tutti i parametri come faceva
+// storicamente l'app. La transizione è solo questione di mostrare/
+// nascondere i due blocchi DOM, e i parametri situazionali (stagione,
+// esposizione, stadio) restano nello stesso posto in entrambe le
+// modalità.
+function wSwitchMode(mode) {
+  wMode = mode;
+  document.getElementById('w-mode-pots').style.display = mode === 'pots' ? '' : 'none';
+  document.getElementById('w-mode-free').style.display = mode === 'free' ? '' : 'none';
+  document.getElementById('w-mode-pots-btn').classList.toggle('active', mode === 'pots');
+  document.getElementById('w-mode-free-btn').classList.toggle('active', mode === 'free');
+  // Quando entro in modalità "vasi", se ho già selezioni precedenti
+  // ricalcolo subito; in caso contrario svuoto il risultato per non
+  // mostrare valori stantii del calcolo libero precedente.
+  if (mode === 'pots' && wSelectedPotIds.size > 0) {
+    wCalculate();
+  }
+}
+
+// ── Lista vasi per la modalità "Da vasi esistenti" ──────────────────
+// Renderizzata dinamicamente leggendo l'inventario. Ogni vaso è una
+// checkbox con label che mostra nickname/id, pianta associata e volume.
+// Se non ci sono vasi viene mostrato un placeholder con CTA verso la
+// sezione "I miei vasi".
+function wRenderPotsList() {
+  const inv = (typeof invLoad === 'function') ? invLoad() : [];
+  const listEl = document.getElementById('w-pots-list');
+  const emptyEl = document.getElementById('w-pots-empty');
+  if (!listEl) return;
+  if (!inv || inv.length === 0) {
+    listEl.innerHTML = '';
+    emptyEl.style.display = 'block';
+    wUpdateSelectedCount();
+    return;
+  }
+  emptyEl.style.display = 'none';
+  // Ordino i vasi: prima per pianta (alfabetico), poi per nickname,
+  // così se ho più phalaenopsis sono raggruppate visivamente.
+  const sorted = inv.slice().sort((a, b) => {
+    const pa = (typeof getPlantById === 'function') ? getPlantById(a.plantTypeIdx) : null;
+    const pb = (typeof getPlantById === 'function') ? getPlantById(b.plantTypeIdx) : null;
+    const na = pa ? pa.name : '';
+    const nb = pb ? pb.name : '';
+    if (na !== nb) return na.localeCompare(nb);
+    return (a.nickname || '').localeCompare(b.nickname || '');
+  });
+  listEl.innerHTML = sorted.map(item => {
+    const plant = (typeof getPlantById === 'function') ? getPlantById(item.plantTypeIdx) : null;
+    const plantLabel = plant ? `${plant.icon || '🌱'} ${plant.name}` : '— pianta non trovata —';
+    const nick = (item.nickname && item.nickname.trim()) ? item.nickname : `Vaso #${item.id}`;
+    const vol = (typeof invGetVolFromItem === 'function') ? invGetVolFromItem(item) : null;
+    const volStr = vol ? ` · ${vol.toFixed(1)} L` : '';
+    const checked = wSelectedPotIds.has(item.id) ? 'checked' : '';
+    return `<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:var(--surface)">
+      <input type="checkbox" data-pot-id="${item.id}" onchange="wTogglePot(${item.id})" ${checked}>
+      <span style="flex:1;font-size:12px;color:var(--text)"><strong>${nick}</strong> · ${plantLabel}<span style="color:var(--muted)">${volStr}</span></span>
+    </label>`;
+  }).join('');
+  wUpdateSelectedCount();
+}
+
+function wTogglePot(potId) {
+  if (wSelectedPotIds.has(potId)) wSelectedPotIds.delete(potId);
+  else wSelectedPotIds.add(potId);
+  wUpdateSelectedCount();
+}
+
+function wPotsSelectAll() {
+  const inv = (typeof invLoad === 'function') ? invLoad() : [];
+  inv.forEach(item => wSelectedPotIds.add(item.id));
+  document.querySelectorAll('#w-pots-list input[type=checkbox]').forEach(cb => { cb.checked = true; });
+  wUpdateSelectedCount();
+}
+
+function wPotsSelectNone() {
+  wSelectedPotIds.clear();
+  document.querySelectorAll('#w-pots-list input[type=checkbox]').forEach(cb => { cb.checked = false; });
+  wUpdateSelectedCount();
+}
+
+function wUpdateSelectedCount() {
+  const el = document.getElementById('w-pots-selected-count');
+  if (!el) return;
+  const n = wSelectedPotIds.size;
+  el.textContent = n === 0 ? 'Nessun vaso selezionato'
+                : n === 1 ? '1 vaso selezionato'
+                : `${n} vasi selezionati`;
 }
 
 function wOnSliderChange(id) {
@@ -1851,7 +1972,55 @@ function calcET0(temp, humidity, solarWm2, windKmh) {
   return { et0, factor, desc, temp: T, humidity: RH, solar: solarWm2, wind: windKmh };
 }
 
+// Mappature da campo del vaso a fattori del calcolatore. Servono per
+// la modalità "Da vasi esistenti" dove dobbiamo dedurre i factor dal
+// record del vaso invece di leggerli dai select. I valori devono
+// restare sincronizzati con le option degli stessi select nell'HTML.
+const W_POT_MAT_FACTORS = {
+  'plastica': 1.0,
+  'ceramica': 1.0,
+  'terracotta': 0.88,
+  'terracotta_spessa': 0.82,
+  'sottovaso': 1.05,
+};
+// Mappa da gruppo simulazione (sim_group della pianta) al fattore della
+// categoria del calcolatore. I gruppi nuovi (acidofila, rampicante,
+// felce, eccetera) ricadono sui valori "universale" come fallback;
+// questo è coerente con il principio "il modello scientifico non ha
+// ancora parametri specifici per i nuovi gruppi" già menzionato.
+const W_PLANT_GROUP_FACTORS = {
+  'succulenta': 0.55,
+  'mediterranea': 0.75,
+  'agrume': 0.75,
+  'aromatica': 0.75,
+  'arbusto': 0.85,
+  'fiorita': 0.85,
+  'tropicale': 1.15,
+  'orchidea': 1.0,
+  'bonsai': 0.65,
+  'albero': 1.0,
+  'acidofila': 1.0,
+  'rampicante': 1.0,
+  'palma': 1.0,
+  'felce': 1.15,
+  'erbacea': 1.0,
+  'tappezzante': 1.0,
+};
+
 function wCalculate() {
+  // Punto di ingresso: smista verso il calcolo libero o quello da vasi
+  // in base alla modalità corrente.
+  if (wMode === 'pots') {
+    wCalculateFromPots();
+  } else {
+    wCalculateFree();
+  }
+}
+
+// Modalità libera: come il calcolo storico, legge tutti i parametri
+// dai campi del form. Estratta da wCalculate per mantenere la logica
+// originale isolata e facilmente testabile.
+function wCalculateFree() {
   wCalcVol();
 
   // Calcola WHC pesato del substrato
@@ -1865,77 +2034,197 @@ function wCalculate() {
     return s + pct * sub.whc;
   }, 0);
 
-  const potFactor  = +document.getElementById('w-pot-mat').value;
+  const result = wComputeWaterForPot({
+    volLiters: wVolLiters,
+    whc,
+    potFactor:   +document.getElementById('w-pot-mat').value,
+    plantFactor: +document.getElementById('w-plant-cat').value,
+  });
+  wRenderResult(result, /* multiVaso */ false);
+  // Nascondo il dettaglio per vaso (è solo per la modalità multi-vasi).
+  document.getElementById('w-pots-breakdown').style.display = 'none';
+}
+
+// Modalità "Da vasi esistenti": calcola per ognuno dei vasi selezionati
+// usando i parametri dedotti dal record del vaso, e mostra sia il
+// totale aggregato sia il dettaglio per vaso.
+function wCalculateFromPots() {
+  if (wSelectedPotIds.size === 0) {
+    alert('Seleziona almeno un vaso dalla lista per poter calcolare l\'acqua necessaria.');
+    return;
+  }
+  const inv = invLoad();
+  const selectedItems = inv.filter(it => wSelectedPotIds.has(it.id));
+  if (selectedItems.length === 0) {
+    alert('I vasi selezionati non sono più nell\'inventario. Aggiorna la selezione.');
+    return;
+  }
+
+  // Calcolo per ciascun vaso e accumulo i risultati. Il totale d'acqua
+  // è la somma semplice; gli altri parametri visualizzati nel result-card
+  // (ritenzione, capacità, frequenza) li medio o aggrego in modo
+  // ragionevole per la vista aggregata.
+  const perPot = selectedItems.map(item => {
+    const vol = invGetVolFromItem(item) || 1.0;
+    let whc = SUBSTRATE_WHC[item.substrate] || 0.30;
+    if (item.substrate === 'custom' && item.customSubstrate) {
+      whc = wSubstrates.reduce((s, sub) => {
+        const pct = (item.customSubstrate[sub.id] || 0) / 100;
+        return s + pct * sub.whc;
+      }, 0) || 0.30;
+    }
+    const potFactor = W_POT_MAT_FACTORS[item.potMat] || 1.0;
+    // Categoria pianta: deduco dal sim_group della pianta associata.
+    const plant = (typeof getPlantById === 'function') ? getPlantById(item.plantTypeIdx) : null;
+    const simGroup = plant && plant.simGroup ? plant.simGroup : null;
+    const plantFactor = W_PLANT_GROUP_FACTORS[simGroup] || 1.0;
+    const calc = wComputeWaterForPot({ volLiters: vol, whc, potFactor, plantFactor });
+    return { item, plant, ...calc };
+  });
+
+  // Aggrego per il result-card principale.
+  const totalWaterMl = perPot.reduce((s, p) => s + p.waterMl, 0);
+  const totalVolLiters = perPot.reduce((s, p) => s + p.volLiters, 0);
+  const totalCapMl = perPot.reduce((s, p) => s + p.capMl, 0);
+  // Media pesata della WHC sul volume (più rappresentativa di una
+  // media semplice).
+  const weightedWhc = totalVolLiters > 0
+    ? perPot.reduce((s, p) => s + p.whc * p.volLiters, 0) / totalVolLiters
+    : 0;
+  // Frequenza: per coerenza visiva, mostro la mediana dei freqClamped.
+  // La media aritmetica può essere fuorviante se ci sono vasi con
+  // frequenze molto diverse (es. una succulenta con 30 giorni e
+  // un'orchidea con 5).
+  const freqs = perPot.map(p => p.freqClamped).sort((a,b)=>a-b);
+  const medianFreq = freqs.length % 2 === 1
+    ? freqs[(freqs.length-1)/2]
+    : Math.round((freqs[freqs.length/2-1] + freqs[freqs.length/2]) / 2);
+
+  // Costruisco un oggetto "result aggregato" con la stessa forma di
+  // quello che wComputeWaterForPot restituisce per uso singolo, così
+  // wRenderResult può lavorare uniformemente.
+  const aggregateResult = {
+    waterMl: totalWaterMl,
+    volLiters: totalVolLiters,
+    whc: weightedWhc,
+    capMl: totalCapMl,
+    freqClamped: medianFreq,
+    et0Used: perPot[0] ? perPot[0].et0Used : false,  // Stesso ET₀ per tutti
+  };
+  wRenderResult(aggregateResult, /* multiVaso */ selectedItems.length > 1);
+  // Dettaglio per vaso, visibile solo se più di un vaso.
+  if (selectedItems.length > 1) {
+    wRenderPotsBreakdown(perPot, totalWaterMl);
+  } else {
+    document.getElementById('w-pots-breakdown').style.display = 'none';
+  }
+}
+
+// Calcolo "core" del fabbisogno idrico per un singolo vaso. Riceve
+// esplicitamente i quattro parametri che lo descrivono e legge dai
+// select solo i parametri situazionali (stagione, esposizione, stadio)
+// e lo stato del toggle ET₀. Estratto da wCalculate originale così che
+// lo stesso calcolo sia riusabile per uno o più vasi.
+function wComputeWaterForPot({ volLiters, whc, potFactor, plantFactor }) {
   let seasFactor = +document.getElementById('w-season').value;
-  const plantFactor= +document.getElementById('w-plant-cat').value;
   let expFactor  = +document.getElementById('w-exposure').value;
   const stageFactor= +document.getElementById('w-stage').value;
 
   // Se ET₀ live è attivo, sostituisci stagione × esposizione con il fattore calcolato
-  let usingET0 = false;
-  let et0Factor = 1.0;
+  let et0Used = false;
   if (wET0Enabled && wET0Data) {
-    et0Factor = wET0Data.factor;
-    seasFactor = 1.0;  // Neutralizza il fattore statico
-    expFactor = et0Factor;  // Usa il fattore ET₀ al suo posto
-    usingET0 = true;
+    seasFactor = 1.0;
+    expFactor  = wET0Data.factor;
+    et0Used = true;
   }
 
   // Capacità idrica del vaso (ml)
-  const waterCapacity = wVolLiters * 1000 * whc;
-
+  const capMl = volLiters * 1000 * whc;
   // Quantità da dare per annaffiatura: saturazione target × fattori
-  // Aggiungiamo extra per garantire il drenaggio completo
-  const baseWater = waterCapacity * PARAMS.drenaggio;
+  const baseWater = capMl * PARAMS.drenaggio;
   const adjustedWater = baseWater * potFactor * plantFactor;
   const waterMl = Math.round(adjustedWater / 10) * 10; // arrotonda a 10ml
-
-  // Frequenza stimata (giorni tra una annaffiatura e l'altra)
-  const subRetentionFactor = whc / 0.45; // normalizzato su terriccio standard
-  const freqBase = PARAMS.freqBase;
-  const freqDays = Math.round(freqBase * (1/seasFactor) * (1/expFactor) * (1/stageFactor) * subRetentionFactor * potFactor);
+  // Frequenza stimata
+  const subRetentionFactor = whc / 0.45;
+  const freqDays = Math.round(PARAMS.freqBase * (1/seasFactor) * (1/expFactor) * (1/stageFactor) * subRetentionFactor * potFactor);
   const freqClamped = Math.max(1, Math.min(60, freqDays));
+  return { waterMl, volLiters, whc, capMl, freqClamped, et0Used };
+}
 
-  // Aggiorna risultato
+// Renderizza il blocco "result-card" principale con i numeri del calcolo.
+// Funziona sia per modalità libera che per modalità vasi (con totale
+// aggregato). Il flag multiVaso modifica l'etichetta in cima così
+// l'utente capisce subito che il totale è la somma di più vasi.
+function wRenderResult(r, multiVaso) {
+  const waterMl = r.waterMl;
   document.getElementById('r-qty').textContent = waterMl >= 1000
     ? (waterMl/1000).toFixed(1) + ' L'
     : waterMl;
-  document.getElementById('r-unit') && (document.getElementById('r-unit').textContent = waterMl >= 1000 ? '' : 'ml');
-  document.getElementById('r-label').textContent =
-    'per ogni annaffiatura · vaso da ' + wVolLiters.toFixed(1) + ' L';
-  document.getElementById('r-vol').textContent  = wVolLiters.toFixed(1) + ' L (' + Math.round(wVolLiters*1000) + ' ml)';
-  document.getElementById('r-ret').textContent  = Math.round(whc*100) + '% ritenzione idrica';
-  document.getElementById('r-cap').textContent  = Math.round(waterCapacity) + ' ml capacità massima';
-  document.getElementById('r-freq').textContent = freqClamped === 1 ? 'Ogni giorno' :
+  const unitEl = document.getElementById('r-unit');
+  if (unitEl) unitEl.textContent = waterMl >= 1000 ? '' : 'ml';
+  document.getElementById('r-label').textContent = multiVaso
+    ? `totale per ${wSelectedPotIds.size} vasi · ${r.volLiters.toFixed(1)} L di substrato`
+    : `per ogni annaffiatura · vaso da ${r.volLiters.toFixed(1)} L`;
+  document.getElementById('r-vol').textContent  = r.volLiters.toFixed(1) + ' L (' + Math.round(r.volLiters*1000) + ' ml)';
+  document.getElementById('r-ret').textContent  = Math.round(r.whc*100) + '% ritenzione idrica' + (multiVaso ? ' (media)' : '');
+  document.getElementById('r-cap').textContent  = Math.round(r.capMl) + ' ml capacità ' + (multiVaso ? 'totale' : 'massima');
+  const freqClamped = r.freqClamped;
+  document.getElementById('r-freq').textContent = (multiVaso ? '~' : '') + (
+    freqClamped === 1 ? 'Ogni giorno' :
     freqClamped <= 3 ? 'Ogni ' + freqClamped + ' giorni' :
     freqClamped <= 7 ? 'Ogni ' + freqClamped + ' giorni (~' + Math.round(freqClamped/7*10)/10 + ' settimane)' :
-    'Ogni ~' + Math.round(freqClamped/7) + (Math.round(freqClamped/7)===1?' settimana':' settimane');
+    'Ogni ~' + Math.round(freqClamped/7) + (Math.round(freqClamped/7)===1?' settimana':' settimane')
+  ) + (multiVaso ? ' (mediana)' : '');
 
-  // Tips personalizzati
+  // Tips personalizzati. Genericizzo sui parametri che ho ricevuto invece
+  // di leggerli dal form, così funziona uguale per modalità libera e
+  // multi-vasi.
   const tips = [];
-  if (usingET0 && wET0Data) {
+  if (r.et0Used && wET0Data) {
     tips.push(`🌤️ <b>Dati meteo live (ET₀ = ${wET0Data.et0.toFixed(2)} mm/giorno)</b>: ${wET0Data.desc}`);
-    if (wET0Data.temp > 30) tips.push('🔥 <b>Temperatura alta (' + wET0Data.temp.toFixed(0) + '°C)</b>: annaffia nelle ore più fresche (mattina presto o sera).');
-    if (wET0Data.temp < 8) tips.push('❄️ <b>Temperatura bassa (' + wET0Data.temp.toFixed(0) + '°C)</b>: riduci le annaffiature — il terreno asciuga lentamente al freddo.');
-    if (wET0Data.humidity < 30) tips.push('💧 <b>Aria molto secca (' + Math.round(wET0Data.humidity) + '%)</b>: nebulizza le foglie delle piante tropicali e dei bonsai.');
-    if (wET0Data.wind > 20) tips.push('💨 <b>Vento forte (' + wET0Data.wind.toFixed(0) + ' km/h)</b>: i vasi esposti al vento asciugano più rapidamente, controlla più spesso.');
+    if (wET0Data.temp > 30) tips.push('🔥 <b>Temperatura alta (' + wET0Data.temp.toFixed(0) + '°C)</b>: annaffia nelle ore più fresche.');
+    if (wET0Data.temp < 8) tips.push('❄️ <b>Temperatura bassa (' + wET0Data.temp.toFixed(0) + '°C)</b>: riduci le annaffiature.');
+    if (wET0Data.humidity < 30) tips.push('💧 <b>Aria molto secca (' + Math.round(wET0Data.humidity) + '%)</b>: nebulizza le piante tropicali e i bonsai.');
+    if (wET0Data.wind > 20) tips.push('💨 <b>Vento forte (' + wET0Data.wind.toFixed(0) + ' km/h)</b>: i vasi esposti asciugano più rapidamente.');
     if (wET0Data.solar > 600) tips.push('☀️ <b>Radiazione solare intensa (' + Math.round(wET0Data.solar) + ' W/m²)</b>: le piante all\'aperto consumano molta più acqua.');
-    // Mostra il box ET₀ nel risultato
     document.getElementById('r-et0-item').style.display = 'block';
-    document.getElementById('r-et0').textContent = wET0Data.et0.toFixed(2) + ' mm/g → fattore ' + et0Factor.toFixed(2) + '×';
+    document.getElementById('r-et0').textContent = wET0Data.et0.toFixed(2) + ' mm/g → fattore ' + wET0Data.factor.toFixed(2) + '×';
   } else {
     document.getElementById('r-et0-item').style.display = 'none';
-    if (whc < 0.20) tips.push('<b>Substrato molto drenante</b>: asciuga velocemente — monitora spesso e annaffia in piccole dosi più frequenti.');
-    if (whc > 0.50) tips.push('<b>Substrato ricco</b>: trattiene molta umidità — aspetta sempre che i primi 2-3 cm siano asciutti prima di annaffiare di nuovo.');
-    if (potFactor < 0.90) tips.push('<b>Terracotta</b>: il vaso assorbe acqua extra — nei mesi caldi controlla più spesso.');
-    if (seasFactor <= 0.45) tips.push('<b>Inverno</b>: molte piante sono in semiriposo — meglio annaffiare meno e controllare visivamente.');
-    if (expFactor >= 1.2) tips.push('<b>Sole diretto + vento</b>: l\u2019evaporazione è alta — la frequenza stimata potrebbe essere ancora più ravvicinata nei picchi estivi.');
+    if (r.whc < 0.20) tips.push('<b>Substrato molto drenante</b>: monitora spesso e annaffia in piccole dosi più frequenti.');
+    if (r.whc > 0.50) tips.push('<b>Substrato ricco</b>: aspetta che i primi 2-3 cm siano asciutti prima di annaffiare di nuovo.');
   }
-  tips.push('💡 <b>Regola pratica</b>: annaffia sempre abbondantemente fino a che l\u2019acqua esce dal foro di drenaggio, poi aspetta che il substrato sia parzialmente asciutto prima della prossima annaffiatura.');
+  if (multiVaso) {
+    tips.push('💡 <b>Distribuzione</b>: la quantità totale si distribuisce tra i vasi proporzionalmente alle loro capacità (vedi tabella sotto).');
+  }
+  tips.push('💡 <b>Regola pratica</b>: annaffia abbondantemente fino a che l\u2019acqua esce dal foro di drenaggio, poi aspetta che il substrato sia parzialmente asciutto.');
   document.getElementById('r-tips').innerHTML = tips.join('<br>');
 
   document.getElementById('w-result').classList.add('visible');
   document.getElementById('w-result').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+// Renderizza la tabella "Distribuzione per vaso" con la quota di acqua
+// per ciascun vaso e la sua percentuale rispetto al totale. Visibile
+// solo in modalità "Da vasi esistenti" con due o più vasi selezionati.
+function wRenderPotsBreakdown(perPot, totalMl) {
+  const body = document.getElementById('w-pots-breakdown-body');
+  if (!body) return;
+  const rows = perPot.map(p => {
+    const nick = (p.item.nickname && p.item.nickname.trim()) ? p.item.nickname : `Vaso #${p.item.id}`;
+    const plantLabel = p.plant ? `${p.plant.icon || '🌱'} ${p.plant.name}` : '';
+    const pctOfTotal = totalMl > 0 ? (p.waterMl / totalMl * 100) : 0;
+    const waterLabel = p.waterMl >= 1000 ? `${(p.waterMl/1000).toFixed(2)} L` : `${p.waterMl} ml`;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-top:1px solid var(--border)">
+      <div style="flex:1;font-size:12px;color:var(--text)">
+        <strong>${nick}</strong> <span style="color:var(--muted)">· ${plantLabel} · ${p.volLiters.toFixed(1)} L</span>
+      </div>
+      <div style="font-size:12px;font-weight:600;color:var(--accent);min-width:80px;text-align:right">${waterLabel}</div>
+      <div style="font-size:11px;color:var(--muted);min-width:48px;text-align:right">${pctOfTotal.toFixed(0)}%</div>
+    </div>`;
+  }).join('');
+  body.innerHTML = rows;
+  document.getElementById('w-pots-breakdown').style.display = 'block';
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -2069,45 +2358,137 @@ wInitCalc = function() {
 // ══════════════════════════════════════════════════════════════════════
 // ⑨ CALCOLATORE FERTIRRIGAZIONE
 // ══════════════════════════════════════════════════════════════════════
+//
+// IMPORTANTE — refactor da "specie pianta" a "vaso reale":
+// In una versione precedente il calcolatore lavorava su FI_PLANTS, una
+// lista per specie con un campo "N° vasi" che l'utente compilava a mano.
+// Adesso lavora direttamente sui vasi dell'inventario: una riga per vaso
+// reale, niente più moltiplicatore "N° vasi" perché ogni riga è già un
+// vaso singolo. La quantità d'acqua di default viene calcolata in modo
+// fisicamente coerente usando wComputeWaterForPot (lo stesso motore del
+// Calcolatore Acqua), così che attivare la spunta produca un dato che
+// rispecchia le caratteristiche reali del vaso e del substrato.
+//
+// FI_PLANTS è ancora valorizzato da loadCustomPlants (per compatibilità
+// con fiOpenFromCalendar, che ha un suo flusso separato basato sui
+// prodotti BioBizz/trattamenti del calendario) ma non è più la fonte
+// dati del rendering principale del calcolatore manuale.
 
 // FI_PLANTS è esteso a runtime con le piante custom (vedi loadCustomPlants).
 // Per ogni pianta custom viene generato un record con waterMl/doseFactor
 // dedotti dal gruppo simulazione, e loc dedotta dal primo vaso registrato
-// (se esistente). Le 26 native restano hard-coded qui sotto.
-// Calcolatore fertirrigazione — popolato dinamicamente da loadCustomPlants()
-// che, per ogni pianta custom, deduce waterMl/doseFactor dal gruppo di
-// simulazione e loc dal primo vaso registrato. Le 26 native originali
-// avevano questo array pre-popolato; oggi nasce vuoto.
+// (se esistente). Resta usato solo da fiOpenFromCalendar come fallback
+// quando un evento del calendario riferisce una pianta priva di vaso
+// nell'inventario; non viene più letto dal calcolatore manuale.
 let FI_PLANTS = [];
 
 let fiInited = false;
 
-function fiInit() {
-  if (fiInited) return;
-  fiInited = true;
-  const list = document.getElementById('fi-plant-list');
-  list.innerHTML = FI_PLANTS.map(p => `
-    <div class="fi-plant-row" id="fir-${p.id}">
-      <input type="checkbox" class="fi-check" id="fic-${p.id}" onchange="fiUpdate()">
-      <span class="fi-icon">${p.icon}</span>
-      <span class="fi-name">${p.name}</span>
-      <div class="fi-controls">
-        <div class="fi-mini-field">🪴<input type="number" id="fin-${p.id}" value="1" min="1" max="50" style="width:38px" onchange="fiUpdate()" title="N° vasi"></div>
-        <div class="fi-mini-field">💧<input type="number" id="fiw-${p.id}" value="${p.waterMl}" min="10" step="10" onchange="fiUpdate()" title="Acqua per vaso (ml)"><span>ml</span></div>
-        <div class="fi-mini-field">⚖️<select id="fid-${p.id}" onchange="fiUpdate()" title="Dose">
-          <option value="1"${p.doseFactor===1?' selected':''}>Piena</option>
-          <option value="0.75"${p.doseFactor===0.75?' selected':''}>¾</option>
-          <option value="0.5"${p.doseFactor===0.5?' selected':''}>½</option>
-          <option value="0.25"${p.doseFactor===0.25?' selected':''}>¼</option>
-        </select></div>
-      </div>
-    </div>`).join('');
+// Dato di default per "acqua per vaso" quando non riusciamo a calcolarlo
+// dai parametri reali del vaso. Voluta scelta conservativa: meglio un
+// numero piccolo che l'utente alza, che un numero grande che produce
+// dosaggi sbagliati di concime se l'utente non lo nota.
+const FI_DEFAULT_WATER_ML = 250;
+
+// Calcola la quantità d'acqua di default per un vaso, usando lo stesso
+// motore del Calcolatore Acqua. Restituisce un numero arrotondato a
+// 10 ml. Se il calcolo fallisce (vaso senza dimensioni o senza substrato
+// definito), ricade sul default conservativo.
+function fiComputeDefaultWater(item) {
+  try {
+    const vol = invGetVolFromItem(item);
+    if (!vol || vol <= 0) return FI_DEFAULT_WATER_ML;
+    let whc = SUBSTRATE_WHC[item.substrate] || 0.30;
+    if (item.substrate === 'custom' && item.customSubstrate) {
+      whc = wSubstrates.reduce((s, sub) => {
+        const pct = (item.customSubstrate[sub.id] || 0) / 100;
+        return s + pct * sub.whc;
+      }, 0) || 0.30;
+    }
+    const potFactor = (typeof W_POT_MAT_FACTORS !== 'undefined') ? (W_POT_MAT_FACTORS[item.potMat] || 1.0) : 1.0;
+    const plant = (typeof getPlantById === 'function') ? getPlantById(item.plantTypeIdx) : null;
+    const simGroup = plant && plant.simGroup ? plant.simGroup : null;
+    const plantFactor = (typeof W_PLANT_GROUP_FACTORS !== 'undefined') ? (W_PLANT_GROUP_FACTORS[simGroup] || 1.0) : 1.0;
+    if (typeof wComputeWaterForPot === 'function') {
+      const r = wComputeWaterForPot({ volLiters: vol, whc, potFactor, plantFactor });
+      // Per la fertirrigazione applichiamo il fattore di riduzione configurato
+      // (default 70%) perché un'annaffiatura "di concime" è tipicamente più
+      // ridotta di una "abbondante per drenaggio". Lo stesso fattore è
+      // applicato in altre parti dell'app per coerenza.
+      const reductionPct = (PARAMS.fertiReduction || PARAMS_DEFAULTS.fertiReduction) / 100;
+      return Math.max(10, Math.round(r.waterMl * reductionPct / 10) * 10);
+    }
+    // Fallback: senza wComputeWaterForPot uso un'approssimazione semplice.
+    return Math.max(10, Math.round(vol * 1000 * whc * 0.30 / 10) * 10);
+  } catch {
+    return FI_DEFAULT_WATER_ML;
+  }
 }
 
-function fiSelectAll()  { FI_PLANTS.forEach(p=>{document.getElementById('fic-'+p.id).checked=true;}); fiUpdate(); }
-function fiSelectNone() { FI_PLANTS.forEach(p=>{document.getElementById('fic-'+p.id).checked=false;}); fiUpdate(); }
-function fiSelectIndoor(){ FI_PLANTS.forEach(p=>{document.getElementById('fic-'+p.id).checked=(p.loc==='indoor');}); fiUpdate(); }
-function fiSelectOutdoor(){FI_PLANTS.forEach(p=>{document.getElementById('fic-'+p.id).checked=(p.loc==='outdoor');}); fiUpdate(); }
+function fiInit() {
+  fiInited = true;
+  const list = document.getElementById('fi-plant-list');
+  const emptyEl = document.getElementById('fi-plant-list-empty');
+  const inv = (typeof invLoad === 'function') ? invLoad() : [];
+  if (!inv || inv.length === 0) {
+    list.innerHTML = '';
+    if (emptyEl) emptyEl.style.display = 'block';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  // Ordino i vasi per pianta (alfabetico) e poi per nickname, così vasi
+  // della stessa specie sono visivamente raggruppati.
+  const sorted = inv.slice().sort((a, b) => {
+    const pa = (typeof getPlantById === 'function') ? getPlantById(a.plantTypeIdx) : null;
+    const pb = (typeof getPlantById === 'function') ? getPlantById(b.plantTypeIdx) : null;
+    const na = pa ? pa.name : '';
+    const nb = pb ? pb.name : '';
+    if (na !== nb) return na.localeCompare(nb);
+    return (a.nickname || '').localeCompare(b.nickname || '');
+  });
+
+  // Render: una riga per ogni vaso. I campi sono "Acqua per vaso (ml)"
+  // pre-popolato col calcolo basato sui parametri reali del vaso, e
+  // "Dose" come prima. Niente più "N° vasi" perché ogni riga è un vaso.
+  list.innerHTML = sorted.map(item => {
+    const plant = (typeof getPlantById === 'function') ? getPlantById(item.plantTypeIdx) : null;
+    const icon = plant ? (plant.icon || '🌱') : '🌱';
+    const plantName = plant ? plant.name : '— pianta non trovata —';
+    const nick = (item.nickname && item.nickname.trim()) ? item.nickname : `Vaso #${item.id}`;
+    const waterMl = fiComputeDefaultWater(item);
+    return `<div class="fi-plant-row" id="fir-${item.id}">
+      <input type="checkbox" class="fi-check" id="fic-${item.id}" onchange="fiUpdate()">
+      <span class="fi-icon">${icon}</span>
+      <span class="fi-name"><strong>${nick}</strong> <span style="font-size:10px;color:var(--muted);font-weight:normal">· ${plantName}</span></span>
+      <div class="fi-controls">
+        <div class="fi-mini-field">💧<input type="number" id="fiw-${item.id}" value="${waterMl}" min="10" step="10" onchange="fiUpdate()" title="Acqua per vaso (ml)"><span>ml</span></div>
+        <div class="fi-mini-field">⚖️<select id="fid-${item.id}" onchange="fiUpdate()" title="Dose">
+          <option value="1">Piena</option>
+          <option value="0.75" selected>¾</option>
+          <option value="0.5">½</option>
+          <option value="0.25">¼</option>
+        </select></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Helper per i pulsanti di selezione massiva. Itero sui vasi
+// dell'inventario invece che su FI_PLANTS, e per "indoor"/"outdoor"
+// uso il campo location del vaso (più affidabile della loc che era
+// dedotta automaticamente in FI_PLANTS).
+function _fiForEachPotCheckbox(fn) {
+  const inv = (typeof invLoad === 'function') ? invLoad() : [];
+  inv.forEach(item => {
+    const cb = document.getElementById('fic-'+item.id);
+    if (cb) fn(cb, item);
+  });
+}
+function fiSelectAll()    { _fiForEachPotCheckbox(cb => { cb.checked = true; }); fiUpdate(); }
+function fiSelectNone()   { _fiForEachPotCheckbox(cb => { cb.checked = false; }); fiUpdate(); }
+function fiSelectIndoor() { _fiForEachPotCheckbox((cb, item) => { cb.checked = (item.location === 'indoor'); }); fiUpdate(); }
+function fiSelectOutdoor(){ _fiForEachPotCheckbox((cb, item) => { cb.checked = (item.location === 'outdoor'); }); fiUpdate(); }
 
 async function fiOpenFromCalendar() {
   const evtData = window._fiCalEvts;
@@ -2387,19 +2768,44 @@ function fiUpdate() {
     unitType = 'ml';
   }
 
+  // Itero sui vasi reali dell'inventario (post-refactor: una riga per
+  // vaso, non più una riga per specie con moltiplicatore "N° vasi").
+  const inv = (typeof invLoad === 'function') ? invLoad() : [];
+
   // Toggle row highlight
-  FI_PLANTS.forEach(p => {
-    const checked = document.getElementById('fic-'+p.id).checked;
-    document.getElementById('fir-'+p.id).classList.toggle('selected', checked);
+  inv.forEach(item => {
+    const cb = document.getElementById('fic-'+item.id);
+    const row = document.getElementById('fir-'+item.id);
+    if (cb && row) row.classList.toggle('selected', cb.checked);
   });
 
-  // Gather selected plants
-  const selected = FI_PLANTS.filter(p => document.getElementById('fic-'+p.id).checked).map(p => ({
-    ...p,
-    pots: +(document.getElementById('fin-'+p.id).value) || 1,
-    waterMl: +(document.getElementById('fiw-'+p.id).value) || 0,
-    doseFactor: +(document.getElementById('fid-'+p.id).value) || 1,
-  }));
+  // Raccolgo i vasi selezionati e arricchisco con i parametri editabili
+  // dell'utente (acqua per vaso, dose). Il "N° vasi" non c'è più: ogni
+  // entry è un vaso singolo, quindi totalPlantWater === waterMl.
+  const selected = inv
+    .filter(item => {
+      const cb = document.getElementById('fic-'+item.id);
+      return cb && cb.checked;
+    })
+    .map(item => {
+      const plant = (typeof getPlantById === 'function') ? getPlantById(item.plantTypeIdx) : null;
+      const waterEl = document.getElementById('fiw-'+item.id);
+      const doseEl  = document.getElementById('fid-'+item.id);
+      const nick = (item.nickname && item.nickname.trim()) ? item.nickname : `Vaso #${item.id}`;
+      return {
+        id: item.id,
+        item,
+        // Mantengo i campi `name`, `icon`, `pots` per non rompere la
+        // logica di rendering del breakdown sotto (che li riusa). `pots`
+        // è sempre 1 perché ogni riga è un singolo vaso.
+        name: nick,
+        plantName: plant ? plant.name : '',
+        icon: plant ? (plant.icon || '🌱') : '🌱',
+        pots: 1,
+        waterMl: +(waterEl ? waterEl.value : 0) || 0,
+        doseFactor: +(doseEl ? doseEl.value : 0.75) || 0.75,
+      };
+    });
 
   const resultEl = document.getElementById('fi-result');
   if (!selected.length || dosePerLiter <= 0) {
@@ -2408,14 +2814,14 @@ function fiUpdate() {
   }
   resultEl.style.display = 'block';
 
-  // Calculate totals
-  const totalWaterMl = selected.reduce((s,p) => s + p.waterMl * p.pots, 0);
+  // Calculate totals (semplificato: totalPlantWater = waterMl perché pots=1)
+  const totalWaterMl = selected.reduce((s,p) => s + p.waterMl, 0);
   const totalWaterL = totalWaterMl / 1000;
-  const totalPots = selected.reduce((s,p) => s + p.pots, 0);
+  const totalPots = selected.length;
 
-  // Per-plant fertilizer
+  // Per-vaso fertilizzante (in realtà "per riga" adesso)
   const breakdown = selected.map(p => {
-    const totalPlantWater = p.waterMl * p.pots;
+    const totalPlantWater = p.waterMl;  // pots=1
     const fertMl = (totalPlantWater / 1000) * dosePerLiter * p.doseFactor;
     return { ...p, totalPlantWater, fertMl };
   });
@@ -2440,27 +2846,28 @@ function fiUpdate() {
   if (allSameDose) {
     document.getElementById('fi-summary').textContent = `Soluzione unica per ${totalPots} vasi: mescola tutto e distribuisci`;
   } else {
-    document.getElementById('fi-summary').textContent = `${totalPots} vasi con dosi diverse: prepara per gruppo o misura per pianta`;
+    document.getElementById('fi-summary').textContent = `${totalPots} vasi con dosi diverse: prepara per gruppo o misura per vaso`;
   }
 
-  // Stats
+  // Stats. Conto piante distinte tra i vasi selezionati per dare
+  // un'idea di quante specie sono in gioco.
+  const distinctPlants = new Set(breakdown.map(p => p.item.plantTypeIdx)).size;
   document.getElementById('fi-stats').innerHTML = `
-    <div class="result-item" style="border-color:#b0c8e8"><div class="result-item-label">Piante</div><div class="result-item-val">${selected.length} specie · ${totalPots} vasi</div></div>
+    <div class="result-item" style="border-color:#b0c8e8"><div class="result-item-label">Vasi</div><div class="result-item-val">${totalPots} vasi · ${distinctPlants} ${distinctPlants===1?'pianta':'piante'}</div></div>
     <div class="result-item" style="border-color:#b0c8e8"><div class="result-item-label">Prodotto</div><div class="result-item-val">${prodName}</div></div>
     <div class="result-item" style="border-color:#b0c8e8"><div class="result-item-label">Concentrazione media</div><div class="result-item-val">${effectiveConc.toFixed(2)} ${unitType}/L</div></div>
     <div class="result-item" style="border-color:#b0c8e8"><div class="result-item-label">Risparmio vs dose piena</div><div class="result-item-val">${avgDose<1 ? Math.round((1-avgDose)*100)+'% risparmiato' : 'Dose piena'}</div></div>`;
 
-  // Breakdown
+  // Breakdown: una riga per vaso. Mostro icona + nickname + nome pianta
+  // breve + acqua + dose label + concime.
   document.getElementById('fi-breakdown').innerHTML = breakdown.map(p => {
     const doseLabel = p.doseFactor===1?'piena':p.doseFactor===0.75?'¾':p.doseFactor===0.5?'½':'¼';
     const totalWStr = p.totalPlantWater >= 1000 ? (p.totalPlantWater/1000).toFixed(1)+' L' : p.totalPlantWater+' ml';
-    const perPotStr = p.waterMl >= 1000 ? (p.waterMl/1000).toFixed(1)+' L' : p.waterMl+' ml';
     const fertStr = p.fertMl < 1 ? p.fertMl.toFixed(2) : p.fertMl < 10 ? p.fertMl.toFixed(1) : Math.round(p.fertMl);
-    const potsInfo = p.pots > 1 ? `<span style="font-size:9px;color:var(--muted)"> (${p.pots}×${perPotStr})</span>` : '';
     return `<div style="display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;background:#f8faff;font-size:11px">
       <span>${p.icon}</span>
-      <span style="flex:1;font-weight:500">${p.name}${p.pots>1?' <span style=\"font-size:9px;background:#e0ecff;color:#2a5a8a;padding:1px 5px;border-radius:10px\">×'+p.pots+'</span>':''}</span>
-      <span style="color:var(--muted)">${totalWStr}${potsInfo}</span>
+      <span style="flex:1;font-weight:500">${p.name}<span style="font-size:9px;color:var(--muted);font-weight:normal"> · ${p.plantName}</span></span>
+      <span style="color:var(--muted)">${totalWStr}</span>
       <span style="color:#2a5a8a;font-weight:500">→</span>
       <span style="color:#2d7a3a;font-weight:600;min-width:50px;text-align:right">${fertStr} ${unitType}</span>
       <span style="font-size:9px;color:var(--muted);min-width:32px">(${doseLabel})</span>
@@ -4397,6 +4804,13 @@ const PARAMS_DEFAULTS = {
   tempRadiciMax: 30,  // Sopra: rischio bruciature radici → allerta
   ecMoistureMin: 30,  // Sotto umidità %: letture EC inaffidabili
   useSimScheduling: true,  // Usa simulazione per calendario annaffiature
+  // Dashboard
+  // Numero massimo di eventi imminenti mostrati per categoria
+  // (fertilizzazioni, trattamenti, annaffiature, voci diario) per ogni
+  // card della Dashboard. Default 6 = compromesso tra panoramica utile
+  // e card non troppo lunghe. L'utente può cambiarlo dalla sezione
+  // Parametri se preferisce vedere meno o più eventi per card.
+  dashboardMaxUpcoming: 6,
 };
 
 const SOGLIE_LABELS = {
@@ -4453,6 +4867,8 @@ function paramsInit() {
   document.getElementById('p-temp-radici-max').value = PARAMS.tempRadiciMax;
   document.getElementById('p-ec-moisture-min').value = PARAMS.ecMoistureMin;
   document.getElementById('p-use-sim-sched').checked = PARAMS.useSimScheduling !== false;
+  // Dashboard
+  document.getElementById('p-dashboard-max-upcoming').value = PARAMS.dashboardMaxUpcoming || PARAMS_DEFAULTS.dashboardMaxUpcoming;
 
   // Soglie grid
   const grid = document.getElementById('p-soglie-grid');
@@ -4702,6 +5118,10 @@ function paramsSave() {
   PARAMS.tempRadiciMax = +(document.getElementById('p-temp-radici-max').value) || PARAMS_DEFAULTS.tempRadiciMax;
   PARAMS.ecMoistureMin = +(document.getElementById('p-ec-moisture-min').value) || PARAMS_DEFAULTS.ecMoistureMin;
   PARAMS.useSimScheduling = document.getElementById('p-use-sim-sched').checked;
+  // Dashboard
+  PARAMS.dashboardMaxUpcoming = Math.max(1, Math.min(50,
+    +(document.getElementById('p-dashboard-max-upcoming').value) || PARAMS_DEFAULTS.dashboardMaxUpcoming
+  ));
 
   // Soglie moisture
   Object.keys(SOGLIE_LABELS).forEach(cat => {
@@ -6063,27 +6483,75 @@ function cpProposeCreatePot(plantId, plantName) {
     `(Potrai sempre crearlo dopo dalla sezione "I miei vasi")`
   );
   if (!wantsPot) return;
-  // Naviga alla sezione vasi e apre il form di aggiunta con la pianta
-  // pre-selezionata. Devo fare due cose in sequenza: showSection per
-  // attivare la tab e (al primo accesso) inizializzarla, e poi aprire
-  // il form. La navigazione è asincrona perché invInit() può richiedere
-  // un fetch dell'inventario; uso un piccolo timeout per essere sicuro
-  // che la dropdown delle piante sia stata popolata prima di selezionarla.
+  // Navigazione e apertura form. Il flusso è apparentemente semplice
+  // (showSection → invOpenAdd → set della dropdown) ma c'è una
+  // condizione di gara da gestire con cura. showSection('vasi') chiama
+  // invInit() la prima volta che entri nella sezione, e invInit è
+  // async: fa fetch dell'inventario e delle piante prima di popolare
+  // la dropdown #inv-plant-type. Se la dropdown non è ancora stata
+  // popolata quando proviamo ad assegnare il valore, il browser ignora
+  // silenziosamente l'assegnazione perché non trova nessuna <option>
+  // con il valore richiesto.
+  //
+  // Un timeout fisso (per esempio 150ms) è fragile: dipende dalla
+  // velocità di rete, dalla latenza del backend, da quanti vasi ci
+  // sono da caricare. Funziona spesso ma fallisce esattamente quando
+  // il sistema è sotto stress, che è il momento peggiore per fallire.
+  //
+  // Soluzione robusta: polling attivo. Verifica ogni 50ms se la
+  // dropdown contiene una option con il valore richiesto, e appena
+  // appare la imposta. Dopo un timeout massimo di sicurezza si arrende
+  // graziosamente per non girare a vuoto in caso di errore di rete.
   showSection('vasi');
-  setTimeout(() => {
+  invSelectPlantWhenReady(plantId);
+}
+
+// Funzione di supporto a cpProposeCreatePot: apre il form di aggiunta
+// vaso e imposta il valore della dropdown delle piante, aspettando se
+// necessario che la dropdown sia stata popolata. Polling con intervallo
+// di 50ms e timeout di sicurezza di 5 secondi.
+function invSelectPlantWhenReady(plantId, attempt = 0) {
+  const MAX_ATTEMPTS = 100;       // 100 × 50ms = 5 secondi totali
+  const POLL_INTERVAL = 50;
+  const target = String(plantId);
+
+  // Se è il primo tentativo, apri subito il form (lo facciamo qui
+  // invece che in cpProposeCreatePot così se la sezione vasi era già
+  // inizializzata e la dropdown già popolata, il primo tentativo
+  // funziona immediatamente senza nessun ritardo percepito).
+  if (attempt === 0) {
     invOpenAdd();
-    const sel = document.getElementById('inv-plant-type');
-    if (sel) {
-      // Imposto il valore della dropdown all'id della pianta appena salvata.
-      // La dropdown contiene già tutte le piante perché loadCustomPlants è
-      // stata chiamata prima di arrivare qui.
-      sel.value = String(plantId);
-      // Triggero anche un evento change in caso ci siano listener che
-      // rispondono al cambio di pianta (per esempio per popolare automaticamente
-      // soglie di umidità o altri campi dipendenti).
-      sel.dispatchEvent(new Event('change'));
-    }
-  }, 150);
+  }
+
+  const sel = document.getElementById('inv-plant-type');
+  if (!sel) {
+    // Form non aperto correttamente — questo non dovrebbe mai succedere
+    // ma se succede tanto vale rinunciare invece di fare polling
+    // all'infinito.
+    return;
+  }
+
+  // Cerco la option con il valore della pianta. Se la trovo, assegno
+  // e ho finito.
+  const matchingOption = Array.from(sel.options).find(o => o.value === target);
+  if (matchingOption) {
+    sel.value = target;
+    // Triggero un evento change in caso ci siano listener che
+    // rispondono al cambio di pianta (per esempio per popolare
+    // automaticamente soglie di umidità o altri campi dipendenti).
+    sel.dispatchEvent(new Event('change'));
+    return;
+  }
+
+  // Non ancora trovata. Se ho ancora tentativi disponibili, riprova.
+  if (attempt < MAX_ATTEMPTS) {
+    setTimeout(() => invSelectPlantWhenReady(plantId, attempt + 1), POLL_INTERVAL);
+  } else {
+    // Timeout esaurito. Non faccio rumore con un toast di errore perché
+    // è un caso edge poco probabile e rischierebbe di confondere l'utente
+    // più di quanto aiuti. Logghiamo in console per diagnostica e basta.
+    console.warn(`[invSelectPlantWhenReady] La dropdown non si è popolata entro ${MAX_ATTEMPTS * POLL_INTERVAL}ms con la pianta id=${plantId}. L'utente dovrà selezionarla manualmente.`);
+  }
 }
 
 // ── Eliminazione protetta ───────────────────────────────────────────
@@ -7441,6 +7909,456 @@ function simRenderTimeline(r) {
 }
 
 // ══════════════════════════════════════════════════════════════════════
+// ⑪ DASHBOARD — Panoramica del giardino raggruppata per pianta
+// ══════════════════════════════════════════════════════════════════════
+// La Dashboard è la nuova "schermata di benvenuto" dell'app: l'utente la
+// vede aprendo la dashboard e ottiene una panoramica veloce dello stato
+// del giardino. È strutturata come griglia di card, una per specie di
+// pianta, dove dentro ogni card vivono i vasi di quella specie con per
+// ognuno: stato sensori, allerte, eventi imminenti.
+//
+// Filosofia: la Dashboard è il "fast lane" per l'utente che vuole capire
+// in 5 secondi se c'è qualcosa che richiede attenzione. I dettagli vivono
+// nelle altre tab (Vasi per la gestione, Pianificazione per il calendario,
+// Schede per l'enciclopedia delle piante).
+
+// Soglie cablate per le allerte. Sono valori sensati di partenza che
+// possono essere esposti nei Parametri in futuro se servirà flessibilità
+// utente. Le commento singolarmente perché ognuna ha una giustificazione
+// agronomica precisa.
+const DASHBOARD_ALERT_THRESHOLDS = {
+  // Ore consecutive sotto la soglia "secco" prima di attivare l'allerta.
+  // 24 ore è il minimo ragionevole: per un'ora secco non vuol dire molto
+  // (l'utente ha appena innaffiato, il sensore è ancora in stabilizzazione,
+  // eccetera), 24 ore invece è un segnale chiaro di stress.
+  drySustainedHours: 24,
+  // Ore consecutive sopra la soglia "umido" prima di attivare l'allerta
+  // di ristagno. 48 ore perché la pioggia naturalmente lascia il
+  // substrato saturo per qualche ora-giorno e non vogliamo allerte ogni
+  // volta che piove. Oltre due giorni di saturo c'è invece rischio reale
+  // di asfissia radicale.
+  wetSustainedHours: 48,
+  // Ore senza dati dal sensore prima di considerarlo "non risponde".
+  // 6 ore copre il caso "il gateway si è riavviato e ci ha messo un po'
+  // a riconnettersi"; più di così c'è probabilmente un problema reale.
+  sensorOfflineHours: 6,
+  // Giorni di ritardo sulla fertilizzazione prima di mostrare allerta.
+  // 7 giorni perché gli intervalli tipici sono 14-21 giorni, una settimana
+  // di ritardo è il segnale "hai dimenticato".
+  fertOverdueDays: 7,
+};
+
+let _dashboardRefreshTimer = null;
+
+// Inizializzazione: chiamata la prima volta che si entra nella Dashboard.
+// Fa il primo render e imposta un refresh periodico per tenere i dati
+// dei sensori aggiornati senza richiedere all'utente di ricaricare.
+function dashboardInit() {
+  dashboardRender();
+  // Refresh ogni 5 minuti dei dati dinamici (sensori, eventi).
+  // Lo lascio attivo anche quando l'utente è su altre tab, perché i
+  // dati vengono comunque mostrati al suo prossimo ritorno; il costo
+  // è banale (qualche operazione di lettura cache, niente di rete).
+  if (_dashboardRefreshTimer) clearInterval(_dashboardRefreshTimer);
+  _dashboardRefreshTimer = setInterval(() => {
+    if (sectionInited.dashboard && document.getElementById('sec-dashboard').classList.contains('active')) {
+      dashboardRender();
+    }
+  }, 300000);  // 5 minuti
+}
+
+// Render principale. Recupera tutti i dati necessari, li raggruppa per
+// pianta, calcola allerte ed eventi imminenti, e popola il DOM.
+function dashboardRender() {
+  const inv = (typeof invLoad === 'function') ? invLoad() : [];
+  const summaryEl = document.getElementById('dashboard-summary');
+  const cardsEl = document.getElementById('dashboard-cards');
+  const emptyEl = document.getElementById('dashboard-empty');
+
+  if (!inv || inv.length === 0) {
+    summaryEl.innerHTML = '';
+    cardsEl.innerHTML = '';
+    emptyEl.style.display = 'block';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  // Raggruppo i vasi per pianta. Uso plantTypeIdx come chiave perché è
+  // l'identificativo univoco della pianta nel database (oggi non ci sono
+  // più id "speciali" nativi, sono tutti record).
+  const groupsByPlant = new Map();
+  inv.forEach(item => {
+    const pid = item.plantTypeIdx;
+    if (!groupsByPlant.has(pid)) groupsByPlant.set(pid, []);
+    groupsByPlant.get(pid).push(item);
+  });
+
+  // Raccolgo l'array dei "gruppi pianta" arricchiti con i dati che
+  // servono per il rendering: pianta, lista vasi con stato, allerte,
+  // eventi imminenti.
+  const groups = [];
+  let totalAlerts = 0;
+  let totalPots = 0;
+  let totalUpcomingEvents = 0;
+
+  groupsByPlant.forEach((pots, plantId) => {
+    const plant = (typeof getPlantById === 'function') ? getPlantById(plantId) : null;
+    if (!plant) return;  // Pianta cancellata o non caricata: skip.
+
+    const potDetails = pots.map(item => {
+      const detail = dashboardComputePotDetail(item, plant);
+      totalAlerts += detail.alerts.length;
+      totalUpcomingEvents += detail.upcomingEvents.length;
+      totalPots++;
+      return detail;
+    });
+
+    // hasAlerts a livello di gruppo: vero se almeno un vaso del gruppo
+    // ha un'allerta. Serve per ordinare i gruppi mettendo in cima quelli
+    // con allerte attive.
+    const hasAlerts = potDetails.some(p => p.alerts.length > 0);
+
+    groups.push({
+      plant,
+      pots: potDetails,
+      hasAlerts,
+    });
+  });
+
+  // Ordino: prima i gruppi con allerte (per attirare l'attenzione su
+  // quello che richiede azione), poi gli altri in alfabetico per nome.
+  groups.sort((a, b) => {
+    if (a.hasAlerts !== b.hasAlerts) return a.hasAlerts ? -1 : 1;
+    return a.plant.name.localeCompare(b.plant.name);
+  });
+
+  // Render del riassunto numerico in cima.
+  summaryEl.innerHTML = dashboardRenderSummary({
+    totalPots,
+    totalGroups: groups.length,
+    totalAlerts,
+    totalUpcomingEvents,
+  });
+
+  // Render delle card.
+  cardsEl.innerHTML = groups.map(g => dashboardRenderGroupCard(g)).join('');
+}
+
+// Calcola tutte le informazioni di stato per un singolo vaso: lettura
+// dei sensori live, lista delle allerte attive, lista degli eventi
+// imminenti dei prossimi giorni.
+function dashboardComputePotDetail(item, plant) {
+  const detail = {
+    item,
+    plant,
+    sensorMoisture: null,
+    sensorTemp: null,
+    sensorEC: null,
+    sensorHasData: false,
+    alerts: [],
+    upcomingEvents: [],
+  };
+
+  // Sensori live: cerco il dato del canale del sensore associato.
+  // Il dato meteo cached vive in window._meteoLatestData se Meteo è
+  // stata visitata almeno una volta. Se no, mostriamo solo i dati
+  // statici (eventi imminenti) senza allerte sensori.
+  const channelId = item.wh51Ch;
+  if (channelId && window._meteoLatestData && typeof meteoGetSoilData === 'function') {
+    const data = meteoGetSoilData(window._meteoLatestData, channelId);
+    if (data.moisture !== null) {
+      detail.sensorMoisture = data.moisture;
+      detail.sensorTemp = data.temp;
+      detail.sensorEC = data.ec;
+      detail.sensorHasData = true;
+    }
+  }
+
+  // Soglie umidità per categoria del sensore.
+  const cat = item.wh51Cat || 'universale';
+  const soglie = (PARAMS.soglie && PARAMS.soglie[cat]) || PARAMS_DEFAULTS.soglie[cat] || PARAMS_DEFAULTS.soglie.universale;
+
+  // Allerte umidità: oggi guardo solo il valore attuale. Per fare l'allerta
+  // "sostenuta per N ore" servirebbe una serie storica che oggi non abbiamo
+  // facilmente accessibile dal frontend. Il sintomo "secco da 24h" lo
+  // approssimo con "secco al momento" + nota "verifica andamento". In una
+  // futura iterazione si potrà accedere allo storico via API e fare il
+  // controllo rigoroso.
+  if (detail.sensorHasData) {
+    if (detail.sensorMoisture < soglie.secco) {
+      detail.alerts.push({
+        level: 'critical',
+        icon: '🔴',
+        text: `Umidità bassa (${detail.sensorMoisture.toFixed(0)}% < ${soglie.secco}% di soglia)`,
+      });
+    } else if (detail.sensorMoisture > soglie.umido) {
+      detail.alerts.push({
+        level: 'warning',
+        icon: '🟡',
+        text: `Umidità alta (${detail.sensorMoisture.toFixed(0)}% > ${soglie.umido}% di soglia, rischio ristagno)`,
+      });
+    }
+  } else if (channelId) {
+    // Sensore associato ma nessun dato: probabilmente offline o batteria.
+    detail.alerts.push({
+      level: 'warning',
+      icon: '📡',
+      text: `Sensore canale ${channelId}: nessun dato recente`,
+    });
+  }
+
+  // Allerte EC se WH52 e dato disponibile.
+  if (detail.sensorHasData && detail.sensorEC !== null && PARAMS.sogliEC) {
+    const ecS = PARAMS.sogliEC[cat] || PARAMS_DEFAULTS.sogliEC[cat] || PARAMS_DEFAULTS.sogliEC.universale;
+    if (detail.sensorEC < ecS.min && detail.sensorMoisture >= (PARAMS.ecMoistureMin || 30)) {
+      detail.alerts.push({
+        level: 'info',
+        icon: '🌱',
+        text: `EC bassa (${detail.sensorEC.toFixed(0)} µS/cm): poveri nutrienti`,
+      });
+    } else if (detail.sensorEC > ecS.max) {
+      detail.alerts.push({
+        level: 'critical',
+        icon: '⚠️',
+        text: `EC alta (${detail.sensorEC.toFixed(0)} µS/cm): possibile accumulo sali`,
+      });
+    }
+  }
+
+  // Eventi imminenti: cerco nei prossimi 30 giorni gli eventi che
+  // riguardano questo vaso. Itero sulle date dei prossimi giorni e
+  // raccolgo gli eventi delle quattro categorie (fert, biobizz, tratt,
+  // annaffiature) più le voci future del diario.
+  detail.upcomingEvents = dashboardCollectUpcomingForPot(item, plant);
+
+  return detail;
+}
+
+// Raccoglie gli eventi imminenti per un singolo vaso, raggruppati per
+// categoria. La struttura di ritorno è {fert: [...], bb: [...], tr: [...],
+// wa: [...], diary: [...]} dove ogni elemento è un oggetto con date e
+// label leggibile. Ogni categoria è troncata a PARAMS.dashboardMaxUpcoming
+// (per categoria, non globalmente, in modo che ogni tipologia abbia la
+// sua quota e non venga oscurata dalle altre).
+function dashboardCollectUpcomingForPot(item, plant) {
+  const maxPerCat = PARAMS.dashboardMaxUpcoming || PARAMS_DEFAULTS.dashboardMaxUpcoming;
+  const result = { fert: [], bb: [], tr: [], wa: [], diary: [] };
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // I gDateMap, bbDateMap, trDateMap, waDateMap sono popolati da
+  // gInitGiorni quando l'utente apre la sezione Pianificazione. Se la
+  // dashboard viene visitata prima della Pianificazione, queste mappe
+  // potrebbero essere vuote. Per coprire questo caso, controllo che
+  // siano definite e che almeno una abbia contenuto; se sono tutte
+  // vuote, gli eventi imminenti del calendario non saranno presenti.
+  const HORIZON_DAYS = 30;
+
+  for (let d = 0; d < HORIZON_DAYS; d++) {
+    const date = new Date(today.getTime() + d * 86400000);
+    const key = (typeof gDateKey === 'function') ? gDateKey(date) : null;
+    if (!key) break;
+
+    // Fertilizzazioni
+    if (typeof gDateMap !== 'undefined' && gDateMap[key]) {
+      gDateMap[key].forEach(ev => {
+        if (ev.plant && ev.plant.id === plant.id && result.fert.length < maxPerCat) {
+          result.fert.push({ date, label: ev.plant.concime || 'Fertilizzazione', note: ev.note || '' });
+        }
+      });
+    }
+    // BioBizz
+    if (typeof bbDateMap !== 'undefined' && bbDateMap[key]) {
+      bbDateMap[key].forEach(ev => {
+        if (ev.plant && ev.plant.id === plant.id && result.bb.length < maxPerCat) {
+          const prodLabel = (typeof BB_PRODUCTS !== 'undefined' && BB_PRODUCTS[ev.prod])
+            ? BB_PRODUCTS[ev.prod].label
+            : ev.prod;
+          result.bb.push({ date, label: prodLabel, note: ev.note || '' });
+        }
+      });
+    }
+    // Trattamenti
+    if (typeof trDateMap !== 'undefined' && trDateMap[key]) {
+      trDateMap[key].forEach(ev => {
+        if (ev.plant && ev.plant.id === plant.id && result.tr.length < maxPerCat) {
+          const prodLabel = (typeof TR_PRODUCTS !== 'undefined' && TR_PRODUCTS[ev.prod])
+            ? TR_PRODUCTS[ev.prod].label
+            : ev.prod;
+          result.tr.push({ date, label: prodLabel, note: ev.note || '' });
+        }
+      });
+    }
+    // Annaffiature
+    if (typeof waDateMap !== 'undefined' && waDateMap[key]) {
+      waDateMap[key].forEach(ev => {
+        if (ev.plant && ev.plant.id === plant.id && result.wa.length < maxPerCat) {
+          result.wa.push({ date, label: 'Annaffiatura', note: ev.note || '' });
+        }
+      });
+    }
+  }
+
+  // Voci del diario future: lo storage del diario è separato e contiene
+  // sia voci passate che future. Filtro per quelle con data >= oggi e
+  // pianta che corrisponde (per nome, perché il diario non sempre ha
+  // l'id collegato).
+  if (typeof dEntries !== 'undefined' && Array.isArray(dEntries)) {
+    const futures = dEntries.filter(e => {
+      if (!e.date) return false;
+      const ed = new Date(e.date);
+      ed.setHours(0, 0, 0, 0);
+      return ed >= today && (e.plant === plant.name || e.plantId === plant.id);
+    }).sort((a, b) => new Date(a.date) - new Date(b.date));
+    result.diary = futures.slice(0, maxPerCat).map(e => ({
+      date: new Date(e.date),
+      label: e.op || 'Operazione',
+      note: e.note || '',
+    }));
+  }
+
+  return result;
+}
+
+// Rendering del riassunto in cima alla Dashboard. Mostra alcuni numeri
+// chiave dello stato del giardino. La logica è "se un numero è
+// rilevante (>0) lo mostro, altrimenti lo nascondo per non riempire
+// di zeri inutili".
+function dashboardRenderSummary({totalPots, totalGroups, totalAlerts, totalUpcomingEvents}) {
+  const chip = (label, value, color) => `<div style="background:${color};padding:8px 14px;border-radius:10px;font-size:11px;color:#fff;font-weight:500;display:flex;align-items:center;gap:6px">
+    <span style="font-size:16px;font-weight:700">${value}</span>
+    <span>${label}</span>
+  </div>`;
+  return [
+    chip(`vas${totalPots === 1 ? 'o' : 'i'} totali`, totalPots, '#5a8050'),
+    chip(`pian${totalGroups === 1 ? 'ta' : 'te'}`, totalGroups, '#3a7a8a'),
+    totalAlerts > 0 ? chip(`allert${totalAlerts === 1 ? 'a' : 'e'}`, totalAlerts, '#c04040') : '',
+    totalUpcomingEvents > 0 ? chip('eventi imminenti', totalUpcomingEvents, '#9a8030') : '',
+  ].filter(Boolean).join('');
+}
+
+// Rendering di una singola card "gruppo pianta". Header con nome pianta
+// e quanti vasi, lista dei vasi con i loro dettagli.
+function dashboardRenderGroupCard(group) {
+  const {plant, pots, hasAlerts} = group;
+  const cardBorder = hasAlerts ? '2px solid #c04040' : '1px solid var(--border)';
+  const headerBg = hasAlerts ? 'rgba(192,64,64,0.08)' : 'var(--bg)';
+  return `<div style="background:#fff;border:${cardBorder};border-radius:12px;margin-bottom:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+    <!-- Header gruppo: pianta + conteggio vasi -->
+    <div style="padding:10px 14px;background:${headerBg};border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+      <div style="font-size:24px">${plant.icon || '🌱'}</div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:600;color:var(--text)">${plant.name}</div>
+        ${plant.latin ? `<div style="font-size:11px;font-style:italic;color:var(--muted)">${plant.latin}</div>` : ''}
+      </div>
+      <div style="font-size:11px;color:var(--muted);background:rgba(0,0,0,0.04);padding:3px 8px;border-radius:10px">
+        ${pots.length} vas${pots.length === 1 ? 'o' : 'i'}
+      </div>
+    </div>
+    <!-- Lista vasi -->
+    <div>${pots.map(p => dashboardRenderPotRow(p)).join('')}</div>
+  </div>`;
+}
+
+// Rendering di una riga "vaso" all'interno di una card pianta. Mostra
+// nickname/identificativo del vaso, stato sensori, allerte ed eventi.
+function dashboardRenderPotRow(detail) {
+  const {item, plant, sensorMoisture, sensorTemp, sensorEC, sensorHasData, alerts, upcomingEvents} = detail;
+
+  // Nome del vaso: nickname se c'è, altrimenti l'id.
+  const potName = item.nickname && item.nickname.trim() ? item.nickname : `Vaso #${item.id}`;
+
+  // Bar visivo dell'umidità.
+  const cat = item.wh51Cat || 'universale';
+  const soglie = (PARAMS.soglie && PARAMS.soglie[cat]) || PARAMS_DEFAULTS.soglie[cat] || PARAMS_DEFAULTS.soglie.universale;
+  let moistureBar = '';
+  if (sensorHasData) {
+    let barColor = '#5a8050';
+    if (sensorMoisture < soglie.secco) barColor = '#c04040';
+    else if (sensorMoisture > soglie.umido) barColor = '#d4a040';
+    const pct = Math.max(0, Math.min(100, sensorMoisture));
+    moistureBar = `<div style="display:flex;align-items:center;gap:6px;font-size:11px">
+      <div style="flex:1;height:8px;background:#e8e6e0;border-radius:4px;overflow:hidden;position:relative">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:${barColor};transition:width 0.3s"></div>
+      </div>
+      <div style="min-width:42px;text-align:right;color:var(--text);font-weight:500">${sensorMoisture.toFixed(0)}%</div>
+    </div>`;
+  } else if (item.wh51Ch) {
+    moistureBar = `<div style="font-size:11px;color:var(--muted);font-style:italic">📡 Nessun dato dal sensore</div>`;
+  } else {
+    moistureBar = `<div style="font-size:11px;color:var(--muted);font-style:italic">— Nessun sensore associato</div>`;
+  }
+
+  // Dati WH52 supplementari.
+  let wh52Bits = '';
+  if (sensorTemp !== null || sensorEC !== null) {
+    const parts = [];
+    if (sensorTemp !== null) parts.push(`🌡️ ${sensorTemp.toFixed(1)}°C`);
+    if (sensorEC !== null) parts.push(`⚡ ${sensorEC.toFixed(0)} µS/cm`);
+    wh52Bits = `<div style="font-size:10px;color:var(--muted);margin-top:3px">${parts.join(' · ')}</div>`;
+  }
+
+  // Allerte.
+  const alertsHtml = alerts.length > 0 ? `<div style="margin-top:8px;display:flex;flex-direction:column;gap:4px">
+    ${alerts.map(a => `<div style="font-size:11px;padding:4px 8px;background:${a.level==='critical'?'#fde8e8':a.level==='warning'?'#fdf3e0':'#e8f0fd'};border-left:3px solid ${a.level==='critical'?'#c04040':a.level==='warning'?'#d4a040':'#3a7abf'};border-radius:4px;color:#5a3030">
+      <span style="margin-right:4px">${a.icon}</span>${a.text}
+    </div>`).join('')}
+  </div>` : '';
+
+  // Eventi imminenti raggruppati per categoria.
+  const upcomingHtml = dashboardRenderUpcomingEvents(upcomingEvents);
+
+  return `<div style="padding:10px 14px;border-bottom:1px solid var(--border)">
+    <!-- Riga superiore: nome vaso + dati ambientali sintetici -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500;color:var(--text)">${potName}</div>
+        ${item.location ? `<div style="font-size:10px;color:var(--muted)">${item.location === 'indoor' ? '🏠 Indoor' : '🌤️ Outdoor'}${item.wh51Ch ? ' · canale ' + item.wh51Ch : ''}</div>` : ''}
+      </div>
+    </div>
+    ${moistureBar}
+    ${wh52Bits}
+    ${alertsHtml}
+    ${upcomingHtml}
+  </div>`;
+}
+
+// Rendering compatto della sezione "Eventi imminenti" di un vaso.
+// Ogni categoria è una riga con icona + label + lista compatta delle
+// date imminenti. Se una categoria non ha eventi, viene saltata.
+function dashboardRenderUpcomingEvents(events) {
+  if (!events) return '';
+  const categories = [
+    { key: 'fert', icon: '📆', label: 'Fertilizzazioni' },
+    { key: 'bb', icon: '💚', label: 'BioBizz' },
+    { key: 'tr', icon: '🛡️', label: 'Trattamenti' },
+    { key: 'wa', icon: '💧', label: 'Annaffiature' },
+    { key: 'diary', icon: '📓', label: 'Diario' },
+  ];
+  const sections = categories
+    .map(c => {
+      const evs = events[c.key];
+      if (!evs || evs.length === 0) return '';
+      // Lista compatta: max 3 eventi per riga visibile, poi "+N altri"
+      // (ma il numero massimo per categoria è già limitato da
+      // PARAMS.dashboardMaxUpcoming a livello di raccolta).
+      const items = evs.map(ev => {
+        const dStr = `${ev.date.getDate()}/${ev.date.getMonth()+1}`;
+        return `<span style="background:rgba(0,0,0,0.04);padding:2px 8px;border-radius:8px;font-size:10px;color:var(--text)" title="${ev.label}${ev.note ? ' — ' + ev.note : ''}">${dStr}</span>`;
+      }).join('');
+      return `<div style="display:flex;align-items:flex-start;gap:6px;font-size:11px;color:var(--muted)">
+        <span style="margin-top:2px">${c.icon}</span>
+        <div style="flex:1;display:flex;flex-wrap:wrap;gap:4px">${items}</div>
+      </div>`;
+    })
+    .filter(Boolean);
+  if (sections.length === 0) return '';
+  return `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);display:flex;flex-direction:column;gap:4px">
+    ${sections.join('')}
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════
 // ⑫ PWA — Service Worker + Offline
 // ══════════════════════════════════════════════════════════════════════
 if ('serviceWorker' in navigator) {
@@ -7498,10 +8416,18 @@ function pwaInstall() {
 // vengono fuse nelle strutture e le sezioni vengono invalidate per essere
 // re-inizializzate alla prossima visita. Il caricamento iniziale ridisegna
 // anche la sezione Schede così l'utente vede subito la sua griglia di piante.
-showSection('schede');
+showSection('dashboard');
 loadCustomPlants().then(() => {
   // Re-inizializzo la sezione Schede per mostrare le piante caricate
+  // (anche se non siamo lì in questo momento, le strutture sPlants etc.
+  // sono ora popolate, e all'apertura della sezione vedremo i dati).
   if (typeof sInitSchede === 'function') sInitSchede();
+  // Ricalcolo anche la Dashboard se è quella che si vede adesso,
+  // perché i dati delle piante potrebbero essere arrivati dopo
+  // l'inizializzazione iniziale.
+  if (sectionInited.dashboard && typeof dashboardRender === 'function') {
+    dashboardRender();
+  }
 });
 
 // Ping al server per determinare se il database SQLite è raggiungibile.
