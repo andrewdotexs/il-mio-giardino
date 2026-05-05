@@ -171,26 +171,162 @@
   </div>
 </div>
 
-<!-- ── SECTION: CALENDARIO MENSILE ────────────────────────────────── -->
-<div id="sec-mensile" class="section">
+<!-- ── SECTION: PIANIFICAZIONE (Mensile + Giorni unificati) ──────────
+     Storicamente queste erano due sezioni separate ("Mensile" con la
+     panoramica annuale, "Giorni" con il calendario dettagliato). Sono
+     state unificate sotto "Pianificazione" perché in pratica sono due
+     livelli di zoom della stessa informazione (gli eventi calendarizzati),
+     non due funzionalità diverse. Lo switch interno "Mese / Giorno"
+     permette di passare tra le due viste senza cambiare tab.
+
+     Implementazione: tengo i due blocchi DOM originali ('p-view-mese' e
+     'p-view-giorno') con i loro id interni invariati per non rompere
+     gInitGiorni e cInitMensile, e li mostro/nascondo via classi CSS.
+     L'overlay del Mese e l'overlay del Giorno restano fuori dalla
+     sezione perché sono modali full-screen e devono essere figli di
+     <body> per ragioni di layering. -->
+<div id="sec-pianificazione" class="section">
   <div class="app-header">
-    <h1 style="color: white;">Calendario 2026 📅</h1>
-    <p style="color: white;">Panoramica mensile · clicca un mese per i dettagli</p>
+    <h1 style="color: white;">Pianificazione 📅</h1>
     <p class="d-mode-indicator" style="color: white;font-size:11px;margin-top:4px">⏳ Connessione al database...</p>
   </div>
-  <div class="legend-row">
-    <div class="legend-chip"><div class="legend-dot" style="background:var(--accent)"></div>Attiva</div>
-    <div class="legend-chip"><div class="legend-dot" style="background:#b8a86a"></div>Ridotta</div>
-    <div class="legend-chip"><div class="legend-dot" style="background:var(--warn)"></div>Attenzione</div>
-    <div class="legend-chip"><div class="legend-dot" style="background:#ccc"></div>Riposo</div>
+
+  <!-- Switch Mese / Giorno -->
+  <div style="display:flex;justify-content:center;gap:6px;max-width:400px;margin:0 auto 1rem;background:rgba(255,255,255,0.7);padding:4px;border-radius:10px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)">
+    <button class="ctrl-btn p-view-btn active" id="p-btn-mese"
+      onclick="pianificazioneSwitchView('mese')"
+      style="flex:1;padding:8px 16px">📅 Mese</button>
+    <button class="ctrl-btn p-view-btn" id="p-btn-giorno"
+      onclick="pianificazioneSwitchView('giorno')"
+      style="flex:1;padding:8px 16px">📆 Giorno</button>
   </div>
-  <div class="year-bar-section">
-    <div class="year-bar-title">Panoramica annuale</div>
-    <div class="bar-month-labels" id="c-bar-labels"></div>
-    <div id="c-year-bars"></div>
+
+  <!-- Vista MESE: griglia annuale + calendario mensile -->
+  <div id="p-view-mese" class="p-view">
+    <div class="legend-row">
+      <div class="legend-chip"><div class="legend-dot" style="background:var(--accent)"></div>Attiva</div>
+      <div class="legend-chip"><div class="legend-dot" style="background:#b8a86a"></div>Ridotta</div>
+      <div class="legend-chip"><div class="legend-dot" style="background:var(--warn)"></div>Attenzione</div>
+      <div class="legend-chip"><div class="legend-dot" style="background:#ccc"></div>Riposo</div>
+    </div>
+    <div class="year-bar-section">
+      <div class="year-bar-title">Panoramica annuale</div>
+      <div class="bar-month-labels" id="c-bar-labels"></div>
+      <div id="c-year-bars"></div>
+    </div>
+    <div class="months-grid" id="c-months-grid"></div>
   </div>
-  <div class="months-grid" id="c-months-grid"></div>
+
+  <!-- Vista GIORNO: filtri + legende + calendario dettagliato -->
+  <div id="p-view-giorno" class="p-view" style="display:none">
+    <!-- Filtro tipo visualizzazione -->
+    <div style="display:flex;gap:6px;justify-content:center;max-width:900px;margin:0 auto .8rem;flex-wrap:wrap">
+      <button class="ctrl-btn" id="gf-all"    onclick="gSetFilter('all')"    style="flex:1;max-width:160px">🌱 Tutti</button>
+      <button class="ctrl-btn" id="gf-fert"   onclick="gSetFilter('fert')"   style="flex:1;max-width:160px">📆 Solo fertilizzazioni</button>
+      <button class="ctrl-btn" id="gf-biobizz" onclick="gSetFilter('biobizz')" style="flex:1;max-width:160px">💚 Solo BioBizz</button>
+      <button class="ctrl-btn" id="gf-tratt"   onclick="gSetFilter('tratt')"   style="flex:1;max-width:160px">🛡️ Trattamenti</button>
+      <button class="ctrl-btn" id="gf-acqua"   onclick="gSetFilter('acqua')"   style="flex:1;max-width:160px">💧 Annaffiature</button>
+    </div>
+    <!-- Legenda piante (fertilizzazioni) — versione collapsabile.
+         Il wrapper ha classi "legend-collapsible collapsed". La prima
+         definisce il comportamento collapsabile (header cliccabile, body
+         che si anima in altezza); la seconda è lo stato corrente. Toggle
+         collassato/espanso avviene aggiungendo/togliendo la classe
+         "collapsed" tramite la funzione toggleLegend().
+
+         Nell'header il counter "X / 26 visibili" è dinamico: quando filtri
+         piante singolarmente o usi "Nessuna", il numero a sinistra dello
+         slash diminuisce per mostrare quante piante sono attualmente
+         attive. Se non hai filtri attivi mostra solo "26 visibili" (senza
+         slash) per non sovraccaricare la lettura.
+
+         I pulsanti "Tutte" / "Nessuna" hanno event.stopPropagation così
+         il loro click esegue l'azione richiesta senza far scattare anche
+         il toggle del collapsable della legenda. Lo stesso vale per il
+         chevron, che invece cambia stato ed è quindi *all'interno* della
+         parte cliccabile dell'header. -->
+    <div id="g-legend-wrap" class="legend-collapsible collapsed">
+      <div class="legend-header" onclick="toggleLegend('g-legend-wrap')">
+        <div class="legend-title">Fertilizzazioni · piante <span class="legend-counter" id="g-legend-counter">26 visibili</span></div>
+        <div class="legend-actions">
+          <button onclick="event.stopPropagation();gShowAllPlants()" title="Mostra tutte le piante" class="legend-bulk-btn">Tutte</button>
+          <button onclick="event.stopPropagation();gHideAllPlants()" title="Nascondi tutte le piante" class="legend-bulk-btn">Nessuna</button>
+          <span class="legend-chevron">▼</span>
+        </div>
+      </div>
+      <div class="legend-body">
+        <div class="g-legend" id="g-legend"></div>
+      </div>
+    </div>
+    <!-- Legenda prodotti BioBizz — collapsabile come le altre.
+         Niente counter né pulsanti "Tutte"/"Nessuna" perché i prodotti
+         sono pochi (sette) e raramente si filtrano in massa: chi vuole
+         isolare un prodotto specifico clicca direttamente il chip.
+         Il chevron è comunque presente per coerenza visiva con le altre
+         legende. -->
+    <div id="bb-legend-wrap" class="legend-collapsible collapsed">
+      <div class="legend-header" onclick="toggleLegend('bb-legend-wrap')">
+        <div class="legend-title">BioBizz · prodotti</div>
+        <div class="legend-actions">
+          <span class="legend-chevron">▼</span>
+        </div>
+      </div>
+      <div class="legend-body">
+        <div class="bb-prod-legend" id="bb-prod-legend"></div>
+      </div>
+    </div>
+    <!-- Legenda trattamenti — collapsabile, stessa logica di BioBizz. -->
+    <div id="tr-legend-wrap" class="legend-collapsible collapsed">
+      <div class="legend-header" onclick="toggleLegend('tr-legend-wrap')">
+        <div class="legend-title">Trattamenti · prodotti</div>
+        <div class="legend-actions">
+          <span class="legend-chevron">▼</span>
+        </div>
+      </div>
+      <div class="legend-body">
+        <div class="tr-prod-legend" id="tr-prod-legend"></div>
+      </div>
+    </div>
+    <!-- Legenda annaffiature — versione collapsabile, parallela a quella
+         fertilizzazioni. Le funzioni waShowAllPlants / waHideAllPlants
+         agiscono sul set waHiddenPlants e sui chip della legenda
+         annaffiature, mantenendo i due gruppi di filtri (fertilizzazioni
+         e annaffiature) indipendenti tra loro come prima. Anche il counter
+         è dinamico e parallelo a quello delle fertilizzazioni. -->
+    <div id="wa-legend-wrap" class="legend-collapsible collapsed">
+      <div class="legend-header" onclick="toggleLegend('wa-legend-wrap')">
+        <div class="legend-title">Annaffiature · piante <span class="legend-counter" id="wa-legend-counter">26 visibili</span></div>
+        <div class="legend-actions">
+          <button onclick="event.stopPropagation();waShowAllPlants()" title="Mostra tutte le piante" class="legend-bulk-btn">Tutte</button>
+          <button onclick="event.stopPropagation();waHideAllPlants()" title="Nascondi tutte le piante" class="legend-bulk-btn">Nessuna</button>
+          <span class="legend-chevron">▼</span>
+        </div>
+      </div>
+      <div class="legend-body">
+        <div class="wa-legend" id="wa-legend"></div>
+      </div>
+    </div>
+    <div class="ctrl-row">
+      <button class="ctrl-btn" onclick="gChangeMonth(-1)">← Prec.</button>
+      <div class="ctrl-title" id="g-nav-title"></div>
+      <div style="display:flex;gap:6px">
+        <button class="ctrl-btn primary" onclick="gGoToday()">Oggi</button>
+        <button class="ctrl-btn" onclick="gChangeMonth(1)">Succ. →</button>
+      </div>
+    </div>
+    <div class="stats-bar" id="g-stats"></div>
+    <div class="calendar-wrap">
+      <div class="dow-header">
+        <div class="dow-cell">Dom</div><div class="dow-cell">Lun</div><div class="dow-cell">Mar</div>
+        <div class="dow-cell">Mer</div><div class="dow-cell">Gio</div><div class="dow-cell">Ven</div><div class="dow-cell">Sab</div>
+      </div>
+      <div class="days-grid" id="g-days-grid"></div>
+    </div>
+  </div>
 </div>
+
+<!-- Overlay del calendario MESE: full-screen modale, fuori dalla sezione
+     per ragioni di layering. -->
 <div class="overlay" id="c-overlay" onclick="cCloseDetail(event)">
   <div class="panel">
     <div class="panel-header">
@@ -201,116 +337,7 @@
   </div>
 </div>
 
-<!-- ── SECTION: CALENDARIO GIORNI ─────────────────────────────────── -->
-<div id="sec-giorni" class="section">
-  <div class="app-header">
-    <h1 style="color: white;">Calendario 📆</h1>
-    <p class="d-mode-indicator" style="color: white;font-size:11px;margin-top:4px">⏳ Connessione al database...</p>
-  </div>
-  <!-- Filtro tipo visualizzazione -->
-  <div style="display:flex;gap:6px;justify-content:center;max-width:900px;margin:0 auto .8rem;flex-wrap:wrap">
-    <button class="ctrl-btn" id="gf-all"    onclick="gSetFilter('all')"    style="flex:1;max-width:160px">🌱 Tutti</button>
-    <button class="ctrl-btn" id="gf-fert"   onclick="gSetFilter('fert')"   style="flex:1;max-width:160px">📆 Solo fertilizzazioni</button>
-    <button class="ctrl-btn" id="gf-biobizz" onclick="gSetFilter('biobizz')" style="flex:1;max-width:160px">💚 Solo BioBizz</button>
-    <button class="ctrl-btn" id="gf-tratt"   onclick="gSetFilter('tratt')"   style="flex:1;max-width:160px">🛡️ Trattamenti</button>
-    <button class="ctrl-btn" id="gf-acqua"   onclick="gSetFilter('acqua')"   style="flex:1;max-width:160px">💧 Annaffiature</button>
-  </div>
-  <!-- Legenda piante (fertilizzazioni) — versione collapsabile.
-       Il wrapper ha classi "legend-collapsible collapsed". La prima
-       definisce il comportamento collapsabile (header cliccabile, body
-       che si anima in altezza); la seconda è lo stato corrente. Toggle
-       collassato/espanso avviene aggiungendo/togliendo la classe
-       "collapsed" tramite la funzione toggleLegend().
-
-       Nell'header il counter "X / 26 visibili" è dinamico: quando filtri
-       piante singolarmente o usi "Nessuna", il numero a sinistra dello
-       slash diminuisce per mostrare quante piante sono attualmente
-       attive. Se non hai filtri attivi mostra solo "26 visibili" (senza
-       slash) per non sovraccaricare la lettura.
-
-       I pulsanti "Tutte" / "Nessuna" hanno event.stopPropagation così
-       il loro click esegue l'azione richiesta senza far scattare anche
-       il toggle del collapsable della legenda. Lo stesso vale per il
-       chevron, che invece cambia stato ed è quindi *all'interno* della
-       parte cliccabile dell'header. -->
-  <div id="g-legend-wrap" class="legend-collapsible collapsed">
-    <div class="legend-header" onclick="toggleLegend('g-legend-wrap')">
-      <div class="legend-title">Fertilizzazioni · piante <span class="legend-counter" id="g-legend-counter">26 visibili</span></div>
-      <div class="legend-actions">
-        <button onclick="event.stopPropagation();gShowAllPlants()" title="Mostra tutte le piante" class="legend-bulk-btn">Tutte</button>
-        <button onclick="event.stopPropagation();gHideAllPlants()" title="Nascondi tutte le piante" class="legend-bulk-btn">Nessuna</button>
-        <span class="legend-chevron">▼</span>
-      </div>
-    </div>
-    <div class="legend-body">
-      <div class="g-legend" id="g-legend"></div>
-    </div>
-  </div>
-  <!-- Legenda prodotti BioBizz — collapsabile come le altre.
-       Niente counter né pulsanti "Tutte"/"Nessuna" perché i prodotti
-       sono pochi (sette) e raramente si filtrano in massa: chi vuole
-       isolare un prodotto specifico clicca direttamente il chip.
-       Il chevron è comunque presente per coerenza visiva con le altre
-       legende. -->
-  <div id="bb-legend-wrap" class="legend-collapsible collapsed">
-    <div class="legend-header" onclick="toggleLegend('bb-legend-wrap')">
-      <div class="legend-title">BioBizz · prodotti</div>
-      <div class="legend-actions">
-        <span class="legend-chevron">▼</span>
-      </div>
-    </div>
-    <div class="legend-body">
-      <div class="bb-prod-legend" id="bb-prod-legend"></div>
-    </div>
-  </div>
-  <!-- Legenda trattamenti — collapsabile, stessa logica di BioBizz. -->
-  <div id="tr-legend-wrap" class="legend-collapsible collapsed">
-    <div class="legend-header" onclick="toggleLegend('tr-legend-wrap')">
-      <div class="legend-title">Trattamenti · prodotti</div>
-      <div class="legend-actions">
-        <span class="legend-chevron">▼</span>
-      </div>
-    </div>
-    <div class="legend-body">
-      <div class="tr-prod-legend" id="tr-prod-legend"></div>
-    </div>
-  </div>
-  <!-- Legenda annaffiature — versione collapsabile, parallela a quella
-       fertilizzazioni. Le funzioni waShowAllPlants / waHideAllPlants
-       agiscono sul set waHiddenPlants e sui chip della legenda
-       annaffiature, mantenendo i due gruppi di filtri (fertilizzazioni
-       e annaffiature) indipendenti tra loro come prima. Anche il counter
-       è dinamico e parallelo a quello delle fertilizzazioni. -->
-  <div id="wa-legend-wrap" class="legend-collapsible collapsed">
-    <div class="legend-header" onclick="toggleLegend('wa-legend-wrap')">
-      <div class="legend-title">Annaffiature · piante <span class="legend-counter" id="wa-legend-counter">26 visibili</span></div>
-      <div class="legend-actions">
-        <button onclick="event.stopPropagation();waShowAllPlants()" title="Mostra tutte le piante" class="legend-bulk-btn">Tutte</button>
-        <button onclick="event.stopPropagation();waHideAllPlants()" title="Nascondi tutte le piante" class="legend-bulk-btn">Nessuna</button>
-        <span class="legend-chevron">▼</span>
-      </div>
-    </div>
-    <div class="legend-body">
-      <div class="wa-legend" id="wa-legend"></div>
-    </div>
-  </div>
-  <div class="ctrl-row">
-    <button class="ctrl-btn" onclick="gChangeMonth(-1)">← Prec.</button>
-    <div class="ctrl-title" id="g-nav-title"></div>
-    <div style="display:flex;gap:6px">
-      <button class="ctrl-btn primary" onclick="gGoToday()">Oggi</button>
-      <button class="ctrl-btn" onclick="gChangeMonth(1)">Succ. →</button>
-    </div>
-  </div>
-  <div class="stats-bar" id="g-stats"></div>
-  <div class="calendar-wrap">
-    <div class="dow-header">
-      <div class="dow-cell">Dom</div><div class="dow-cell">Lun</div><div class="dow-cell">Mar</div>
-      <div class="dow-cell">Mer</div><div class="dow-cell">Gio</div><div class="dow-cell">Ven</div><div class="dow-cell">Sab</div>
-    </div>
-    <div class="days-grid" id="g-days-grid"></div>
-  </div>
-</div>
+<!-- Overlay del calendario GIORNO: full-screen modale, anche questo fuori. -->
 <div class="overlay" id="g-overlay" onclick="gCloseOverlay(event)">
   <div class="panel">
     <div class="panel-header">
@@ -1815,11 +1842,8 @@
   <button class="nav-tab active" id="tab-schede" data-sec="schede" onclick="showSection('schede')">
     <span class="nav-icon">🌿</span>Schede
   </button>
-  <button class="nav-tab" id="tab-mensile" data-sec="mensile" onclick="showSection('mensile')">
-    <span class="nav-icon">📅</span>Mensile
-  </button>
-  <button class="nav-tab" id="tab-giorni" data-sec="giorni" onclick="showSection('giorni')">
-    <span class="nav-icon">📆</span>Giorni
+  <button class="nav-tab" id="tab-pianificazione" data-sec="pianificazione" onclick="showSection('pianificazione')">
+    <span class="nav-icon">📅</span>Pianificazione
   </button>
   <button class="nav-tab" id="tab-diario" data-sec="diario" onclick="showSection('diario')">
     <span class="nav-icon">📓</span>Diario

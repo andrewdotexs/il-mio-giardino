@@ -49,7 +49,15 @@ async function apiFetch(url, options = {}) {
 // ══════════════════════════════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════════════════════════════
-const sectionInited = {schede:false, mensile:false, giorni:false, diario:false, acqua:false, vasi:false, meteo:false, params:false};
+// Stato di inizializzazione delle sezioni. La sezione "pianificazione" è
+// nuova e racchiude le due vecchie sezioni "mensile" e "giorni" (vedi
+// commento nell'HTML alla sezione sec-pianificazione). Mantengo qui un
+// unico flag per la nuova tab; le due funzioni di init dei sottoblocchi
+// (cInitMensile e gInitGiorni) vengono chiamate entrambe alla prima
+// apertura della tab perché popolano DOM disgiunti che vivono nei due
+// div figli p-view-mese e p-view-giorno.
+// ══════════════════════════════════════════════════════════════════════
+const sectionInited = {schede:false, pianificazione:false, diario:false, acqua:false, vasi:false, meteo:false, params:false};
 
 function showSection(name) {
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -58,8 +66,15 @@ function showSection(name) {
   window.scrollTo(0,0);
   if (!sectionInited[name]) {
     if (name==='schede') sInitSchede();
-    else if (name==='mensile') cInitMensile();
-    else if (name==='giorni') gInitGiorni();
+    else if (name==='pianificazione') {
+      // Inizializzo entrambe le viste della pianificazione. Le due
+      // funzioni popolano DOM disgiunti (la prima dentro p-view-mese,
+      // la seconda dentro p-view-giorno) quindi non interferiscono tra
+      // loro. Lo switch tra le due viste è solo questione di
+      // mostrare/nascondere via CSS, gestito da pianificazioneSwitchView.
+      cInitMensile();
+      gInitGiorni();
+    }
     else if (name==='diario') dInitDiario();
     else if (name==='acqua') wInitCalc();
     else if (name==='vasi') invInit();
@@ -69,6 +84,29 @@ function showSection(name) {
   }
   if (name==='diario') dRender();
   if (name==='meteo') meteoRefresh();
+}
+
+// Switch tra vista MESE e vista GIORNO dentro la sezione Pianificazione.
+// I due blocchi DOM esistono entrambi nel documento; mostrare uno e
+// nascondere l'altro è solo manipolazione di style.display. Aggiorno
+// anche la classe active sui due pulsanti dello switch così l'utente
+// vede chiaramente quale vista è attiva.
+function pianificazioneSwitchView(view) {
+  const mese = document.getElementById('p-view-mese');
+  const giorno = document.getElementById('p-view-giorno');
+  const btnMese = document.getElementById('p-btn-mese');
+  const btnGiorno = document.getElementById('p-btn-giorno');
+  if (view === 'mese') {
+    mese.style.display = '';
+    giorno.style.display = 'none';
+    btnMese.classList.add('active');
+    btnGiorno.classList.remove('active');
+  } else {
+    mese.style.display = 'none';
+    giorno.style.display = '';
+    btnMese.classList.remove('active');
+    btnGiorno.classList.add('active');
+  }
 }
 
 document.addEventListener('keydown', e => {
@@ -5398,11 +5436,10 @@ async function _loadCustomPlantsImpl() {
   // Quando l'utente le riaprirà, verranno re-inizializzate con i dati nuovi.
   // Questo meccanismo sfrutta sectionInited già esistente.
   if (typeof sectionInited !== 'undefined') {
-    sectionInited.schede  = false;
-    sectionInited.mensile = false;
-    sectionInited.giorni  = false;
-    sectionInited.vasi    = false;
-    sectionInited.diario  = false;  // Il filtro pianta del diario deve aggiornarsi
+    sectionInited.schede         = false;
+    sectionInited.pianificazione = false;
+    sectionInited.vasi           = false;
+    sectionInited.diario         = false;  // Il filtro pianta del diario deve aggiornarsi
   }
   // Il calcolatore di fertirrigazione ha un suo flag separato perché viene
   // inizializzato fuori dal sistema sectionInited centrale. Resetto anche
@@ -5963,6 +6000,21 @@ async function cpSavePlant() {
     cpToast(cpEditingId ? `✅ ${name} aggiornata` : `✅ ${name} aggiunta`, 'success');
     cpDirty = false;
 
+    // Estraggo l'id della pianta appena salvata. Per la modifica è
+    // semplicemente cpEditingId; per la creazione devo leggere dalla
+    // risposta del backend, che restituisce {item: {...}} con la pianta
+    // appena creata e il suo nuovo id.
+    let savedPlantId = cpEditingId;
+    if (!cpEditingId) {
+      try {
+        const responseData = await res.json();
+        savedPlantId = responseData.item && responseData.item.id;
+      } catch {
+        savedPlantId = null;
+      }
+    }
+    const wasNewPlant = !cpEditingId;
+
     // Ricarica le piante custom: la fusione è idempotente, quindi questo
     // aggiorna sia la cache che le 5 strutture native in memoria.
     await loadCustomPlants();
@@ -5977,9 +6029,61 @@ async function cpSavePlant() {
     document.getElementById('cp-overlay').classList.remove('open');
     document.body.style.overflow = '';
     cpEditingId = null;
+
+    // Solo per creazioni nuove (non modifiche), proponi di creare anche
+    // un vaso per la pianta appena aggiunta. La logica vive in una
+    // funzione separata per non appesantire questo flusso e per essere
+    // facilmente disattivabile in futuro se l'utente preferirà tornare
+    // al comportamento "salva e basta".
+    if (wasNewPlant && savedPlantId) {
+      cpProposeCreatePot(savedPlantId, name);
+    }
   } catch (e) {
     cpToast('Errore di rete: ' + e.message, 'error');
   }
+}
+
+// ── Proposta post-creazione: vuoi creare anche un vaso? ───────────────
+// Dopo aver salvato una nuova pianta, chiediamo all'utente se vuole
+// creare immediatamente un vaso che usi quella pianta. È un'ottimizzazione
+// di flusso: la maggior parte degli utenti che aggiunge una pianta nuova
+// nel sistema lo fa proprio perché ha (o sta per avere) un vaso fisico
+// con quella pianta, e portarli direttamente al form vaso evita due click
+// di navigazione.
+//
+// Usiamo confirm() del browser invece di un dialog custom perché è
+// semplice, accessibile, e la domanda è un sì/no banale che non merita
+// una UI dedicata. Se in futuro vorremo un'esperienza più ricca (per
+// esempio mostrare un'anteprima della pianta nel dialog), basterà
+// sostituire questa funzione.
+function cpProposeCreatePot(plantId, plantName) {
+  const wantsPot = confirm(
+    `Pianta "${plantName}" salvata!\n\n` +
+    `Vuoi creare anche un vaso per questa pianta?\n` +
+    `(Potrai sempre crearlo dopo dalla sezione "I miei vasi")`
+  );
+  if (!wantsPot) return;
+  // Naviga alla sezione vasi e apre il form di aggiunta con la pianta
+  // pre-selezionata. Devo fare due cose in sequenza: showSection per
+  // attivare la tab e (al primo accesso) inizializzarla, e poi aprire
+  // il form. La navigazione è asincrona perché invInit() può richiedere
+  // un fetch dell'inventario; uso un piccolo timeout per essere sicuro
+  // che la dropdown delle piante sia stata popolata prima di selezionarla.
+  showSection('vasi');
+  setTimeout(() => {
+    invOpenAdd();
+    const sel = document.getElementById('inv-plant-type');
+    if (sel) {
+      // Imposto il valore della dropdown all'id della pianta appena salvata.
+      // La dropdown contiene già tutte le piante perché loadCustomPlants è
+      // stata chiamata prima di arrivare qui.
+      sel.value = String(plantId);
+      // Triggero anche un evento change in caso ci siano listener che
+      // rispondono al cambio di pianta (per esempio per popolare automaticamente
+      // soglie di umidità o altri campi dipendenti).
+      sel.dispatchEvent(new Event('change'));
+    }
+  }, 150);
 }
 
 // ── Eliminazione protetta ───────────────────────────────────────────
