@@ -6199,6 +6199,236 @@ function cpOpenAddForm() {
   setTimeout(() => document.getElementById('cp-name').focus(), 50);
 }
 
+// ════════════════════════════════════════════════════════════════════
+// AUTOCOMPLETAMENTO CATALOGO PIANTE
+// ════════════════════════════════════════════════════════════════════
+// Quando l'utente digita nei campi cp-name o cp-latin, l'app interroga
+// l'endpoint /api/catalog/search e mostra suggerimenti dal catalogo
+// esteso (170 piante). Cliccando su un suggerimento, tutti i campi del
+// form si auto-popolano con i dati della pianta selezionata, riusando
+// cpPopulateForm.
+//
+// Architettura:
+// - Debounce di 200ms per non bombardare il backend a ogni tasto
+// - Cache delle ultime ricerche per query identiche back-to-back
+// - Navigazione tastiera (frecce su/giù, Enter, Esc) per accessibilità
+// - Click outside chiude il dropdown
+// - Solo query >= 2 caratteri triggerano la ricerca
+
+let _cpSuggestTimer = null;       // setTimeout pendente per debounce
+let _cpSuggestCache = new Map();  // q → response data, max 20 entries
+let _cpSuggestActive = -1;        // indice elemento evidenziato per tastiera
+let _cpSuggestField = null;       // 'name' o 'latin', il campo che ha il dropdown aperto
+
+// Setup degli event listener sui due campi.
+// Chiamata una sola volta al boot dell'app.
+function cpSuggestInit() {
+  const setupField = (fieldName) => {
+    const inputId = 'cp-' + fieldName;
+    const listId = 'cp-' + fieldName + '-suggest';
+    const input = document.getElementById(inputId);
+    const list = document.getElementById(listId);
+    if (!input || !list) return;  // l'HTML non ha la struttura attesa
+
+    input.addEventListener('input', (e) => {
+      cpSuggestOnInput(fieldName, e.target.value);
+    });
+    input.addEventListener('keydown', (e) => {
+      cpSuggestOnKeyDown(fieldName, e);
+    });
+    input.addEventListener('focus', (e) => {
+      // Riapri se c'è già un valore digitato (utente torna sul campo)
+      if (e.target.value.trim().length >= 2) {
+        cpSuggestOnInput(fieldName, e.target.value);
+      }
+    });
+    input.addEventListener('blur', () => {
+      // Chiudi con un piccolo delay perché altrimenti il click su un
+      // item del dropdown viene cancellato dal blur che precede il click
+      setTimeout(() => cpSuggestClose(fieldName), 150);
+    });
+  };
+
+  setupField('name');
+  setupField('latin');
+}
+
+// Handler input con debounce
+function cpSuggestOnInput(fieldName, value) {
+  const q = (value || '').trim();
+  if (q.length < 2) {
+    cpSuggestClose(fieldName);
+    return;
+  }
+  if (_cpSuggestTimer) clearTimeout(_cpSuggestTimer);
+  _cpSuggestTimer = setTimeout(() => {
+    cpSuggestFetch(fieldName, q);
+  }, 200);
+}
+
+// Esegue la fetch (con cache) e mostra i risultati
+async function cpSuggestFetch(fieldName, q) {
+  const qLower = q.toLowerCase();
+
+  // Cache hit?
+  if (_cpSuggestCache.has(qLower)) {
+    cpSuggestRender(fieldName, _cpSuggestCache.get(qLower));
+    return;
+  }
+
+  try {
+    const res = await apiFetch('/api/catalog/search?q=' + encodeURIComponent(q) + '&limit=10');
+    if (!res.ok) {
+      cpSuggestClose(fieldName);
+      return;
+    }
+    const data = await res.json();
+
+    // Cache LRU semplice: max 20 entries, butta il primo aggiunto se piena
+    if (_cpSuggestCache.size >= 20) {
+      const firstKey = _cpSuggestCache.keys().next().value;
+      _cpSuggestCache.delete(firstKey);
+    }
+    _cpSuggestCache.set(qLower, data);
+
+    cpSuggestRender(fieldName, data);
+  } catch (e) {
+    // Backend non raggiungibile (modalità locale): chiudi silenziosamente.
+    // L'autocompletamento è una nice-to-have, non un blocker.
+    cpSuggestClose(fieldName);
+  }
+}
+
+// Renderizza i risultati nel dropdown
+function cpSuggestRender(fieldName, data) {
+  const list = document.getElementById('cp-' + fieldName + '-suggest');
+  if (!list) return;
+  const items = (data && data.items) || [];
+
+  if (items.length === 0) {
+    list.innerHTML = '<div class="cp-suggest-empty">Nessuna corrispondenza nel catalogo</div>';
+    list.classList.add('open');
+    _cpSuggestField = fieldName;
+    _cpSuggestActive = -1;
+    return;
+  }
+
+  // Gli item sono cliccabili con onclick. Memorizzo l'indice come data
+  // attribute così posso riusarlo per la navigazione da tastiera.
+  list.innerHTML = items.map((p, i) => `
+    <div class="cp-suggest-item" data-idx="${i}" onclick="cpSuggestPick(${i})">
+      <div class="cp-suggest-icon">${p.icon || '🌱'}</div>
+      <div class="cp-suggest-text">
+        <div class="cp-suggest-name">${cpEscapeHtml(p.name || '')}</div>
+        <div class="cp-suggest-latin">${cpEscapeHtml(p.latin || '')}</div>
+      </div>
+      <div class="cp-suggest-group">${cpEscapeHtml(p.sim_group || '')}</div>
+    </div>
+  `).join('');
+
+  list.classList.add('open');
+  _cpSuggestField = fieldName;
+  _cpSuggestActive = -1;
+  // Memorizzo gli items sul list element così cpSuggestPick li recupera
+  list._items = items;
+}
+
+// Helper: escape HTML per evitare injection nei nomi (paranoia, ma sano)
+function cpEscapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Click su un suggerimento: popola il form intero
+function cpSuggestPick(idx) {
+  if (!_cpSuggestField) return;
+  const list = document.getElementById('cp-' + _cpSuggestField + '-suggest');
+  const items = list && list._items;
+  if (!items || idx < 0 || idx >= items.length) return;
+  const plant = items[idx];
+
+  // Riuso cpPopulateForm che già gestisce tutti i campi (nome, latino,
+  // icon, gruppo, sensor_cat, scheda colturale, calendari, kc, ecc.).
+  // Funziona perché il record del catalogo ha la stessa struttura di un
+  // record dal database custom_plants.
+  cpPopulateForm(plant);
+
+  // Chiudi entrambi i dropdown (l'utente ha appena scelto, non vogliamo
+  // che riapra il dropdown sull'altro campo per via dell'auto-popolazione)
+  cpSuggestClose('name');
+  cpSuggestClose('latin');
+
+  // Focus al successivo campo significativo per continuare la compilazione
+  // senza dover muovere il mouse. Vado sul soprannome o sull'icona.
+  const nextEl = document.getElementById('cp-icon');
+  if (nextEl) nextEl.focus();
+
+  // Marco il form come modificato: l'utente vorrà probabilmente premere
+  // Salva, e cpDirty=true abilita il pulsante.
+  cpDirty = true;
+}
+
+// Navigazione tastiera: frecce, Enter, Esc
+function cpSuggestOnKeyDown(fieldName, e) {
+  const list = document.getElementById('cp-' + fieldName + '-suggest');
+  if (!list || !list.classList.contains('open')) return;
+  const items = list._items || [];
+  if (items.length === 0) {
+    if (e.key === 'Escape') cpSuggestClose(fieldName);
+    return;
+  }
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _cpSuggestActive = Math.min(_cpSuggestActive + 1, items.length - 1);
+    cpSuggestUpdateActive(fieldName);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _cpSuggestActive = Math.max(_cpSuggestActive - 1, 0);
+    cpSuggestUpdateActive(fieldName);
+  } else if (e.key === 'Enter') {
+    if (_cpSuggestActive >= 0) {
+      e.preventDefault();
+      cpSuggestPick(_cpSuggestActive);
+    }
+  } else if (e.key === 'Escape') {
+    cpSuggestClose(fieldName);
+  }
+}
+
+// Aggiorna evidenziazione dell'item attivo (navigazione tastiera)
+function cpSuggestUpdateActive(fieldName) {
+  const list = document.getElementById('cp-' + fieldName + '-suggest');
+  if (!list) return;
+  list.querySelectorAll('.cp-suggest-item').forEach((el, i) => {
+    if (i === _cpSuggestActive) {
+      el.classList.add('active');
+      // Scroll automatico se l'item attivo esce dalla viewport del dropdown
+      el.scrollIntoView({block: 'nearest'});
+    } else {
+      el.classList.remove('active');
+    }
+  });
+}
+
+// Chiude il dropdown
+function cpSuggestClose(fieldName) {
+  const list = document.getElementById('cp-' + fieldName + '-suggest');
+  if (list) {
+    list.classList.remove('open');
+    list.innerHTML = '';
+    list._items = null;
+  }
+  if (_cpSuggestField === fieldName) {
+    _cpSuggestField = null;
+    _cpSuggestActive = -1;
+  }
+}
+
 // ── Apertura del form in modalità "modifica" ─────────────────────────
 // Carica la pianta dalla cache, popola tutti i campi del form, mostra
 // il pulsante elimina.
@@ -8926,6 +9156,15 @@ showSection('dashboard');
   // arrivate.
   if (sectionInited.dashboard && typeof dashboardRender === 'function') {
     dashboardRender();
+  }
+  // Setup degli event listener per l'autocompletamento del catalogo nel
+  // form "Crea pianta personalizzata". Va fatto al boot e una sola volta
+  // perché aggancia listener permanenti agli input del form (che sono
+  // sempre nel DOM, anche quando il form non è aperto). Idempotente:
+  // se chiamato due volte aggiunge listener duplicati ma non rompe nulla.
+  if (typeof cpSuggestInit === 'function') {
+    try { cpSuggestInit(); }
+    catch (e) { console.warn('[bootstrap] cpSuggestInit fallita:', e); }
   }
 })();
 

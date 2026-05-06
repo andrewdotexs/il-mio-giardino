@@ -810,3 +810,91 @@ body {
 .p-view-btn:not(.active):hover {
   background: rgba(255, 255, 255, 0.85);
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   AUTOCOMPLETAMENTO CATALOGO PIANTE
+   ════════════════════════════════════════════════════════════════════
+   Dropdown di suggerimenti che appare sotto i campi nome/latino del form
+   "Crea pianta personalizzata". I risultati vengono popolati dall'endpoint
+   /api/catalog/search con un debounce di 200ms tra digitazioni.
+
+   Stato visivo: il container .cp-suggest-wrap avvolge l'input e ha
+   posizione relativa per fare da ancoraggio al dropdown .cp-suggest-list,
+   che è absolute e si srotola verso il basso. Quando vuoto il dropdown
+   ha display:none così non occupa spazio. */
+.cp-suggest-wrap {
+  position: relative;
+}
+.cp-suggest-list {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 2px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 200;
+}
+.cp-suggest-list.open {
+  display: block;
+}
+.cp-suggest-item {
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.12s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cp-suggest-item:last-child {
+  border-bottom: none;
+}
+.cp-suggest-item:hover,
+.cp-suggest-item.active {
+  background: var(--bg);
+}
+.cp-suggest-icon {
+  font-size: 18px;
+  flex: 0 0 auto;
+}
+.cp-suggest-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.cp-suggest-name {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cp-suggest-latin {
+  font-style: italic;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cp-suggest-group {
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex: 0 0 auto;
+}
+.cp-suggest-empty {
+  padding: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-style: italic;
+  text-align: center;
+}

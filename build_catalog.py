@@ -940,6 +940,348 @@ PLANTS += [
 ]
 
 # ════════════════════════════════════════════════════════════════════════
+# AMPLIAMENTO #1 — Aggiunte richieste e voci comuni mancanti
+# ════════════════════════════════════════════════════════════════════════
+# Questo blocco completa il catalogo con piante segnalate come mancanti
+# e voci comuni in Italia che erano sfuggite al primo giro:
+#
+# - Mimosa (Acacia dealbata): l'albero da fiori gialli più iconico del
+#   primo periodo primaverile, presente in mille giardini italiani
+# - Paulownia tomentosa: l'"albero principessa", molto di moda negli
+#   ultimi anni anche per scopi di biomassa
+# - Juniperus chinensis 'Itoigawa': una varietà specifica del ginepro
+#   cinese, è IL ginepro per bonsai (foglie minuscole, ramificazione
+#   fitta, legno secco scolpibile in jin/shari)
+#
+# Più piante comuni dimenticate al primo giro: arbusti da siepe (nandina,
+# weigela, spirea, photinia), alberi nobili (carpino, ontano), aromatiche
+# (verbena odorosa, ruta, stevia), bonsai (zelkova, olmo siberiano),
+# tropicali appartamento (schefflera full-size, croton, asparagina),
+# succulenta (epifillo).
+
+PLANTS += [
+    # ─── Le tre richieste esplicitamente ──────────────────────────────
+    make_plant("Mimosa", "Acacia dealbata", "🌼", "albero",
+               root_depth_cm=50, p_coef=0.50,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1],
+               card_data_overrides={"esp": {"note": "Sempreverde da fiori gialli profumati a fine inverno (gennaio-marzo). Resistente al gelo solo fino a -5°C: in Nord Italia teme inverni rigidi."}}),
+    make_plant("Paulownia (Albero principessa)", "Paulownia tomentosa", "💜", "albero",
+               root_depth_cm=70,
+               card_data_overrides={"esp": {"note": "Albero a crescita rapidissima (fino a 3 m/anno) con grandi fiori lilla a forma di tromba in primavera. Foglie cuoriformi grandi fino a 30 cm."}}),
+    make_plant("Bonsai Ginepro Itoigawa", "Juniperus chinensis 'Itoigawa'", "🌲", "bonsai",
+               root_depth_cm=12,
+               card_data_overrides={"esp": {"note": "Varietà giapponese del ginepro cinese, la più usata nel bonsai per fogliame fitto e finissimo. Adatta a tecniche jin/shari. Da esterno tutto l'anno con protezione invernale del vaso."}}),
+
+    # ─── Arbusti ornamentali aggiuntivi ───────────────────────────────
+    make_plant("Nandina (Bambù sacro)", "Nandina domestica", "🌿", "arbusto",
+               root_depth_cm=25,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1],
+               card_data_overrides={"esp": {"note": "Sempreverde con fogliame rossastro in autunno-inverno, bacche rosse durature. Molto resistente."}}),
+    make_plant("Weigela", "Weigela florida", "🌸", "arbusto", root_depth_cm=30),
+    make_plant("Spirea", "Spiraea japonica", "🌸", "arbusto", root_depth_cm=25),
+    make_plant("Photinia", "Photinia × fraseri", "🌳", "arbusto",
+               root_depth_cm=35,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1],
+               card_data_overrides={"esp": {"note": "Sempreverde da siepe, germogli rossi in primavera. Tollerante al sole e alla potatura."}}),
+    make_plant("Bosso", "Buxus sempervirens", "🌿", "arbusto",
+               root_depth_cm=25,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1],
+               card_data_overrides={"cur": {"note": "Da controllare per piralide del bosso (Cydalima perspectalis): trattamento preventivo con Bacillus thuringiensis primavera-estate."}}),
+    make_plant("Lauroceraso", "Prunus laurocerasus", "🌳", "arbusto",
+               root_depth_cm=40,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1]),
+    make_plant("Pieris", "Pieris japonica", "🤍", "arbusto",
+               root_depth_cm=30,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1],
+               card_data_overrides={"sub": {"note": "Acidofila: substrato per acidofile (pH 5.0-6.0), come azalee e camelie."}}),
+    make_plant("Skimmia", "Skimmia japonica", "❤️", "arbusto",
+               root_depth_cm=25,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1],
+               card_data_overrides={"sub": {"note": "Acidofila: substrato per acidofile. Bacche rosse persistenti in inverno."}}),
+
+    # ─── Alberi latifoglie aggiuntivi ─────────────────────────────────
+    make_plant("Carpino bianco", "Carpinus betulus", "🌳", "albero",
+               root_depth_cm=50,
+               card_data_overrides={"cur": {"note": "Latifoglia da siepe formale per eccellenza. Conserva le foglie secche in inverno (marcescenza), funzione di schermatura tutto l'anno."}}),
+    make_plant("Carpino nero", "Ostrya carpinifolia", "🌳", "albero", root_depth_cm=50),
+    make_plant("Ontano nero", "Alnus glutinosa", "🌳", "albero", root_depth_cm=50),
+    make_plant("Acero negundo", "Acer negundo", "🍁", "albero", root_depth_cm=50),
+    make_plant("Sofora del Giappone", "Styphnolobium japonicum", "🌳", "albero", root_depth_cm=60),
+    make_plant("Albero di Giuda", "Cercis siliquastrum", "💜", "albero",
+               root_depth_cm=45,
+               card_data_overrides={"esp": {"note": "Fioritura spettacolare rosa-violetta direttamente sui rami in aprile, prima delle foglie. Resistente alla siccità mediterranea."}}),
+    make_plant("Bagolaro", "Celtis australis", "🌳", "albero", root_depth_cm=60),
+    make_plant("Sorbo domestico", "Sorbus domestica", "🌳", "albero", root_depth_cm=50),
+
+    # ─── Conifere aggiuntive ──────────────────────────────────────────
+    make_plant("Abete bianco", "Abies alba", "🌲", "conifera",
+               root_depth_cm=70,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1]),
+    make_plant("Abete rosso (Peccio)", "Picea abies", "🌲", "conifera",
+               root_depth_cm=60,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1]),
+    make_plant("Pino silvestre", "Pinus sylvestris", "🌲", "conifera",
+               root_depth_cm=60,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1]),
+    make_plant("Cipresso di Leyland", "× Cuprocyparis leylandii", "🌲", "conifera",
+               root_depth_cm=50,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1]),
+    make_plant("Tuia", "Thuja occidentalis", "🌲", "conifera",
+               root_depth_cm=45,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1]),
+
+    # ─── Aromatiche e officinali aggiuntive ───────────────────────────
+    make_plant("Verbena odorosa (Erba Luigia)", "Aloysia citrodora", "🌿", "aromatica",
+               root_depth_cm=25,
+               card_data_overrides={"esp": {"note": "Foglie con intenso profumo di limone, ottime in tisana. In Nord Italia perde le foglie in inverno: protezione del fittone."}}),
+    make_plant("Ruta", "Ruta graveolens", "🌿", "aromatica",
+               root_depth_cm=20,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1]),
+    make_plant("Stevia", "Stevia rebaudiana", "🌿", "aromatica",
+               root_depth_cm=20,
+               card_data_overrides={"esp": {"note": "Foglie naturalmente dolci. Teme il gelo: in Nord Italia ricovero invernale o coltivata come annuale."}}),
+    make_plant("Santoreggia", "Satureja montana", "🌿", "aromatica",
+               root_depth_cm=20,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1]),
+    make_plant("Issopo", "Hyssopus officinalis", "💜", "aromatica", root_depth_cm=20),
+
+    # ─── Bonsai aggiuntivi ────────────────────────────────────────────
+    make_plant("Bonsai Zelkova", "Zelkova serrata", "🌳", "bonsai", root_depth_cm=12,
+               card_data_overrides={"esp": {"note": "Bonsai da esterno per eccellenza per stile broom (eretto formale a chioma globosa). Resistente al gelo."}}),
+    make_plant("Bonsai Olmo siberiano", "Ulmus pumila", "🌳", "bonsai", root_depth_cm=12),
+    make_plant("Bonsai Glicine", "Wisteria sinensis", "💜", "bonsai", root_depth_cm=12,
+               card_data_overrides={"esp": {"note": "Bonsai da esterno con fioritura spettacolare a grappoli pendenti in aprile-maggio. Esigenze idriche elevate in fioritura."}}),
+    make_plant("Bonsai Azalea Satsuki", "Rhododendron indicum", "🌸", "bonsai", root_depth_cm=12,
+               card_data_overrides={"sub": {"note": "Acidofila: substrato kanuma puro (pH 4.5-5.5). Annaffiare solo con acqua decalcificata o piovana."}}),
+    make_plant("Bonsai Cotogno giapponese", "Chaenomeles japonica", "🌸", "bonsai", root_depth_cm=12),
+
+    # ─── Tropicali appartamento aggiuntive ────────────────────────────
+    make_plant("Schefflera", "Schefflera arboricola", "🌿", "tropicale", root_depth_cm=25),
+    make_plant("Croton (Codiaeum)", "Codiaeum variegatum", "🍂", "tropicale", root_depth_cm=20,
+               card_data_overrides={"esp": {"note": "Fogliame multicolore (verde, giallo, rosso) molto decorativo. Esigenze di luce intensa per mantenere le colorazioni."}}),
+    make_plant("Asparagina", "Asparagus densiflorus", "🌿", "tropicale", root_depth_cm=20),
+    make_plant("Felce di Boston", "Nephrolepis exaltata", "🌿", "tropicale", root_depth_cm=20,
+               card_data_overrides={"esp": {"note": "Felce classica da appartamento, ama umidità elevata. Ottima per bagni luminosi."}}),
+    make_plant("Aglaonema", "Aglaonema commutatum", "🌿", "tropicale", root_depth_cm=20),
+    make_plant("Dieffenbachia", "Dieffenbachia seguine", "🌿", "tropicale", root_depth_cm=25,
+               card_data_overrides={"cur": {"note": "Linfa irritante: lavarsi le mani dopo manipolazione. Tossica per bambini e animali."}}),
+    make_plant("Strelitzia (Uccello del paradiso)", "Strelitzia reginae", "🧡", "tropicale", root_depth_cm=35),
+
+    # ─── Succulente aggiuntive ────────────────────────────────────────
+    make_plant("Epifillo (Cactus orchidea)", "Epiphyllum oxypetalum", "🌸", "succulenta", root_depth_cm=15),
+    make_plant("Aeonium", "Aeonium arboreum", "🌹", "succulenta", root_depth_cm=15),
+    make_plant("Graptopetalum", "Graptopetalum paraguayense", "🌸", "succulenta", root_depth_cm=10),
+]
+
+# ════════════════════════════════════════════════════════════════════════
+# AMPLIAMENTO #2 — Macchia mediterranea + flora del Nord Italia
+# ════════════════════════════════════════════════════════════════════════
+# Questo blocco raggruppa due categorie di aggiunte:
+#
+# A) MACCHIA MEDITERRANEA: piante tipiche del bosco e della macchia delle
+#    coste italiane meridionali e insulari, e in alcuni casi diffuse anche
+#    in Pianura Padana per coltivazione (carrubo, agrifoglio). Coprono
+#    buchi importanti come il carrubo, la ginestra, l'erica arborea, la
+#    fillirea, l'alaterno e l'olivastro che sono protagonisti della
+#    macchia ma erano assenti dal catalogo.
+#
+# B) NORD ITALIA / PIANURA PADANA: specie autoctone della pianura padana
+#    e dei bassi rilievi alpini. Coprono il gelso (storicamente importante
+#    per l'allevamento del baco da seta in Lombardia), gli arbusti
+#    autoctoni delle siepi rurali padane (sambuco, nocciolo, prugnolo,
+#    biancospino, sanguinello), gli alberi delle zone umide (salice
+#    bianco, ontano nero — già presente ma confermato), e specie utili
+#    nei giardini di campagna (melo e pero selvatici, sorbo degli
+#    uccellatori).
+#
+# C) AROMATICHE E OFFICINALI tipiche del Nord Italia (camomilla, achillea,
+#    iperico, equiseto) che integrano la lista delle aromatiche da
+#    balcone con voci più "spontanee" di erboristeria.
+
+PLANTS += [
+    # ─── A. MACCHIA MEDITERRANEA ──────────────────────────────────────
+    make_plant("Carrubo", "Ceratonia siliqua", "🌳", "albero",
+               root_depth_cm=60,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1],
+               card_data_overrides={"esp": {"note": "Albero sempreverde mediterraneo, longevo e resistente alla siccità. Predilige climi caldi: in Nord Italia rischia il gelo intenso."}}),
+    make_plant("Ginestra odorosa", "Spartium junceum", "💛", "mediterranea",
+               root_depth_cm=40,
+               card_data_overrides={"esp": {"note": "Arbusto pioniero della macchia mediterranea, fioritura giallo intenso giugno-luglio. Resiste alla siccità estrema."}}),
+    make_plant("Ginestra dei carbonai", "Cytisus scoparius", "💛", "arbusto",
+               root_depth_cm=30,
+               card_data_overrides={"esp": {"note": "Arbusto con fioritura gialla aprile-maggio. Colonizza pendii e terreni poveri. Resistente al gelo, presente anche al Nord."}}),
+    make_plant("Erica arborea", "Erica arborea", "🤍", "arbusto",
+               root_depth_cm=30,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1],
+               card_data_overrides={"sub": {"note": "Acidofila: substrato per acidofile (pH 4.5-6.0). Foglie aghiformi minuscole, fiori bianchi a campanella in marzo-maggio."}}),
+    make_plant("Fillirea (Ilatro)", "Phillyrea latifolia", "🌿", "mediterranea",
+               root_depth_cm=40,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1]),
+    make_plant("Alaterno", "Rhamnus alaternus", "🌿", "mediterranea",
+               root_depth_cm=35,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1]),
+    make_plant("Olivastro (Olivo selvatico)", "Olea europaea var. sylvestris", "🫒", "mediterranea",
+               root_depth_cm=50, p_coef=0.55,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1],
+               card_data_overrides={"esp": {"note": "Forma selvatica dell'olivo, molto longeva e resistente. Tipica della macchia alta delle coste italiane."}}),
+    make_plant("Palma nana (Palma di San Pietro)", "Chamaerops humilis", "🌴", "mediterranea",
+               root_depth_cm=40,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1],
+               card_data_overrides={"esp": {"note": "Unica palma autoctona europea. Resistente al gelo (-12°C) ma cresce molto lentamente. Coltivabile anche al Nord."}}),
+    make_plant("Cappero", "Capparis spinosa", "🤍", "mediterranea",
+               root_depth_cm=30,
+               card_data_overrides={"esp": {"note": "Cresce spontaneo su rupi e muretti, fiori bianchi/rosa estivi. I boccioli sotto sale sono i 'capperi' da cucina."}}),
+    make_plant("Agrifoglio", "Ilex aquifolium", "🌳", "arbusto",
+               root_depth_cm=40,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1],
+               card_data_overrides={"esp": {"note": "Sempreverde con bacche rosse natalizie. Tollera bene mezz'ombra e gelo. Comune sia in macchia che nel sottobosco padano."}}),
+    make_plant("Pungitopo", "Ruscus aculeatus", "🌿", "arbusto",
+               root_depth_cm=20,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1]),
+    make_plant("Mortella (Mirto comune)", "Myrtus communis 'Tarentina'", "🌿", "mediterranea",
+               root_depth_cm=25,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1],
+               card_data_overrides={"esp": {"note": "Cultivar di mirto a foglia piccola, molto compatto. Usato per siepi formali nei giardini mediterranei."}}),
+    make_plant("Euforbia arborescente", "Euphorbia dendroides", "🌿", "succulenta",
+               root_depth_cm=25,
+               card_data_overrides={"cur": {"note": "Linfa lattice irritante: usare guanti durante la potatura. In estate va a riposo perdendo le foglie (strategia di tolleranza alla siccità)."}}),
+    make_plant("Lavanda dei muri", "Lavandula stoechas", "💜", "aromatica",
+               root_depth_cm=25,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1],
+               card_data_overrides={"esp": {"note": "Lavanda mediterranea con fiori a 'pennacchio' in primavera. Più calda della L. angustifolia, in Nord Italia richiede protezione invernale."}}),
+
+    # ─── B. NORD ITALIA / PIANURA PADANA ──────────────────────────────
+    make_plant("Gelso bianco", "Morus alba", "🍃", "albero",
+               root_depth_cm=60,
+               card_data_overrides={"esp": {"note": "Storicamente coltivato in Lombardia per l'allevamento del baco da seta. Foglie cuoriformi, frutti dolci bianco-rosati commestibili."}}),
+    make_plant("Gelso nero", "Morus nigra", "🫐", "albero",
+               root_depth_cm=60,
+               card_data_overrides={"esp": {"note": "Frutti molto saporiti, color nero-violaceo a maturità. Più rustico del gelso bianco, presente nelle campagne padane."}}),
+    make_plant("Robinia (Acacia falsa)", "Robinia pseudoacacia", "🌳", "albero",
+               root_depth_cm=50,
+               card_data_overrides={"esp": {"note": "Specie alloctona invasiva (origine nordamericana) ma diffusissima in Pianura Padana. Fioritura bianca profumata fine maggio."}}),
+    make_plant("Salice bianco", "Salix alba", "🌳", "albero",
+               root_depth_cm=50,
+               card_data_overrides={"esp": {"note": "Tipico delle zone umide e dei greti fluviali padani. Tollera ristagni idrici e cresce rapidamente."}}),
+    make_plant("Sambuco nero", "Sambucus nigra", "🤍", "arbusto",
+               root_depth_cm=40,
+               card_data_overrides={"con": {"note": "Fiori bianchi profumati a maggio (utili per sciroppi), bacche nere in agosto-settembre. Tipico delle siepi spontanee padane."}}),
+    make_plant("Nocciolo comune", "Corylus avellana", "🌰", "arbusto",
+               root_depth_cm=40,
+               card_data_overrides={"esp": {"note": "Arbusto autoctono italiano. In coltivazione produce nocciole; in giardino è ottima siepe alta sempreverde modesta."}}),
+    make_plant("Prugnolo", "Prunus spinosa", "🤍", "arbusto",
+               root_depth_cm=35,
+               card_data_overrides={"esp": {"note": "Arbusto spinoso autoctono delle siepi rurali. Fioritura bianca in marzo-aprile prima delle foglie. Frutti (prugnoli) per liquori."}}),
+    make_plant("Sanguinello", "Cornus sanguinea", "🌳", "arbusto",
+               root_depth_cm=30,
+               card_data_overrides={"esp": {"note": "Tipico delle siepi padane. In autunno i rami diventano rosso sangue, da cui il nome. Bacche nere non commestibili."}}),
+    make_plant("Corniolo", "Cornus mas", "💛", "arbusto",
+               root_depth_cm=30,
+               card_data_overrides={"esp": {"note": "Fioritura gialla precocissima (febbraio-marzo). Drupe rosse commestibili in agosto, ottime per marmellate."}}),
+    make_plant("Sorbo degli uccellatori", "Sorbus aucuparia", "🌳", "albero",
+               root_depth_cm=45,
+               card_data_overrides={"esp": {"note": "Albero rustico delle Alpi e Prealpi. Bacche rosso vivo in autunno, attirano gli uccelli (da cui il nome)."}}),
+    make_plant("Melo selvatico", "Malus sylvestris", "🍎", "albero", root_depth_cm=50),
+    make_plant("Pero selvatico", "Pyrus pyraster", "🍐", "albero", root_depth_cm=50),
+    make_plant("Acero riccio (Norvegese)", "Acer platanoides 'Crimson King'", "🍁", "albero",
+               root_depth_cm=60,
+               card_data_overrides={"esp": {"note": "Cultivar a foglia rosso-purpurea, molto comune nei viali alberati e nei parchi del Nord Italia."}}),
+    make_plant("Olmo siberiano (Olmo da siepe)", "Ulmus pumila", "🌳", "albero",
+               root_depth_cm=50,
+               card_data_overrides={"esp": {"note": "Resistente alla grafiosi (malattia che ha decimato gli olmi europei). Usato nelle siepi formali delle ville padane."}}),
+    make_plant("Tasso barbasso", "Verbascum thapsus", "💛", "fiorita",
+               root_depth_cm=30,
+               card_data_overrides={"esp": {"note": "Pianta biennale spontanea, alta fino a 2 metri al secondo anno con spiga giallo intenso. Comune nei prati incolti padani."}}),
+    make_plant("Edera terrestre", "Glechoma hederacea", "💜", "tropicale",
+               root_depth_cm=15,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1]),
+
+    # ─── C. AROMATICHE E OFFICINALI SPONTANEE ─────────────────────────
+    make_plant("Camomilla", "Matricaria chamomilla", "🌼", "aromatica",
+               root_depth_cm=15,
+               card_data_overrides={"con": {"note": "Annuale spontanea dei prati incolti. I capolini essiccati danno la classica tisana digestiva."}}),
+    make_plant("Achillea", "Achillea millefolium", "🤍", "aromatica",
+               root_depth_cm=20,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1]),
+    make_plant("Iperico (Erba di San Giovanni)", "Hypericum perforatum", "💛", "aromatica",
+               root_depth_cm=25,
+               card_data_overrides={"esp": {"note": "Erba officinale tradizionale, fioritura gialla a fine giugno (San Giovanni). Resistente al gelo, comune nelle scarpate."}}),
+    make_plant("Tarassaco (Dente di leone)", "Taraxacum officinale", "💛", "aromatica",
+               root_depth_cm=25,
+               card_data_overrides={"con": {"note": "Spontaneo in tutti i prati italiani. Foglie giovani in insalata, radici come surrogato del caffè."}}),
+    make_plant("Calendula", "Calendula officinalis", "🌼", "aromatica",
+               root_depth_cm=15,
+               card_data_overrides={"con": {"note": "Annuale da fiore commestibile, anche officinale. Resiste al freddo: fiorisce da marzo a novembre in zone miti."}}),
+    make_plant("Cerfoglio", "Anthriscus cerefolium", "🌿", "aromatica", root_depth_cm=15),
+    make_plant("Levistico (Sedano di monte)", "Levisticum officinale", "🌿", "aromatica",
+               root_depth_cm=30,
+               card_data_overrides={"esp": {"note": "Aromatica perenne dal sapore intenso simile al sedano. Cresce bene anche al Nord, ricaccia ogni primavera."}}),
+    make_plant("Aneto", "Anethum graveolens", "🌿", "aromatica", root_depth_cm=20),
+]
+
+# ════════════════════════════════════════════════════════════════════════
+# AMPLIAMENTO #3 — Integrazione delle 26 piante native nel catalogo
+# ════════════════════════════════════════════════════════════════════════
+# Le 26 piante "native" originali del progetto vivono nel database SQLite
+# (vedi seed_native_plants.py) ma fino a oggi NON erano nel catalogo JSON
+# usato per autocompletamento. Conseguenza: digitando "Phalaenopsis" nel
+# form "Crea pianta personalizzata" il sistema non suggeriva la voce
+# corrispondente, perché quella esiste solo come record nel database.
+#
+# Aggiungo qui le voci native MANCANTI (cioè quelle con nome italiano non
+# già presente nel catalogo esteso). Quelle con nome italiano già presente
+# nel catalogo (es. Aloe vera, Salvia, Rosmarino, Ficus elastica, Mimosa,
+# Paulownia, Crassula, Oleandro, Pittosforo che è già "Pittosporo" nel
+# catalogo) non vengono duplicate per non confondere l'utente con due
+# voci uguali nel dropdown di autocompletamento.
+#
+# I dati delle voci aggiunte qui sono volutamente snelli (template di
+# gruppo + override minimi) e NON replicano le schede ricche delle native
+# nel database. Lo scopo è solo permettere all'autocompletamento di
+# trovare il nome — quando l'utente seleziona dal dropdown, il form si
+# popola con questa scheda generica, ma quando crea la pianta nel
+# database, la pianta esistente con lo stesso nome resta intatta.
+
+PLANTS += [
+    # ─── Native con nomi unici (non già nel catalogo) ─────────────────
+    # NB: alcune native sono escluse perché già nel catalogo:
+    # - Sanseviera (già "Sansevieria")
+    # - Ficus Benjamina (già "Ficus benjamina")
+    # - Pilea/Moneta cinese (già "Pilea")
+    # - Crassula Ovata (già "Crassula (Albero di giada)")
+    # - Aloe Vera (già "Aloe vera")
+    # - Salvia, Rosmarino, Mimosa, Paulownia, Oleandro, Pittosforo,
+    #   Acero Campestre, Betulla, Ippocastano, Ficus Elastica
+    #   (già in catalogo)
+    make_plant("Orchidea Phalaenopsis (generica)", "Phalaenopsis sp.", "🌸", "orchidea",
+               root_depth_cm=15,
+               card_data_overrides={"esp": {"note": "Orchidea da appartamento più diffusa. Fioritura prolungata di 2-3 mesi, può rifiorire dallo stesso stelo."}}),
+    make_plant("Glicine Bonsai (varietà nativa)", "Wisteria sinensis 'nativa'", "💜", "bonsai", root_depth_cm=12,
+               card_data_overrides={"esp": {"note": "Bonsai da esterno con fioritura primaverile spettacolare. Esigenze idriche elevate da aprile a settembre."}}),
+    make_plant("Limone (varietà generica)", "Citrus limon", "🍋", "agrume", root_depth_cm=35),
+    make_plant("Vinca (Pervinca)", "Vinca major", "💜", "tropicale",
+               root_depth_cm=20,
+               monthly_states=[1,1,1,1,1,1,1,1,1,1,1,1],
+               card_data_overrides={"esp": {"note": "Tappezzante perenne sempreverde. Tollera bene mezz'ombra e gelo. Fiori azzurro-violacei a 5 petali."}}),
+    make_plant("Melograno", "Punica granatum", "🍎", "albero",
+               root_depth_cm=40,
+               card_data_overrides={"esp": {"note": "Piccolo albero da frutto mediterraneo. Fioritura rosso-arancio in maggio, frutti maturi in autunno."}}),
+    make_plant("Stella di Natale", "Euphorbia pulcherrima", "❤️", "tropicale",
+               root_depth_cm=20,
+               card_data_overrides={"esp": {"note": "Brattee rosse decorative in inverno. Per rifiorire l'anno seguente serve buio assoluto 14h/giorno per 8 settimane in autunno."}}),
+    make_plant("Liquidambar", "Liquidambar styraciflua", "🍂", "albero",
+               root_depth_cm=60,
+               card_data_overrides={"esp": {"note": "Albero ornamentale dai colori autunnali spettacolari (giallo, arancio, rosso, viola). Foglia palmata simile all'acero."}}),
+    make_plant("Spino di Giuda", "Gleditsia triacanthos", "🌳", "albero", root_depth_cm=50),
+    make_plant("Gelso Bonsai", "Morus alba (bonsai)", "🌳", "bonsai", root_depth_cm=12),
+    make_plant("Tradescantia", "Tradescantia zebrina", "💜", "tropicale",
+               root_depth_cm=15,
+               card_data_overrides={"esp": {"note": "Tropicale d'appartamento ricadente, foglie strisce viola-argento. Crescita molto rapida, propagazione facilissima."}}),
+    make_plant("Carmona Bonsai", "Carmona retusa", "🌳", "bonsai", root_depth_cm=10,
+               card_data_overrides={"esp": {"note": "Bonsai tropicale d'appartamento. Foglie piccole lucide, fiori bianchi minuscoli. Teme correnti e sbalzi termici."}}),
+]
+
+# ════════════════════════════════════════════════════════════════════════
 # OUTPUT
 # ════════════════════════════════════════════════════════════════════════
 

@@ -1532,11 +1532,17 @@
         <div class="form-row">
           <div class="form-field" style="flex:2">
             <label>Nome <span style="color:#c45a5a">*</span></label>
-            <input type="text" id="cp-name" placeholder="Es. Plumeria">
+            <div class="cp-suggest-wrap">
+              <input type="text" id="cp-name" placeholder="Es. Plumeria" autocomplete="off">
+              <div class="cp-suggest-list" id="cp-name-suggest"></div>
+            </div>
           </div>
           <div class="form-field" style="flex:2">
             <label>Nome latino</label>
-            <input type="text" id="cp-latin" placeholder="Es. Plumeria rubra">
+            <div class="cp-suggest-wrap">
+              <input type="text" id="cp-latin" placeholder="Es. Plumeria rubra" autocomplete="off">
+              <div class="cp-suggest-list" id="cp-latin-suggest"></div>
+            </div>
           </div>
           <div class="form-field" style="max-width:90px">
             <label>Icona</label>

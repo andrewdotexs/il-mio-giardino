@@ -134,6 +134,31 @@ ECOWITT_ENABLED = all(k and not k.startswith("INSERISCI") for k in [ECOWITT_APP_
 ECOWITT_BASE    = "https://api.ecowitt.net/api/v3"
 
 
+# ── Catalogo piante esteso ────────────────────────────────────────────
+# Il catalogo extended_catalog.json viene caricato in memoria all'avvio
+# e usato dall'endpoint /api/catalog/search per fornire suggerimenti
+# autocompletamento nel form "Crea pianta personalizzata". Il file pesa
+# circa 370KB ed è interamente in memoria (nessun overhead apprezzabile).
+#
+# Il catalogo non è obbligatorio: se manca il file, l'endpoint risponde
+# con una lista vuota e l'autocompletamento si disattiva silenziosamente.
+# Questa scelta evita di forzare l'utente a scaricare il catalogo se non
+# vuole usarlo, e permette anche di sostituirlo con un file personalizzato
+# (per es. con piante specifiche di una regione climatica diversa).
+CATALOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "extended_catalog.json")
+CATALOG = []
+try:
+    if os.path.exists(CATALOG_FILE):
+        with open(CATALOG_FILE, "r", encoding="utf-8") as _cf:
+            CATALOG = json.load(_cf)
+        print(f"📚 Catalogo caricato: {len(CATALOG)} piante da {CATALOG_FILE}")
+    else:
+        print(f"⚠ Catalogo non trovato: {CATALOG_FILE} — autocompletamento disattivato")
+except Exception as _e:
+    print(f"❌ Errore caricamento catalogo: {_e} — autocompletamento disattivato")
+    CATALOG = []
+
+
 # ── Database ──────────────────────────────────────────────────────────
 def get_db():
     conn = sqlite3.connect(DB_FILE)
@@ -802,6 +827,51 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json({"error": f"Errore Open-Meteo: {e}"}, 502)
             except Exception as e:
                 self.send_json({"error": str(e)}, 500)
+            return
+
+        # GET /api/catalog/search?q=... — ricerca nel catalogo esteso per
+        # autocompletamento del form "Crea pianta personalizzata".
+        #
+        # Cerca il termine q nel nome italiano e nel nome latino di ogni
+        # pianta del catalogo. Match case-insensitive con normalizzazione
+        # (i.e. "rosmarino", "ROSMARINO" e "Rosmarino" matchano lo stesso).
+        # Match per prefisso E sostringa: "ros" trova sia "Rosmarino" sia
+        # "Tuberosa". I prefissi vengono ordinati prima delle sostringhe
+        # nei risultati, perché di solito chi digita "ros" vuole prima i
+        # match che iniziano per ros.
+        #
+        # Restituisce massimo N risultati per non sovraccaricare l'UI.
+        # La ricerca ignora la sezione "monthly_notes" e le schedule per
+        # ridurre il payload (i suggerimenti mostrano solo nome+latino+icon).
+        if path == "/api/catalog/search":
+            qs = parse_qs(urlparse(self.path).query)
+            q_raw = (qs.get("q", [""])[0] or "").strip().lower()
+            limit = int(qs.get("limit", ["10"])[0])
+            limit = max(1, min(20, limit))  # bounded 1-20
+
+            if not q_raw or len(q_raw) < 2:
+                # Query troppo corta: niente suggerimenti (no senso fare
+                # match con 1 carattere, sarebbero centinaia di risultati)
+                self.send_json({"items": [], "query": q_raw})
+                return
+
+            prefix_matches = []
+            substring_matches = []
+            for plant in CATALOG:
+                name_lc = plant.get("name", "").lower()
+                latin_lc = plant.get("latin", "").lower()
+
+                if name_lc.startswith(q_raw) or latin_lc.startswith(q_raw):
+                    prefix_matches.append(plant)
+                elif q_raw in name_lc or q_raw in latin_lc:
+                    substring_matches.append(plant)
+
+                if len(prefix_matches) + len(substring_matches) >= limit * 2:
+                    break  # abbiamo abbastanza risultati, evitiamo di iterare tutto
+
+            # Restituisco prima i prefissi (più rilevanti), poi le sottostringhe
+            results = (prefix_matches + substring_matches)[:limit]
+            self.send_json({"items": results, "query": q_raw, "total": len(results)})
             return
 
         self.send_json({"error": "Not found"}, 404)
