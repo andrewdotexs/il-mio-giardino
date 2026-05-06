@@ -746,26 +746,122 @@ class Handler(BaseHTTPRequestHandler):
                 qp = parse_qs(parsed.query)
                 start = qp.get("start_date", [datetime.now().strftime("%Y-%m-%d")])[0]
                 end = qp.get("end_date", [datetime.now().strftime("%Y-%m-%d")])[0]
-                cb = qp.get("call_back", ["outdoor,indoor,soil"])[0]
-                params = urlencode({
-                    "application_key": ECOWITT_APP_KEY,
-                    "api_key": ECOWITT_API_KEY,
-                    "mac": ECOWITT_MAC,
-                    "start_date": start + " 00:00:00",
-                    "end_date": end + " 23:59:59",
-                    "call_back": cb,
-                    "temp_unitid": "1",
-                    "pressure_unitid": "3",
-                    "wind_speed_unitid": "6",
-                    "rainfall_unitid": "12",
-                    "cycle_type": "auto",
-                })
-                url = f"{ECOWITT_BASE}/device/history?{params}"
-                req = Request(url, headers={"User-Agent": "GiardinoApp/1.0"})
-                with urlopen(req, timeout=15) as resp:
-                    data = json.loads(resp.read().decode("utf-8"))
-                data["configured"] = True
-                self.send_json(data)
+
+                # Strategia di fallback per call_back. L'API Ecowitt v3 ha
+                # cambiato nel tempo la sintassi accettata per questo
+                # parametro nell'endpoint /device/history. Testato sul campo:
+                # - "soil" (vecchia sintassi) → code 40016 "soil is invalid"
+                # - "all"  (universale)        → code 40016 "all is invalid"
+                # - "outdoor"                  → code 0 ma SENZA dati soil
+                #
+                # Provo in sequenza diverse sintassi finché ne trovo una che
+                # produce code=0 E include effettivamente la chiave 'soil'
+                # nei dati. "code=0" da solo non basta perché "outdoor" lo
+                # ottiene ma restituisce solo dati ambientali, non soil.
+                # Quella che vince viene loggata in console del backend così
+                # possiamo cementarla nel frontend dopo.
+                #
+                # In cima alla lista metto la sintassi composita "soil_ch1,
+                # soil_ch2,..." costruita dinamicamente dai canali soil
+                # registrati nei vasi, perché il payload real_time mostra
+                # esattamente queste chiavi (visto nei log [meteoRefresh]:
+                # 'soil_ch1','soil_ch2',...,'soil_ch5'). Plausibile che
+                # l'history accetti la stessa convenzione.
+
+                # Leggo i canali soil dei vasi in inventory per costruire
+                # dinamicamente "soil_ch1,soil_ch2,..." con i canali
+                # effettivamente in uso.
+                try:
+                    with get_db() as conn:
+                        ch_rows = conn.execute(
+                            "SELECT DISTINCT wh51_ch FROM inventory WHERE wh51_ch IS NOT NULL AND wh51_ch != ''"
+                        ).fetchall()
+                    used_channels = sorted(set(int(r[0]) for r in ch_rows if str(r[0]).isdigit()))
+                except Exception:
+                    used_channels = []
+
+                composite_soil = ",".join(f"soil_ch{c}" for c in used_channels) if used_channels else None
+
+                cb_requested = qp.get("call_back", [None])[0]
+                candidates = []
+                if cb_requested:
+                    candidates.append(cb_requested)
+                # Sintassi composita preferita: "soil_ch1,soil_ch2,..."
+                if composite_soil:
+                    candidates.append(composite_soil)
+                # Fallback aggiuntivi (in ordine di plausibilità decrescente)
+                candidates += [
+                    "soil_ch1",
+                    "soil_ch1,soil_ch2,soil_ch3,soil_ch4,soil_ch5,soil_ch6,soil_ch7,soil_ch8",
+                    "outdoor,indoor,soil_ch1",
+                    "outdoor",
+                    "indoor",
+                    "soilmoisture",
+                    "wh51",
+                    "wh52",
+                ]
+
+                # Dedup mantenendo l'ordine.
+                seen = set()
+                candidates = [c for c in candidates if not (c in seen or seen.add(c))]
+
+                last_data = None
+                last_error = None
+                winning_cb = None
+                for cb in candidates:
+                    params = urlencode({
+                        "application_key": ECOWITT_APP_KEY,
+                        "api_key": ECOWITT_API_KEY,
+                        "mac": ECOWITT_MAC,
+                        "start_date": start + " 00:00:00",
+                        "end_date": end + " 23:59:59",
+                        "call_back": cb,
+                        "temp_unitid": "1",
+                        "pressure_unitid": "3",
+                        "wind_speed_unitid": "6",
+                        "rainfall_unitid": "12",
+                        "cycle_type": "auto",
+                    })
+                    url = f"{ECOWITT_BASE}/device/history?{params}"
+                    req = Request(url, headers={"User-Agent": "GiardinoApp/1.0"})
+                    try:
+                        with urlopen(req, timeout=15) as resp:
+                            data = json.loads(resp.read().decode("utf-8"))
+                        last_data = data
+                        if data.get("code") == 0:
+                            # Verifico che la risposta contenga effettivamente
+                            # dati soil (almeno una chiave che inizia con
+                            # "soil_"). Senza questo controllo "outdoor"
+                            # vince con code=0 ma dati inutili per noi.
+                            data_obj = data.get("data") or {}
+                            has_soil = any(k.startswith("soil_") or k == "soil" for k in data_obj.keys())
+                            if has_soil:
+                                winning_cb = cb
+                                print(f"[ecowitt history] call_back='{cb}' → SUCCESS (code 0, has soil data)", flush=True)
+                                break
+                            else:
+                                # code 0 ma senza soil: continuo a provare.
+                                print(f"[ecowitt history] call_back='{cb}' → code 0 ma senza dati soil (keys: {list(data_obj.keys())})", flush=True)
+                                last_error = "code 0 ma senza dati soil"
+                        else:
+                            last_error = f"code {data.get('code')} msg: {data.get('msg', 'errore sconosciuto')}"
+                            print(f"[ecowitt history] call_back='{cb}' → {last_error}", flush=True)
+                    except URLError as e:
+                        last_error = f"Errore connessione: {e}"
+                        print(f"[ecowitt history] call_back='{cb}' → {last_error}", flush=True)
+
+                if winning_cb is not None and last_data is not None:
+                    last_data["configured"] = True
+                    last_data["_call_back_used"] = winning_cb
+                    self.send_json(last_data)
+                else:
+                    self.send_json({
+                        "configured": True,
+                        "error": f"Nessuna sintassi call_back ha restituito dati soil. Ultimo errore: {last_error}",
+                        "_call_back_tried": candidates,
+                        "code": last_data.get("code") if last_data else None,
+                        "msg": last_data.get("msg") if last_data else None,
+                    }, 502)
             except URLError as e:
                 self.send_json({"error": f"Errore connessione: {e}", "configured": True}, 502)
             except Exception as e:

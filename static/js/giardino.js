@@ -53,9 +53,9 @@ async function apiFetch(url, options = {}) {
 // nuova e racchiude le due vecchie sezioni "mensile" e "giorni" (vedi
 // commento nell'HTML alla sezione sec-pianificazione). Mantengo qui un
 // unico flag per la nuova tab; le due funzioni di init dei sottoblocchi
-// (cInitMensile e gInitGiorni) vengono chiamate entrambe alla prima
-// apertura della tab perché popolano DOM disgiunti che vivono nei due
-// div figli p-view-mese e p-view-giorno.
+// (cInitMensile per la Panoramica annuale e gInitGiorni per il calendario
+// giornaliero) vengono chiamate entrambe alla prima apertura della tab
+// perché popolano DOM disgiunti che vivono nella stessa sezione fusa.
 // ══════════════════════════════════════════════════════════════════════
 const sectionInited = {dashboard:false, schede:false, pianificazione:false, diario:false, acqua:false, vasi:false, params:false};
 
@@ -68,11 +68,15 @@ function showSection(name) {
     if (name==='dashboard') dashboardInit();
     else if (name==='schede') sInitSchede();
     else if (name==='pianificazione') {
-      // Inizializzo entrambe le viste della pianificazione. Le due
-      // funzioni popolano DOM disgiunti (la prima dentro p-view-mese,
-      // la seconda dentro p-view-giorno) quindi non interferiscono tra
-      // loro. Lo switch tra le due viste è solo questione di
-      // mostrare/nascondere via CSS, gestito da pianificazioneSwitchView.
+      // La sezione Pianificazione contiene due blocchi di logica
+      // distinti: la Panoramica annuale (gestita da cInitMensile) e
+      // il calendario giornaliero (gestito da gInitGiorni). Storicamente
+      // questi due blocchi vivevano in due viste separate con uno switch
+      // Mese/Giorno; oggi sono fusi in un'unica vista scrollabile, ma le
+      // due funzioni di init sono restate distinte perché popolano DOM
+      // disgiunti (c-bar-labels/c-year-bars per la Panoramica, g-days-grid
+      // per il calendario). Le chiamo entrambe in cascata alla prima
+      // apertura della tab.
       cInitMensile();
       gInitGiorni();
     }
@@ -102,29 +106,42 @@ function showSection(name) {
 
 // Switch tra vista MESE e vista GIORNO dentro la sezione Pianificazione.
 // I due blocchi DOM esistono entrambi nel documento; mostrare uno e
-// nascondere l'altro è solo manipolazione di style.display. Aggiorno
-// anche la classe active sui due pulsanti dello switch così l'utente
-// vede chiaramente quale vista è attiva.
-function pianificazioneSwitchView(view) {
-  const mese = document.getElementById('p-view-mese');
-  const giorno = document.getElementById('p-view-giorno');
-  const btnMese = document.getElementById('p-btn-mese');
-  const btnGiorno = document.getElementById('p-btn-giorno');
-  if (view === 'mese') {
-    mese.style.display = '';
-    giorno.style.display = 'none';
-    btnMese.classList.add('active');
-    btnGiorno.classList.remove('active');
-  } else {
-    mese.style.display = 'none';
-    giorno.style.display = '';
-    btnMese.classList.remove('active');
-    btnGiorno.classList.add('active');
-  }
+// ──────────────────────────────────────────────────────────────────────
+// PIANIFICAZIONE — funzioni di supporto al markup
+// ──────────────────────────────────────────────────────────────────────
+// Dopo la riorganizzazione della sezione Pianificazione (rimossione dello
+// switch Mese/Giorno e fusione delle due viste in un'unica scrollabile),
+// la funzione pianificazioneSwitchView non serve più. La lascio definita
+// come no-op per sicurezza nel caso qualche vecchio link o handler la
+// invochi ancora, evitando errori "is not a function" runtime.
+function pianificazioneSwitchView(_view) { /* no-op, switch rimosso */ }
+
+// Apre/chiude la dialog dei filtri dettagliati (le 4 legende collapsabili
+// per pianta/prodotto). La dialog usa lo stesso pattern overlay/panel
+// degli altri modali; lo stato visibile/nascosto è gestito tramite la
+// classe .open sull'overlay. body.style.overflow='hidden' impedisce lo
+// scroll della pagina sotto mentre la dialog è aperta, e viene
+// ripristinato alla chiusura.
+function pianificazioneOpenFiltersDialog() {
+  const ov = document.getElementById('p-filters-overlay');
+  if (!ov) return;
+  ov.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function pianificazioneCloseFiltersDialog(e) {
+  // Se chiamata da onclick sull'overlay (click sullo sfondo), chiudo
+  // solo se il target è proprio l'overlay e non una sua child (così
+  // un click dentro al panel non chiude la dialog). Se chiamata
+  // direttamente (es. dal pulsante ✕), e === undefined e procedo.
+  if (e && e.target !== document.getElementById('p-filters-overlay')) return;
+  const ov = document.getElementById('p-filters-overlay');
+  if (!ov) return;
+  ov.classList.remove('open');
+  document.body.style.overflow = '';
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key==='Escape') { sCloseDetail(); cCloseOverlay(); gClosePanel(); invCloseForm(); simClose(); cpCloseForm(); dashboardCloseTrendDialog(); }
+  if (e.key==='Escape') { sCloseDetail(); cCloseOverlay(); gClosePanel(); invCloseForm(); simClose(); cpCloseForm(); dashboardCloseTrendDialog(); dashboardClosePotDialog(); pianificazioneCloseFiltersDialog(); }
 });
 
 // ══════════════════════════════════════════════════════════════════════
@@ -412,14 +429,14 @@ function cInitMensile() {
   // Cleanup difensivo: la funzione può essere chiamata più volte (una
   // dal bootstrap dopo il caricamento piante, una da showSection alla
   // prima visita della tab) e senza questo reset accumulava 24 label
-  // mesi e 24 schede mensili invece di 12. La causa è che gli helper
-  // sotto fanno appendChild senza prima azzerare il container.
+  // mesi al posto di 12. Azzero i due container interessati.
+  // Nota: il container 'c-months-grid' delle 12 schede mensili è stato
+  // rimosso dal DOM, quindi non lo cerco più qui.
   const barLabels = document.getElementById('c-bar-labels');
   const yearBars = document.getElementById('c-year-bars');
-  const grid = document.getElementById('c-months-grid');
+  if (!barLabels || !yearBars) return;
   barLabels.innerHTML = '';
   yearBars.innerHTML = '';
-  grid.innerHTML = '';
 
   // Sui telefoni stretti (<600px) le label "Gen Feb Mar..." in 8px non
   // ci stanno tutte e l'ultima ("Dic") veniva troncata fuori schermo.
@@ -448,17 +465,13 @@ function cInitMensile() {
     p.months.forEach((s,mi)=>{const bar=document.createElement('div');bar.className='bar-month '+cSC(s);bar.title=cMonths[mi]+': '+cSL(s);bars.appendChild(bar)});
     row.appendChild(bars);yearBars.appendChild(row);
   });
-  cMonths.forEach((month,mi)=>{
-    const card=document.createElement('div');card.className='month-card';card.onclick=()=>cOpenMonthDetail(mi);
-    const header=document.createElement('div');header.className='month-header';
-    header.innerHTML=`<span class="month-name">${month}</span><span class="month-season">${cSeasons[mi]}</span>`;
-    card.appendChild(header);
-    const body=document.createElement('div');body.className='month-body';
-    const active=cPlants.filter(p=>p.months[mi]>0);
-    if(!active.length){body.innerHTML='<div class="empty-month">Riposo per tutte le piante</div>';}
-    else{active.forEach(p=>{const s=p.months[mi];const row=document.createElement('div');row.className='plant-row';row.innerHTML=`<span class="plant-icon-sm">${p.icon}</span><span class="plant-name-sm">${cpEscape(p.name)}</span><span class="status-badge badge-${cSC(s)}">${cSL(s)}</span>`;body.appendChild(row)});}
-    card.appendChild(body);grid.appendChild(card);
-  });
+  // Le 12 schede mensili "Gennaio · Inverno · Riposo per tutte le
+  // piante" che venivano generate qui sono state rimosse: erano
+  // ridondanti rispetto al calendario giornaliero che mostra già
+  // giorno per giorno cosa succede, con dettaglio molto più ricco.
+  // La funzione cOpenMonthDetail() resta nel codice perché potrebbe
+  // essere richiamata da altri punti, ma di fatto nessuno la chiama
+  // più dalla UI.
 }
 
 function cOpenMonthDetail(mi) {
@@ -469,14 +482,14 @@ function cOpenMonthDetail(mi) {
     let out=`<div class="detail-section-title">${label}</div>`;
     list.forEach(p=>{
       const note=p.notes[mi+1]||'';
-      // Pulsante modifica in fondo alla riga: apre il form di edit della
-      // pianta. Adesso che tutte le piante sono editabili allo stesso modo
-      // (la distinzione native/custom è stata abolita), il pulsante è
-      // sempre presente. Uso event.stopPropagation perché la riga ha
-      // altri handler legati alla card e non vogliamo scatenarli quando
-      // il click è destinato al pulsante.
-      const editBtn = `<button onclick="event.stopPropagation();cCloseOverlay();cpOpenEditForm(${p.id})" style="margin-top:6px;padding:4px 10px;font-size:0.85em;border:1px solid #b0a070;background:#fff8e0;border-radius:6px;cursor:pointer;color:#5a4a10">✏️ Modifica</button>`;
-      out+=`<div class="plant-detail-row ${status}"><div class="pdr-icon">${p.icon}</div><div class="pdr-content"><div class="pdr-name">${cpEscape(p.name)}</div>${p.latin?`<div class="pdr-latin">${cpEscape(p.latin)}</div>`:''}<div class="pdr-info"><strong>Concime:</strong> ${cpEscape(p.concime)}<br><strong>Frequenza:</strong> ${cpEscape(p.freq)}${note?'<br>'+cpEscape(note):''}</div>${editBtn}</div><span class="pdr-badge ${status}">${cSL({active:1,reduce:2,special:3,stop:0}[status])}</span></div>`;
+      // Il pulsante "Modifica" che era qui è stato rimosso: per modificare
+      // i parametri colturali di una pianta (incluso il calendario di
+      // fioritura/concimazione) si va alla sezione Piante, dove la
+      // modifica avviene sulla scheda della pianta. Avere il pulsante
+      // Modifica direttamente da una vista derivata come il calendario
+      // era semanticamente confuso: il calendario non è la fonte di
+      // verità, è un riassunto.
+      out+=`<div class="plant-detail-row ${status}"><div class="pdr-icon">${p.icon}</div><div class="pdr-content"><div class="pdr-name">${cpEscape(p.name)}</div>${p.latin?`<div class="pdr-latin">${cpEscape(p.latin)}</div>`:''}<div class="pdr-info"><strong>Concime:</strong> ${cpEscape(p.concime)}<br><strong>Frequenza:</strong> ${cpEscape(p.freq)}${note?'<br>'+cpEscape(note):''}</div></div><span class="pdr-badge ${status}">${cSL({active:1,reduce:2,special:3,stop:0}[status])}</span></div>`;
     });
     return out;
   }
@@ -4239,7 +4252,10 @@ async function meteoRenderHistory() {
   const dateStr = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 
   try {
-    const res = await apiFetch(`/api/ecowitt/history?start_date=${dateStr(yesterday)}&end_date=${dateStr(today)}&call_back=soil`);
+    // call_back=all invece del precedente call_back=soil che produceva
+    // errore 40016 "soil is invalid" sull'API Ecowitt v3 attuale.
+    // Vedi nota più estesa nel duplicato in dashboardRenderTrendDialog.
+    const res = await apiFetch(`/api/ecowitt/history?start_date=${dateStr(yesterday)}&end_date=${dateStr(today)}&call_back=all`);
     const json = await res.json();
     if (!json.configured || json.code !== 0) {
       el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:1rem;font-size:11px">Storico non disponibile — verifica configurazione Ecowitt</div>';
@@ -4258,22 +4274,34 @@ async function meteoRenderHistory() {
       const cat = it.wh51Cat || 'universale';
       const ecThresh = (PARAMS.sogliEC || {})[cat] || {min:400, target:800, max:2000};
 
-      // Cerca le serie nei dati: possibili chiavi
-      const ecKeys = [`soilad${ch}`, `ec_ch${ch}`, `soilec${ch}`];
-      const tempKeys = [`soiltemp${ch}`, `tf_ch${ch}`];
-      const moistKeys = [`soilmoisture${ch}`, `soil_ch${ch}`];
+      // Stessa logica di parsing del findSeries di dashboardRenderTrendDialog
+      // (vedi commento esteso lì): la struttura dell'API v3 è
+      // json.data.soil_chN.<type>.list con type in {soilmoisture, ec,
+      // soiltemp, ad}. Mantengo un fallback piatto per retrocompatibilità.
+      const channelKey = `soil_ch${ch}`;
+      const channelObj = (json.data && json.data[channelKey]) || null;
 
-      const findSeries = keys => {
-        for (const k of keys) {
-          if (soilHistory[k] && soilHistory[k].list) return soilHistory[k].list;
-          if (json.data[k] && json.data[k].list) return json.data[k].list;
+      const findSeries = typeKeys => {
+        if (channelObj) {
+          for (const t of typeKeys) {
+            if (channelObj[t] && channelObj[t].list) return channelObj[t].list;
+          }
         }
+        for (const t of typeKeys) {
+          const flatKey = `${t}${ch}`;
+          if (json.data[flatKey] && json.data[flatKey].list) return json.data[flatKey].list;
+        }
+        if (json.data[channelKey] && json.data[channelKey].list) return json.data[channelKey].list;
         return null;
       };
 
-      const ecSeries = findSeries(ecKeys);
-      const tempSeries = findSeries(tempKeys);
-      const moistSeries = findSeries(moistKeys);
+      const ecTypes    = ['ec', 'soilad'];
+      const tempTypes  = ['soiltemp', 'tf'];
+      const moistTypes = ['soilmoisture'];
+
+      const ecSeries = findSeries(ecTypes);
+      const tempSeries = findSeries(tempTypes);
+      const moistSeries = findSeries(moistTypes);
 
       html += `<div class="soil-card" style="margin-bottom:8px">
         <div class="soil-card-head">
@@ -4426,6 +4454,13 @@ async function meteoFetchForecast() {
       return;
     }
 
+    // Cache globale dei dati forecast per riuso. La dialog dettaglio
+    // vaso (dashboardOpenPotDialog) li legge da qui per generare le
+    // allerte meteo pertinenti al vaso senza dover rifare la fetch.
+    // Memo: i dati arrivano da Open-Meteo, sono freschi perché la
+    // Dashboard rifetcha ogni volta che la apri.
+    window._lastForecastDaily = daily;
+
     if (wrapEl) wrapEl.style.display = 'block';
 
     const todayStr = new Date().toISOString().slice(0,10);
@@ -4547,6 +4582,129 @@ async function meteoFetchForecast() {
     // senza dare all'utente un'azione utile da intraprendere.
     if (wrapEl) wrapEl.style.display = 'none';
   }
+}
+
+// Calcola le allerte meteo PERTINENTI per un vaso specifico nei prossimi
+// 7 giorni, filtrando per location del vaso (interpretazione B).
+//
+// Regola del filtro per location:
+// - INDOOR → nessuna allerta meteo. Le piante in salotto non subiscono
+//   il gelo esterno né le ondate di calore. Restituisco array vuoto.
+// - OUTDOOR / BALCONE → tutte le allerte meteo standard (gelo, freddo,
+//   ondata calore, pioggia intensa, vento forte, gelata tardiva/precoce).
+//
+// I dati daily arrivano dalla cache window._lastForecastDaily popolata
+// da meteoFetchForecast. Se la cache è vuota (es. utente non ha mai
+// aperto la Dashboard, o /api/forecast ha fallito), restituisco array
+// vuoto silenziosamente — le allerte non sono critiche per l'esperienza.
+function dashboardComputeMeteoAlertsForPot(item) {
+  // Indoor: nessuna allerta meteo applicabile.
+  if (item.location === 'indoor') return [];
+
+  const daily = window._lastForecastDaily;
+  if (!daily || !daily.time || !daily.time.length) return [];
+
+  const alerts = [];
+
+  // GELO PREVISTO (Tmin sotto zero)
+  for (let i = 0; i < daily.time.length; i++) {
+    const tMin = daily.temperature_2m_min[i];
+    const d = new Date(daily.time[i] + 'T12:00');
+    const dayLabel = i === 0 ? 'Oggi' : i === 1 ? 'Domani' : (FC_DAYS_IT[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth()+1));
+    if (tMin < 0) {
+      alerts.push({
+        level: 'critical', icon: '🥶',
+        text: `Gelo previsto ${dayLabel}: min ${Math.round(tMin)}°C. Sposta dentro le piante sensibili.`,
+      });
+      break;  // Una sola allerta gelo, sulla prima occorrenza
+    }
+  }
+
+  // FREDDO (Tmin sotto soglia ma >= 0)
+  for (let i = 0; i < daily.time.length; i++) {
+    const tMin = daily.temperature_2m_min[i];
+    const d = new Date(daily.time[i] + 'T12:00');
+    const dayLabel = i === 0 ? 'Oggi' : i === 1 ? 'Domani' : (FC_DAYS_IT[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth()+1));
+    if (tMin >= 0 && tMin < PARAMS.alertFrost) {
+      alerts.push({
+        level: 'warning', icon: '❄️',
+        text: `Freddo ${dayLabel}: min ${Math.round(tMin)}°C. Considera di proteggere le piante più sensibili.`,
+      });
+      break;
+    }
+  }
+
+  // ONDATA DI CALORE (3+ giorni sopra soglia)
+  let heatDays = 0;
+  for (let i = 0; i < daily.time.length; i++) {
+    if (daily.temperature_2m_max[i] > PARAMS.alertHeat) heatDays++;
+  }
+  if (heatDays >= 3) {
+    alerts.push({
+      level: 'warning', icon: '🔥',
+      text: `Ondata di calore in arrivo: ${heatDays} giorni sopra ${PARAMS.alertHeat}°C. Ombreggiatura, annaffiature più frequenti, nebulizza la sera.`,
+    });
+  } else if (heatDays >= 1) {
+    const maxT = Math.max(...daily.temperature_2m_max);
+    alerts.push({
+      level: 'info', icon: '☀️',
+      text: `Giornate calde previste: max ${Math.round(maxT)}°C. Annaffia nelle ore fresche.`,
+    });
+  }
+
+  // PIOGGIA INTENSA (un singolo giorno > 30mm)
+  const maxDayRain = Math.max(...daily.precipitation_sum);
+  if (maxDayRain > 30) {
+    const idx = daily.precipitation_sum.indexOf(maxDayRain);
+    const rd = new Date(daily.time[idx] + 'T12:00');
+    const dayLabel = idx === 0 ? 'oggi' : idx === 1 ? 'domani' : (FC_DAYS_IT[rd.getDay()] + ' ' + rd.getDate() + '/' + (rd.getMonth()+1));
+    alerts.push({
+      level: 'warning', icon: '⛈️',
+      text: `Pioggia intensa ${dayLabel}: ${maxDayRain.toFixed(0)}mm. Verifica drenaggio del vaso.`,
+    });
+  } else {
+    // SETTIMANA PIOVOSA (totale > 40mm spalmati)
+    const totalRain = daily.precipitation_sum.reduce((s, v) => s + v, 0);
+    if (totalRain > 40) {
+      alerts.push({
+        level: 'info', icon: '🌧️',
+        text: `Settimana piovosa: ${totalRain.toFixed(0)}mm totali. Riduci le annaffiature, attenzione al rischio oidio.`,
+      });
+    }
+  }
+
+  // VENTO FORTE (raffica > soglia)
+  if (daily.wind_gusts_10m_max) {
+    const maxGust = Math.max(...daily.wind_gusts_10m_max);
+    if (maxGust > PARAMS.alertWind) {
+      const idx = daily.wind_gusts_10m_max.indexOf(maxGust);
+      const gd = new Date(daily.time[idx] + 'T12:00');
+      const dayLabel = idx === 0 ? 'oggi' : idx === 1 ? 'domani' : (FC_DAYS_IT[gd.getDay()] + ' ' + gd.getDate() + '/' + (gd.getMonth()+1));
+      alerts.push({
+        level: 'warning', icon: '💨',
+        text: `Raffiche fino a ${Math.round(maxGust)} km/h ${dayLabel}. Metti al riparo i vasi alti e leggeri.`,
+      });
+    }
+  }
+
+  // GELATA TARDIVA / PRECOCE (Tmin tra 0 e 2°C in primavera o autunno)
+  const month = new Date().getMonth() + 1;
+  if ((month >= 3 && month <= 5) || (month >= 9 && month <= 11)) {
+    for (let i = 0; i < daily.time.length; i++) {
+      if (daily.temperature_2m_min[i] < 2 && daily.temperature_2m_min[i] >= 0) {
+        const d = new Date(daily.time[i] + 'T12:00');
+        const label = month <= 5 ? 'tardiva' : 'precoce';
+        const dayLabel = i === 0 ? 'oggi' : i === 1 ? 'domani' : (FC_DAYS_IT[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth()+1));
+        alerts.push({
+          level: 'warning', icon: '🌡️',
+          text: `Possibile gelata ${label} ${dayLabel}: ${daily.temperature_2m_min[i].toFixed(1)}°C. Proteggi rinvasi recenti e talee.`,
+        });
+        break;
+      }
+    }
+  }
+
+  return alerts;
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -8566,6 +8724,15 @@ function _dashboardSecondaryRender() {
     return a.plant.name.localeCompare(b.plant.name);
   });
 
+  // Cache flat dei details per accesso rapido dalla dialog di
+  // dettaglio vaso. Quando l'utente clicca una card, dashboardOpenPotDialog
+  // cerca il detail per id senza dover ricalcolare tutto. La cache
+  // viene rinfrescata a ogni render, quindi resta coerente con quanto
+  // visualizzato. È volutamente una variabile su window per essere
+  // accessibile dall'onclick inline che il rendering genera.
+  window._dashboardLastDetails = [];
+  groups.forEach(g => g.pots.forEach(p => window._dashboardLastDetails.push(p)));
+
   // Render del riassunto numerico in cima.
   summaryEl.innerHTML = dashboardRenderSummary({
     totalPots,
@@ -8669,10 +8836,51 @@ function dashboardComputePotDetail(item, plant) {
     }
   }
 
-  // Eventi imminenti: cerco nei prossimi 30 giorni gli eventi che
+  // Allerte malattie/parassiti attivi: ogni malattia non ancora marcata
+  // come "risolta" è un problema attivo che richiede attenzione. La
+  // mostro come allerta a livello warning perché la cura è già pianificata
+  // dal protocollo curativo (visibile nel calendario), ma il vaso resta
+  // "in cura" finché la spunta resolved non viene messa.
+  const activeDiseases = (item.diseases || []).filter(d => !d.resolved);
+  if (activeDiseases.length > 0) {
+    activeDiseases.forEach(d => {
+      const label = (typeof INV_DISEASE_LABELS !== 'undefined' && INV_DISEASE_LABELS[d.type]) || d.type;
+      detail.alerts.push({
+        level: 'warning',
+        icon: '🦠',
+        text: `Malattia attiva: ${label}${d.note ? ' — ' + d.note : ''}`,
+      });
+    });
+  }
+
+  // Allerte meteo (per i vasi outdoor e balcone, esclusi indoor).
+  // Filtro solo critical e warning: le info come "settimana piovosa" o
+  // "giornate calde" restano nella sezione dedicata della dialog di
+  // dettaglio (dove sono visibili tutte le allerte meteo, anche le info).
+  // Tenere fuori le info da detail.alerts evita di gonfiare il conteggio
+  // in alto della Dashboard e di colorare di rosso le card per situazioni
+  // meteo normali. Solo le allerte che richiedono davvero un'azione
+  // (gelo, ondata calore prolungata, vento forte ecc.) attivano il
+  // sistema "rosso".
+  //
+  // Marco ogni allerta con category:'meteo' così la dialog può filtrarle
+  // fuori dalla sezione "Allerte attive" (dove altrimenti apparirebbero
+  // duplicate, perché c'è già una sezione separata "🌤️ Allerte meteo").
+  // Il sistema bordo rosso / conteggio in alto / badge nella riga le
+  // conta comunque perché legge tutto detail.alerts indistintamente.
+  if (typeof dashboardComputeMeteoAlertsForPot === 'function') {
+    const meteoAlerts = dashboardComputeMeteoAlertsForPot(item);
+    meteoAlerts.forEach(a => {
+      if (a.level === 'critical' || a.level === 'warning') {
+        detail.alerts.push({ ...a, category: 'meteo' });
+      }
+    });
+  }
+
+  // Eventi imminenti: cerco nei prossimi 7 giorni gli eventi che
   // riguardano questo vaso. Itero sulle date dei prossimi giorni e
-  // raccolgo gli eventi delle quattro categorie (fert, biobizz, tratt,
-  // annaffiature) più le voci future del diario.
+  // raccolgo gli eventi delle sei categorie (fert, biobizz, tratt,
+  // cure, annaffiature) più le voci future del diario.
   detail.upcomingEvents = dashboardCollectUpcomingForPot(item, plant);
 
   return detail;
@@ -8686,17 +8894,31 @@ function dashboardComputePotDetail(item, plant) {
 // sua quota e non venga oscurata dalle altre).
 function dashboardCollectUpcomingForPot(item, plant) {
   const maxPerCat = PARAMS.dashboardMaxUpcoming || PARAMS_DEFAULTS.dashboardMaxUpcoming;
-  const result = { fert: [], bb: [], tr: [], wa: [], diary: [] };
+  // Cinque categorie + cure (sesta). Le cure fitopatiche vivono per VASO
+  // (non per pianta) perché sono legate alla specifica malattia registrata
+  // su quel vaso, quindi vengono filtrate da invId === item.id invece che
+  // da plant.id come per le altre categorie.
+  const result = { fert: [], bb: [], tr: [], cure: [], wa: [], diary: [] };
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // I gDateMap, bbDateMap, trDateMap, waDateMap sono popolati da
-  // gInitGiorni quando l'utente apre la sezione Pianificazione. Se la
+  // I gDateMap, bbDateMap, trDateMap, cureDateMap, waDateMap sono popolati
+  // da gInitGiorni quando l'utente apre la sezione Pianificazione. Se la
   // dashboard viene visitata prima della Pianificazione, queste mappe
   // potrebbero essere vuote. Per coprire questo caso, controllo che
   // siano definite e che almeno una abbia contenuto; se sono tutte
   // vuote, gli eventi imminenti del calendario non saranno presenti.
-  const HORIZON_DAYS = 30;
+  //
+  // Finestra temporale: 7 giorni. È lo stesso orizzonte mostrato dal
+  // calendario "Prossimi 7 giorni" nella dialog di dettaglio vaso. Tenere
+  // i due numeri allineati garantisce che il badge "📅 N eventi" della
+  // riga compatta corrisponda esattamente al numero di eventi visibili
+  // aprendo la dialog. Storicamente questa finestra era 30 giorni e
+  // creava confusione: il badge contava più eventi di quelli effettivamente
+  // visualizzabili nel calendario, perché alcuni cadevano oltre i 7 giorni
+  // (tipico dei protocolli curativi che durano 3-4 settimane). Adesso le
+  // due finestre sono coerenti.
+  const HORIZON_DAYS = 7;
 
   for (let d = 0; d < HORIZON_DAYS; d++) {
     const date = new Date(today.getTime() + d * 86400000);
@@ -8722,7 +8944,7 @@ function dashboardCollectUpcomingForPot(item, plant) {
         }
       });
     }
-    // Trattamenti
+    // Trattamenti preventivi
     if (typeof trDateMap !== 'undefined' && trDateMap[key]) {
       trDateMap[key].forEach(ev => {
         if (ev.plant && ev.plant.id === plant.id && result.tr.length < maxPerCat) {
@@ -8730,6 +8952,28 @@ function dashboardCollectUpcomingForPot(item, plant) {
             ? TR_PRODUCTS[ev.prod].label
             : ev.prod;
           result.tr.push({ date, label: prodLabel, note: ev.note || '' });
+        }
+      });
+    }
+    // Cure fitopatiche: filtro per invId (vivono per vaso, non per pianta)
+    if (typeof cureDateMap !== 'undefined' && cureDateMap[key]) {
+      cureDateMap[key].forEach(ev => {
+        if (ev.invId === item.id && result.cure.length < maxPerCat) {
+          // Label: nome malattia + step "X/N", così l'utente sa subito a
+          // che punto è del protocollo. La nota contiene il prodotto +
+          // dose, informazioni operative.
+          const stepLabel = ev.totalSteps
+            ? `${ev.diseaseLabel} (step ${ev.step}/${ev.totalSteps})`
+            : ev.diseaseLabel;
+          const noteParts = [];
+          if (ev.prod) noteParts.push(ev.prod);
+          if (ev.dose) noteParts.push(ev.dose);
+          if (ev.note) noteParts.push(ev.note);
+          result.cure.push({
+            date,
+            label: stepLabel,
+            note: noteParts.join(' · '),
+          });
         }
       });
     }
@@ -8744,15 +8988,19 @@ function dashboardCollectUpcomingForPot(item, plant) {
   }
 
   // Voci del diario future: lo storage del diario è separato e contiene
-  // sia voci passate che future. Filtro per quelle con data >= oggi e
-  // pianta che corrisponde (per nome, perché il diario non sempre ha
-  // l'id collegato).
+  // sia voci passate che future. Filtro per quelle con data nella stessa
+  // finestra di 7 giorni delle altre categorie, e pianta che corrisponde
+  // (per nome, perché il diario non sempre ha l'id collegato). Se non
+  // limitassi qui alla stessa finestra, il badge "📅 N eventi" potrebbe
+  // contare voci del diario annotate per dopodomani-mese-prossimo che
+  // poi non comparirebbero nel calendario 7gg, generando incoerenza.
   if (typeof dEntries !== 'undefined' && Array.isArray(dEntries)) {
+    const horizonEnd = new Date(today.getTime() + HORIZON_DAYS * 86400000);
     const futures = dEntries.filter(e => {
       if (!e.date) return false;
       const ed = new Date(e.date);
       ed.setHours(0, 0, 0, 0);
-      return ed >= today && (e.plant === plant.name || e.plantId === plant.id);
+      return ed >= today && ed < horizonEnd && (e.plant === plant.name || e.plantId === plant.id);
     }).sort((a, b) => new Date(a.date) - new Date(b.date));
     result.diary = futures.slice(0, maxPerCat).map(e => ({
       date: new Date(e.date),
@@ -8805,7 +9053,17 @@ function dashboardRenderGroupCard(group) {
 }
 
 // Rendering di una riga "vaso" all'interno di una card pianta. Mostra
-// nickname/identificativo del vaso, stato sensori, allerte ed eventi.
+// nickname/identificativo del vaso, stato sensori sintetico e allerte
+// critiche. Tutto il resto (allerte non critiche, eventi imminenti
+// dettagliati, calendario 7 giorni) è accessibile cliccando la riga,
+// che apre la dialog di dettaglio (vedi dashboardOpenPotDialog).
+//
+// Strategia di compattazione (opzione "C"): tengo nella riga le cose
+// che richiedono attenzione immediata (umidità sensore + allerte
+// critiche). Le allerte non critiche e gli eventi diventano un
+// contatore "📅 N eventi" che invita ad aprire la dialog. Questo
+// mantiene la Dashboard come "panoramica colpo d'occhio" senza farla
+// diventare un papiro verticale.
 function dashboardRenderPotRow(detail) {
   const {item, plant, sensorMoisture, sensorTemp, sensorEC, sensorHasData, alerts, upcomingEvents} = detail;
 
@@ -8833,38 +9091,278 @@ function dashboardRenderPotRow(detail) {
     moistureBar = `<div style="font-size:11px;color:var(--muted);font-style:italic">— Nessun sensore associato</div>`;
   }
 
-  // Dati WH52 supplementari.
-  let wh52Bits = '';
-  if (sensorTemp !== null || sensorEC !== null) {
-    const parts = [];
-    if (sensorTemp !== null) parts.push(`🌡️ ${sensorTemp.toFixed(1)}°C`);
-    if (sensorEC !== null) parts.push(`⚡ ${sensorEC.toFixed(0)} µS/cm`);
-    wh52Bits = `<div style="font-size:10px;color:var(--muted);margin-top:3px">${parts.join(' · ')}</div>`;
-  }
-
-  // Allerte.
-  const alertsHtml = alerts.length > 0 ? `<div style="margin-top:8px;display:flex;flex-direction:column;gap:4px">
-    ${alerts.map(a => `<div style="font-size:11px;padding:4px 8px;background:${a.level==='critical'?'#fde8e8':a.level==='warning'?'#fdf3e0':'#e8f0fd'};border-left:3px solid ${a.level==='critical'?'#c04040':a.level==='warning'?'#d4a040':'#3a7abf'};border-radius:4px;color:#5a3030">
+  // Allerte CRITICHE inline (tengo solo le critical, le altre vivono
+  // nel contatore badge sotto). Per "critical" intendo level==='critical'
+  // — tipicamente sensori in zona stress, accumulo sali grave, gelo.
+  const criticalAlerts = (alerts || []).filter(a => a.level === 'critical');
+  const otherAlertsCount = (alerts || []).length - criticalAlerts.length;
+  const criticalHtml = criticalAlerts.length > 0 ? `<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px">
+    ${criticalAlerts.map(a => `<div style="font-size:11px;padding:4px 8px;background:#fde8e8;border-left:3px solid #c04040;border-radius:4px;color:#5a3030">
       <span style="margin-right:4px">${a.icon}</span>${a.text}
     </div>`).join('')}
   </div>` : '';
 
-  // Eventi imminenti raggruppati per categoria.
-  const upcomingHtml = dashboardRenderUpcomingEvents(upcomingEvents);
+  // Conteggio eventi imminenti totali (tutte le 5 categorie sommate).
+  let totalUpcoming = 0;
+  if (upcomingEvents) {
+    for (const k of ['fert','bb','tr','cure','wa','diary']) {
+      totalUpcoming += (upcomingEvents[k] || []).length;
+    }
+  }
 
-  return `<div style="padding:10px 14px;border-bottom:1px solid var(--border)">
-    <!-- Riga superiore: nome vaso + dati ambientali sintetici -->
+  // Riga dei "badge" riassuntivi che invitano ad aprire la dialog: numero
+  // eventi imminenti + eventuale numero allerte non critiche residue.
+  const badges = [];
+  if (totalUpcoming > 0) {
+    badges.push(`<span style="font-size:10px;background:rgba(154,128,48,0.15);color:#7a6020;padding:2px 8px;border-radius:10px">📅 ${totalUpcoming} event${totalUpcoming === 1 ? 'o' : 'i'}</span>`);
+  }
+  if (otherAlertsCount > 0) {
+    badges.push(`<span style="font-size:10px;background:rgba(58,122,191,0.12);color:#2a4a7a;padding:2px 8px;border-radius:10px">ℹ️ ${otherAlertsCount} avvis${otherAlertsCount === 1 ? 'o' : 'i'}</span>`);
+  }
+  // Hint visivo che la riga è cliccabile: chevron a destra. Su hover
+  // si scurisce leggermente il background per dare feedback.
+  const badgesHtml = badges.length > 0 ? `<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+    ${badges.join('')}
+  </div>` : '';
+
+  // L'intera card del vaso è cliccabile: onclick apre la dialog di
+  // dettaglio. role="button" + tabindex="0" + keydown enter/space per
+  // accessibilità da tastiera. cursor:pointer per il feedback visivo.
+  // La classe .dashboard-pot-row gestisce hover e padding via CSS.
+  return `<div class="dashboard-pot-row" role="button" tabindex="0"
+      onclick="dashboardOpenPotDialog(${item.id})"
+      onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();dashboardOpenPotDialog(${item.id})}">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
       <div style="flex:1">
         <div style="font-size:13px;font-weight:500;color:var(--text)">${potName}</div>
         ${item.location ? `<div style="font-size:10px;color:var(--muted)">${item.location === 'indoor' ? '🏠 Indoor' : '🌤️ Outdoor'}${item.wh51Ch ? ' · canale ' + item.wh51Ch : ''}</div>` : ''}
       </div>
+      <div class="dashboard-pot-chevron" aria-hidden="true">›</div>
     </div>
     ${moistureBar}
-    ${wh52Bits}
-    ${alertsHtml}
-    ${upcomingHtml}
+    ${criticalHtml}
+    ${badgesHtml}
   </div>`;
+}
+
+// ── Dialog "Dettaglio vaso" ──────────────────────────────────────────
+// Aperta cliccando una card vaso nella Dashboard. Mostra in vista
+// ariosa tutte le informazioni del vaso che la riga compatta nasconde:
+// dati ambientali completi (umidità + EC + temperatura WH52),
+// elenco completo delle allerte (anche non critiche), e un calendario
+// a 7 giorni con tutti gli eventi del vaso. Il calendario assume due
+// forme via media query CSS: timeline orizzontale su desktop, lista
+// verticale dei 7 giorni su mobile. La logica di rendering JS è la
+// stessa, è il CSS che decide il layout.
+function dashboardOpenPotDialog(potId) {
+  const overlay = document.getElementById('dashboard-pot-overlay');
+  if (!overlay) return;
+  // Trovo il detail del vaso nei dati che la Dashboard ha già calcolato.
+  // _dashboardLastDetails è popolato da dashboardRender (vedi sotto)
+  // come cache, evitando di ricalcolare tutto dal niente quando si
+  // apre la dialog.
+  const detail = (window._dashboardLastDetails || []).find(d => d.item.id === potId);
+  if (!detail) {
+    document.getElementById('dashboard-pot-title').textContent = 'Vaso non trovato';
+    document.getElementById('dashboard-pot-subtitle').textContent = '';
+    document.getElementById('dashboard-pot-body').innerHTML =
+      '<div style="text-align:center;color:var(--muted);padding:2rem;font-size:12px">Il vaso #' + potId + ' non è disponibile. Prova a chiudere e ricaricare la Dashboard.</div>';
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    return;
+  }
+
+  const {item, plant, sensorMoisture, sensorTemp, sensorEC, sensorHasData, alerts, upcomingEvents} = detail;
+  const potName = item.nickname && item.nickname.trim() ? item.nickname : `Vaso #${item.id}`;
+  document.getElementById('dashboard-pot-title').textContent = `${plant.icon || '🌱'} ${potName}`;
+  const subtitleParts = [];
+  subtitleParts.push(plant.name);
+  if (item.location) subtitleParts.push(item.location === 'indoor' ? '🏠 Indoor' : '🌤️ Outdoor');
+  if (item.wh51Ch) subtitleParts.push(`Canale sensore ${item.wh51Ch}`);
+  document.getElementById('dashboard-pot-subtitle').textContent = subtitleParts.join(' · ');
+  document.getElementById('dashboard-pot-body').innerHTML = dashboardRenderPotDialogBody(detail);
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function dashboardClosePotDialog() {
+  const overlay = document.getElementById('dashboard-pot-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Rendering del corpo della dialog dettaglio vaso. Tre blocchi: dati
+// ambientali, allerte, calendario 7 giorni.
+function dashboardRenderPotDialogBody(detail) {
+  const {item, plant, sensorMoisture, sensorTemp, sensorEC, sensorHasData, alerts, upcomingEvents} = detail;
+
+  // ── Blocco 1: dati ambientali completi ───────────────────────────
+  const cat = item.wh51Cat || 'universale';
+  const soglie = (PARAMS.soglie && PARAMS.soglie[cat]) || PARAMS_DEFAULTS.soglie[cat] || PARAMS_DEFAULTS.soglie.universale;
+  let envHtml = '<div class="dpd-section"><div class="dpd-section-title">📡 Dati ambientali</div>';
+  if (sensorHasData) {
+    let barColor = '#5a8050';
+    let stato = 'ok';
+    if (sensorMoisture < soglie.secco) { barColor = '#c04040'; stato = 'secco'; }
+    else if (sensorMoisture > soglie.umido) { barColor = '#d4a040'; stato = 'troppo umido'; }
+    const pct = Math.max(0, Math.min(100, sensorMoisture));
+    envHtml += `<div class="dpd-env-row">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Umidità terreno (${stato})</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="flex:1;height:10px;background:#e8e6e0;border-radius:5px;overflow:hidden;position:relative">
+          <div style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:${barColor};transition:width 0.3s"></div>
+        </div>
+        <div style="min-width:50px;text-align:right;font-size:14px;font-weight:600;color:var(--text)">${sensorMoisture.toFixed(0)}%</div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:3px">Soglie: secco &lt; ${soglie.secco}% · umido &gt; ${soglie.umido}%</div>
+    </div>`;
+    if (sensorTemp !== null || sensorEC !== null) {
+      envHtml += '<div class="dpd-env-grid">';
+      if (sensorTemp !== null) {
+        envHtml += `<div class="dpd-env-cell"><div class="dpd-env-label">🌡️ Temperatura</div><div class="dpd-env-val">${sensorTemp.toFixed(1)}°C</div></div>`;
+      }
+      if (sensorEC !== null) {
+        envHtml += `<div class="dpd-env-cell"><div class="dpd-env-label">⚡ Conducibilità (EC)</div><div class="dpd-env-val">${sensorEC.toFixed(0)} <span style="font-size:11px;font-weight:400;color:var(--muted)">µS/cm</span></div></div>`;
+      }
+      envHtml += '</div>';
+    }
+  } else if (item.wh51Ch) {
+    envHtml += '<div style="font-size:12px;color:var(--muted);font-style:italic;padding:8px">📡 Nessun dato disponibile dal sensore in questo momento.</div>';
+  } else {
+    envHtml += '<div style="font-size:12px;color:var(--muted);font-style:italic;padding:8px">Questo vaso non ha un sensore associato. Per monitoraggio idrico in tempo reale puoi associare un canale WH51/WH52 dalla sezione Vasi.</div>';
+  }
+  envHtml += '</div>';
+
+  // ── Blocco 2: allerte attive del vaso (sensori + malattie) ──────
+  // Nota: le allerte con category:'meteo' sono filtrate fuori da qui
+  // perché vivono già nella sezione dedicata "🌤️ Allerte meteo" più
+  // sotto. Senza questo filtro l'utente vedrebbe la stessa allerta
+  // "Gelo previsto sabato" sia in Allerte attive sia in Allerte meteo.
+  let alertsHtml = '';
+  const nonMeteoAlerts = (alerts || []).filter(a => a.category !== 'meteo');
+  if (nonMeteoAlerts.length > 0) {
+    alertsHtml = `<div class="dpd-section"><div class="dpd-section-title">⚠️ Allerte attive (${nonMeteoAlerts.length})</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        ${nonMeteoAlerts.map(a => {
+          const bg = a.level==='critical'?'#fde8e8':a.level==='warning'?'#fdf3e0':'#e8f0fd';
+          const bd = a.level==='critical'?'#c04040':a.level==='warning'?'#d4a040':'#3a7abf';
+          const fg = a.level==='critical'?'#5a3030':a.level==='warning'?'#5a4520':'#2a4a7a';
+          return `<div style="font-size:12px;padding:6px 10px;background:${bg};border-left:3px solid ${bd};border-radius:5px;color:${fg}">
+            <span style="margin-right:6px">${a.icon}</span>${a.text}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  // ── Blocco 2.5: allerte meteo (filtrate per location del vaso) ───
+  // Calcolate da dashboardComputeMeteoAlertsForPot che applica
+  // l'interpretazione B: vasi indoor → nessuna allerta meteo (le piante
+  // in salotto non subiscono il gelo esterno); vasi outdoor/balcone →
+  // tutte le allerte meteo standard (gelo, freddo, ondata calore,
+  // pioggia intensa, vento forte, gelata tardiva/precoce).
+  // La sezione viene mostrata solo se ci sono allerte da mostrare,
+  // altrimenti viene completamente saltata per non aggiungere rumore
+  // visivo (un riquadro vuoto sarebbe peggio che assente).
+  // Titolo distinto da "Allerte attive" perché concettualmente sono
+  // diverse: le allerte attive sono dei sensori del vaso, le allerte
+  // meteo sono del contesto ambientale del giardino.
+  let meteoAlertsHtml = '';
+  const meteoAlerts = (typeof dashboardComputeMeteoAlertsForPot === 'function')
+    ? dashboardComputeMeteoAlertsForPot(item)
+    : [];
+  if (meteoAlerts.length > 0) {
+    meteoAlertsHtml = `<div class="dpd-section"><div class="dpd-section-title">🌤️ Allerte meteo · prossimi 7 giorni</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        ${meteoAlerts.map(a => {
+          const bg = a.level==='critical'?'#fde8e8':a.level==='warning'?'#fdf3e0':'#e8f0fd';
+          const bd = a.level==='critical'?'#c04040':a.level==='warning'?'#d4a040':'#3a7abf';
+          const fg = a.level==='critical'?'#5a3030':a.level==='warning'?'#5a4520':'#2a4a7a';
+          return `<div style="font-size:12px;padding:6px 10px;background:${bg};border-left:3px solid ${bd};border-radius:5px;color:${fg}">
+            <span style="margin-right:6px">${a.icon}</span>${a.text}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  // ── Blocco 3: calendario 7 giorni ────────────────────────────────
+  // Costruisco una struttura giornaliera dei prossimi 7 giorni (oggi
+  // incluso) e ci distribuisco gli eventi del vaso. Gli eventi sono
+  // già nella detail.upcomingEvents pre-calcolata, mi basta filtrarli.
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today); d.setDate(today.getDate() + i);
+    days.push({ date: d, key: d.toISOString().slice(0,10), evts: [] });
+  }
+  const dayMap = {}; days.forEach(d => dayMap[d.key] = d);
+  const evCategories = [
+    { key: 'fert',  icon: '📆', color: '#4a4a4a', label: 'Fertilizzazione' },
+    { key: 'bb',    icon: '💚', color: '#5a8050', label: 'BioBizz' },
+    { key: 'tr',    icon: '🛡️', color: '#9a8030', label: 'Trattamento' },
+    { key: 'cure',  icon: '⭐', color: '#c04040', label: 'Cura fitopatia' },
+    { key: 'wa',    icon: '💧', color: '#3a7abf', label: 'Annaffiatura' },
+    { key: 'diary', icon: '📓', color: '#7a5a8a', label: 'Diario' },
+  ];
+  const colorByKey = {}; evCategories.forEach(c => colorByKey[c.key] = c);
+  if (upcomingEvents) {
+    for (const cat of evCategories) {
+      for (const ev of (upcomingEvents[cat.key] || [])) {
+        if (!ev.date) continue;
+        const d = new Date(ev.date); d.setHours(0,0,0,0);
+        const k = d.toISOString().slice(0,10);
+        if (dayMap[k]) dayMap[k].evts.push({ ...ev, _cat: cat });
+      }
+    }
+  }
+  const dayNames = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  const monthNames = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+  const has7dEvents = days.some(d => d.evts.length > 0);
+
+  let calHtml = `<div class="dpd-section"><div class="dpd-section-title">📅 Prossimi 7 giorni</div>`;
+  if (!has7dEvents) {
+    calHtml += '<div style="font-size:12px;color:var(--muted);font-style:italic;padding:8px;text-align:center">Nessun evento programmato per questo vaso nei prossimi 7 giorni.</div>';
+  } else {
+    // Stessa struttura DOM, due rendering CSS:
+    // - desktop (>720px): timeline orizzontale (.dpd-cal-timeline)
+    // - mobile: lista verticale dei giorni (.dpd-cal-list)
+    // Le classi .dpd-cal-* hanno display:flex e flex-direction diverse
+    // a seconda della media query.
+    calHtml += '<div class="dpd-cal">';
+    days.forEach((d, idx) => {
+      const dayLabel = idx === 0 ? 'Oggi' : (idx === 1 ? 'Domani' : `${dayNames[d.date.getDay()]} ${d.date.getDate()}`);
+      const dateLabel = `${d.date.getDate()} ${monthNames[d.date.getMonth()]}`;
+      const isToday = idx === 0;
+      const hasEvts = d.evts.length > 0;
+      const dotsHtml = d.evts.map(e => `<span class="dpd-cal-dot" style="background:${e._cat.color}" title="${e._cat.label}: ${e.label || ''}${e.note ? ' — ' + e.note : ''}">${e._cat.icon}</span>`).join('');
+      const evtListHtml = d.evts.map(e =>
+        `<div class="dpd-cal-evt" style="border-left-color:${e._cat.color}">
+          <span style="margin-right:6px">${e._cat.icon}</span>
+          <span style="font-weight:500">${e._cat.label}</span>
+          ${e.label ? `<span style="color:var(--muted)"> · ${e.label}</span>` : ''}
+          ${e.note ? `<div style="font-size:10px;color:var(--muted);margin-top:2px">${e.note}</div>` : ''}
+        </div>`
+      ).join('');
+      calHtml += `<div class="dpd-cal-day${isToday ? ' is-today' : ''}${!hasEvts ? ' is-empty' : ''}">
+        <div class="dpd-cal-day-head">
+          <div class="dpd-cal-day-label">${dayLabel}</div>
+          <div class="dpd-cal-day-date">${dateLabel}</div>
+        </div>
+        <div class="dpd-cal-dots">${dotsHtml || '<span class="dpd-cal-empty">—</span>'}</div>
+        <div class="dpd-cal-evts">${evtListHtml}</div>
+      </div>`;
+    });
+    calHtml += '</div>';
+    // Legenda colori in fondo
+    calHtml += `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:10px;color:var(--muted)">
+      ${evCategories.map(c => `<span style="display:inline-flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:50%;background:${c.color};display:inline-block"></span>${c.icon} ${c.label}</span>`).join('')}
+    </div>`;
+  }
+  calHtml += '</div>';
+
+  return envHtml + alertsHtml + meteoAlertsHtml + calHtml;
 }
 
 // Rendering compatto della sezione "Eventi imminenti" di un vaso.
@@ -8876,6 +9374,7 @@ function dashboardRenderUpcomingEvents(events) {
     { key: 'fert', icon: '📆', label: 'Fertilizzazioni' },
     { key: 'bb', icon: '💚', label: 'BioBizz' },
     { key: 'tr', icon: '🛡️', label: 'Trattamenti' },
+    { key: 'cure', icon: '⭐', label: 'Cure fitopatie' },
     { key: 'wa', icon: '💧', label: 'Annaffiature' },
     { key: 'diary', icon: '📓', label: 'Diario' },
   ];
@@ -8958,18 +9457,41 @@ async function dashboardRenderTrendDialog() {
   const dateStr = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 
   try {
-    const res = await apiFetch(`/api/ecowitt/history?start_date=${dateStr(yesterday)}&end_date=${dateStr(today)}&call_back=soil`);
+    // Storia di questa scelta: la chiamata con call_back=soil produceva
+    // errore 40016 "soil is invalid" sull'API Ecowitt v3 attuale. Il
+    // valore singolo "soil" non è più riconosciuto come call_back valido
+    // (probabilmente lo era in versioni precedenti dell'API). Uso
+    // call_back=all che funziona in modo affidabile in tutti gli
+    // esempi pubblici della community (Home Assistant, varie librerie
+    // Python). Paga un po' di banda in più (la risposta include sezioni
+    // outdoor/indoor che qui non usiamo) ma è la scelta più solida.
+    // I dati soil che ci interessano vengono comunque estratti
+    // correttamente da json.data.soil e dalle relative chiavi di canale
+    // soilmoisture/soilad/soiltemp gestite più sotto da findSeries().
+    const res = await apiFetch(`/api/ecowitt/history?start_date=${dateStr(yesterday)}&end_date=${dateStr(today)}&call_back=all`);
     const json = await res.json();
 
     // Log diagnostico: utile per capire perché la dialog mostra "non
     // disponibile" quando si presume che lo storico ci sia. Lascialo qui
     // per il debug futuro (è poco rumoroso e non interferisce con l'UI).
+    // Se il backend ha trovato un call_back che funziona via fallback chain
+    // (vedi server.py), lo logga qui in evidenza così l'utente può dirmelo
+    // e cementiamo quel valore nel codice.
     console.log('[trend dialog] Risposta Ecowitt history:', {
       configured: json.configured,
       code: json.code,
       msg: json.msg,
       dataKeys: json.data ? Object.keys(json.data) : null,
+      _call_back_used: json._call_back_used,
+      _call_back_tried: json._call_back_tried,
     });
+    if (json._call_back_used) {
+      console.log(`%c[trend dialog] ✅ Sintassi call_back vincente: "${json._call_back_used}"`,
+                  'color:#5a8050;font-weight:bold');
+    }
+    if (json._call_back_tried) {
+      console.warn('[trend dialog] ❌ Tutte le sintassi provate hanno fallito:', json._call_back_tried);
+    }
 
     if (!json.configured) {
       body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:2rem;font-size:12px">Stazione Ecowitt non configurata.</div>';
@@ -9002,22 +9524,51 @@ async function dashboardRenderTrendDialog() {
       const cat = it.wh51Cat || 'universale';
       const isWh52 = it.sensorType === 'wh52';
 
-      // Cerca le serie nei dati. Le chiavi possibili variano leggermente
-      // tra le versioni dell'API Ecowitt, quindi uso un helper che prova
-      // più alias.
-      const moistKeys = [`soilmoisture${ch}`, `soil_ch${ch}`];
-      const ecKeys = [`soilad${ch}`, `ec_ch${ch}`, `soilec${ch}`];
-      const tempKeys = [`soiltemp${ch}`, `tf_ch${ch}`];
+      // Cerca le serie nei dati storici. La struttura della risposta
+      // dell'API Ecowitt v3 è annidata su tre livelli:
+      //
+      //   json.data.soil_ch1.soilmoisture.list  (umidità %)
+      //   json.data.soil_ch1.ad.list            (lettura grezza ADC)
+      //   json.data.soil_ch1.soiltemp.list      (temperatura, solo WH52)
+      //   json.data.soil_ch1.ec.list            (conducibilità, solo WH52)
+      //
+      // Il primo livello è il canale ("soil_ch1"), il secondo è il tipo
+      // di misura ("soilmoisture", "ad", "soiltemp", "ec"), il terzo è
+      // l'oggetto con metadati (`unit`) e dati (`list`).
+      //
+      // findSeries riceve l'array delle chiavi-tipo possibili (es.
+      // ["soilmoisture"] per umidità) e cerca la prima che esiste sotto
+      // soil_chN. In più mantiene un fallback "piatto" per retrocompatibilità
+      // con eventuali versioni più vecchie dell'API che mettevano i dati
+      // direttamente in json.data["soilmoisture1"].list (senza il livello
+      // soil_chN intermedio). Questo fallback non si attiva con l'API
+      // attuale ma protegge da regressioni se Ecowitt cambia di nuovo.
+      const channelKey = `soil_ch${ch}`;
+      const channelObj = (json.data && json.data[channelKey]) || null;
 
-      const findSeries = keys => {
-        for (const k of keys) {
-          if (soilHistory[k] && soilHistory[k].list) return soilHistory[k].list;
-          if (json.data[k] && json.data[k].list) return json.data[k].list;
+      const findSeries = typeKeys => {
+        // Path principale: json.data.soil_chN.<type>.list
+        if (channelObj) {
+          for (const t of typeKeys) {
+            if (channelObj[t] && channelObj[t].list) return channelObj[t].list;
+          }
         }
+        // Fallback piatto: json.data.<type><ch>.list o json.data.soil_chN.list
+        for (const t of typeKeys) {
+          const flatKey = `${t}${ch}`;
+          if (json.data[flatKey] && json.data[flatKey].list) return json.data[flatKey].list;
+        }
+        if (json.data[channelKey] && json.data[channelKey].list) return json.data[channelKey].list;
         return null;
       };
 
-      const moistSeries = findSeries(moistKeys);
+      // Tipi di misura per ogni grandezza. L'ordine è: nome moderno
+      // dell'API v3 prima, alias storici dopo.
+      const moistTypes = ['soilmoisture'];
+      const ecTypes    = ['ec', 'soilad'];   // 'ad' è la grezza ADC, NON l'EC
+      const tempTypes  = ['soiltemp', 'tf'];
+
+      const moistSeries = findSeries(moistTypes);
       const soglieMoist = (PARAMS.soglie || {})[cat] || PARAMS_DEFAULTS.soglie.universale;
       const moistThresh = { min: soglieMoist.secco, max: soglieMoist.umido };
 
@@ -9034,8 +9585,8 @@ async function dashboardRenderTrendDialog() {
         ${renderTrendChart(moistSeries, null, moistThresh, 'Umidità', '%', '#3a7abf')}`;
 
       if (isWh52) {
-        const ecSeries = findSeries(ecKeys);
-        const tempSeries = findSeries(tempKeys);
+        const ecSeries = findSeries(ecTypes);
+        const tempSeries = findSeries(tempTypes);
         const ecThresh = (PARAMS.sogliEC || {})[cat] || PARAMS_DEFAULTS.sogliEC.universale;
         html += `${renderTrendChart(ecSeries, null, ecThresh, 'EC', 'µS/cm', '#9a7a20')}
                  ${renderTrendChart(tempSeries, null, {min:PARAMS.tempRadiciMin, max:PARAMS.tempRadiciMax}, 'Temp radici', '°C', '#c06040')}`;

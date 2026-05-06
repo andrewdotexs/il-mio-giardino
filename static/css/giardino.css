@@ -331,7 +331,18 @@ body {
 
 /* ── SHARED NAV/CONTROLS ───────────────────────────────────────────── */
 .ctrl-row{display:flex;align-items:center;justify-content:space-between;max-width:900px;margin:0 auto 1rem;gap:8px;flex-wrap:wrap}
-.ctrl-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:500;min-width:150px;text-align:center}
+.ctrl-title{
+  font-family:'Playfair Display',serif;
+  font-size:18px;
+  font-weight:500;
+  min-width:150px;
+  text-align:center;
+  /* Stesso trattamento delle .legend-chip: sullo sfondo a foglie il
+     testo di default ereditato (scuro) è poco leggibile sopra le
+     ombre del wallpaper. Bianco + ombra leggera lo scolpisce. */
+  color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,.4);
+}
 .ctrl-btn{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 13px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text);transition:all .13s}
 .ctrl-btn:hover{background:#f0ece4;border-color:var(--border2)}
 .ctrl-btn.primary{background:var(--text);color:#fff;border-color:var(--text)}
@@ -370,7 +381,18 @@ body {
    CALENDARIO MENSILE
 ══════════════════════════════════════════════════════════════════ */
 .legend-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:1.2rem}
-.legend-chip{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.legend-chip{
+  display:flex;align-items:center;gap:5px;font-size:11px;
+  /* Sullo sfondo a foglie verdi del wallpaper le label in muted
+     (#9a9082) erano poco leggibili: il loro contrasto con lo sfondo
+     non bastava. Le metto in bianco con un'ombra leggera che
+     scolpisce il testo dallo sfondo, come per il titolo della
+     sezione. La font-weight 500 dà un po' di corpo che aiuta la
+     leggibilità senza pesare troppo. */
+  color:#fff;
+  font-weight:500;
+  text-shadow:0 1px 2px rgba(0,0,0,.4);
+}
 .legend-dot{width:9px;height:9px;border-radius:50%}
 .year-bar-section{max-width:900px;margin:0 auto 1.2rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
 .year-bar-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:500;margin-bottom:12px}
@@ -379,6 +401,30 @@ body {
 .bar-months{display:flex;flex:1;gap:2px}
 .bar-month{flex:1;height:14px;border-radius:3px;background:#f0ece4}
 .bar-month.active{background:var(--accent)}.bar-month.reduce{background:#b8a86a}.bar-month.special{background:var(--warn)}
+/* Container scrollabile per le righe di pianta della Panoramica annuale.
+   Senza max-height, una pianta-foresta da 30+ piante allungherebbe la
+   sezione fino a coprire tutto lo schermo, costringendo l'utente a
+   scrollare a lungo solo per arrivare al calendario. Con max-height
+   le righe oltre la soglia diventano scrollabili internamente,
+   mantenendo la Panoramica compatta indipendentemente dal numero di
+   piante. 35vh = 35% dell'altezza viewport, cioè circa 250px su mobile
+   e 380px su desktop, che permette di vedere 10-15 piante senza
+   scroll interno e attivare lo scroll solo quando serve davvero.
+   La barra di scroll è stilizzata sottile per non distrarre. */
+.year-bars-scroll {
+  max-height: 35vh;
+  overflow-y: auto;
+  /* Padding-right per evitare che la barra di scroll quando appare
+     copra parte delle barre dei mesi. */
+  padding-right: 4px;
+}
+.year-bars-scroll::-webkit-scrollbar { width: 6px; }
+.year-bars-scroll::-webkit-scrollbar-track { background: transparent; }
+.year-bars-scroll::-webkit-scrollbar-thumb {
+  background: var(--border2);
+  border-radius: 3px;
+}
+.year-bars-scroll::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 .bar-month-labels{display:flex;gap:2px;margin-left:113px;margin-bottom:3px}
 .bar-month-label{flex:1;font-size:8px;color:var(--muted);text-align:center}
 /* Le label dei mesi mostrano due forme: l'abbreviazione testuale
@@ -534,7 +580,19 @@ body {
 .entry-btn.del:hover{background:#faeaea;color:#b04040}
 .entry-btn.edit:hover{background:#eaf3e0;color:var(--accent)}
 .entry-auto{font-size:9px;padding:2px 6px;border-radius:10px;background:#f0ece4;color:var(--muted);font-weight:500;margin-left:auto;flex-shrink:0}
-.diary-empty{text-align:center;padding:2.5rem 1rem;color:var(--muted);font-size:13px;font-style:italic}
+.diary-empty{
+  text-align:center;
+  padding:2.5rem 1rem;
+  font-size:13px;
+  font-style:italic;
+  /* Stesso trattamento di .legend-chip e .ctrl-title: il messaggio
+     "Nessuna voce ancora..." compare quando il diario è vuoto, sopra
+     lo sfondo a foglie del wallpaper. Il color:var(--muted) originario
+     era poco leggibile in quel contesto. Bianco + ombra leggera
+     scolpisce il testo dal background. */
+  color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,.4);
+}
 .diary-empty .empty-icon{font-size:36px;display:block;margin-bottom:8px}
 
 /* ══════════════════════════════════════════════════════════════════
@@ -935,4 +993,219 @@ body {
   font-size: 12px;
   font-style: italic;
   text-align: center;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   DASHBOARD — riga vaso cliccabile + dialog dettaglio vaso
+
+   La riga vaso nella Dashboard (.dashboard-pot-row) è un elemento
+   cliccabile che apre la dialog di dettaglio. Stile hover sottile,
+   cursor pointer, chevron a destra che dà feedback visivo.
+══════════════════════════════════════════════════════════════════ */
+.dashboard-pot-row {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.dashboard-pot-row:hover,
+.dashboard-pot-row:focus-visible {
+  background: rgba(0, 0, 0, 0.025);
+  outline: none;
+}
+.dashboard-pot-row:focus-visible {
+  /* Accessibilità: ring di focus visibile per navigazione da tastiera */
+  box-shadow: inset 0 0 0 2px rgba(90, 122, 74, 0.4);
+}
+.dashboard-pot-row:last-child {
+  border-bottom: none;
+}
+.dashboard-pot-chevron {
+  font-size: 22px;
+  color: var(--muted);
+  font-weight: 300;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: transform 0.12s, color 0.12s;
+}
+.dashboard-pot-row:hover .dashboard-pot-chevron {
+  transform: translateX(2px);
+  color: var(--text);
+}
+
+/* Dialog dettaglio vaso — sezioni interne (.dpd-* sta per Dashboard
+   Pot Dialog). Ogni sezione ha titolo + contenuto, separate da spazio
+   verticale per leggibilità. */
+.dpd-section {
+  margin-bottom: 18px;
+}
+.dpd-section:last-child {
+  margin-bottom: 0;
+}
+.dpd-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px dashed var(--border);
+}
+.dpd-env-row {
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.dpd-env-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.dpd-env-cell {
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.dpd-env-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.dpd-env-val {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ── Calendario 7 giorni: due rendering responsive via media query ──
+   Default (desktop, > 720px): TIMELINE ORIZZONTALE.
+     I 7 giorni sono affiancati come colonne strette. Ogni colonna mostra
+     header (giorno + data) e dot colorati per gli eventi. La lista
+     dettagliata degli eventi (.dpd-cal-evts) è nascosta perché lo
+     spazio orizzontale è limitato; gli eventi sono identificati dai
+     dot con tooltip al passaggio del puntatore.
+   Mobile (≤ 720px): LISTA VERTICALE.
+     I 7 giorni diventano righe verticali. Ogni riga mostra l'header
+     compatto, e SOTTO la lista dettagliata degli eventi del giorno.
+     I dot orizzontali sono nascosti perché ridondanti con la lista
+     dettagliata. Questo è il layout giusto per gli schermi stretti
+     dove una timeline orizzontale di 7 colonne sarebbe illeggibile. */
+.dpd-cal {
+  display: flex;
+  gap: 4px;
+}
+.dpd-cal-day {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;  /* Importante per flex: senza, il content forza la larghezza */
+}
+.dpd-cal-day.is-today {
+  background: rgba(90, 122, 74, 0.08);
+  border-color: rgba(90, 122, 74, 0.3);
+}
+.dpd-cal-day.is-empty {
+  opacity: 0.55;
+}
+.dpd-cal-day-head {
+  text-align: center;
+}
+.dpd-cal-day-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+.dpd-cal-day-date {
+  font-size: 10px;
+  color: var(--muted);
+}
+.dpd-cal-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  justify-content: center;
+  min-height: 22px;
+  align-items: flex-start;
+}
+.dpd-cal-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: white;
+  cursor: help;
+}
+.dpd-cal-empty {
+  font-size: 10px;
+  color: var(--muted);
+  opacity: 0.5;
+}
+.dpd-cal-evts {
+  /* Su desktop (timeline) la lista dettagliata è nascosta, basta i dot.
+     Su mobile (vedi media query sotto) viene mostrata. */
+  display: none;
+}
+.dpd-cal-evt {
+  font-size: 11px;
+  padding: 5px 8px;
+  background: white;
+  border-left: 3px solid var(--border2);
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+.dpd-cal-evt:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 720px) {
+  /* Mobile: lista verticale dei 7 giorni con eventi inline */
+  .dpd-cal {
+    flex-direction: column;
+    gap: 6px;
+  }
+  .dpd-cal-day {
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+  .dpd-cal-day-head {
+    flex: 0 0 70px;
+    text-align: left;
+  }
+  .dpd-cal-dots {
+    /* Su mobile i dot orizzontali non servono perché c'è la lista
+       dettagliata sotto. Li nascondo per non duplicare informazione. */
+    display: none;
+  }
+  .dpd-cal-evts {
+    /* Mostra la lista dettagliata degli eventi */
+    display: block;
+    flex: 1;
+    min-width: 0;
+  }
+  .dpd-cal-day.is-empty .dpd-cal-evts::before {
+    content: '— nessun evento';
+    font-size: 11px;
+    color: var(--muted);
+    font-style: italic;
+  }
+  /* Sui telefoni la grid 2-colonne di temp+EC può risultare stretta;
+     la lascio comunque a 2 colonne perché 80px ciascuna è leggibile,
+     ma riduco il padding per dare più spazio al contenuto. */
+  .dpd-env-cell {
+    padding: 8px 10px;
+  }
+  .dpd-env-val {
+    font-size: 14px;
+  }
 }
