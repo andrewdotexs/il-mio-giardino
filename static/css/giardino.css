@@ -381,6 +381,13 @@ body {
 .bar-month.active{background:var(--accent)}.bar-month.reduce{background:#b8a86a}.bar-month.special{background:var(--warn)}
 .bar-month-labels{display:flex;gap:2px;margin-left:113px;margin-bottom:3px}
 .bar-month-label{flex:1;font-size:8px;color:var(--muted);text-align:center}
+/* Le label dei mesi mostrano due forme: l'abbreviazione testuale
+   ("Gen Feb Mar...") di default e il numero del mese (1-12) solo su
+   mobile, dove gli abbreviativi a 3 caratteri si troncano fuori
+   schermo. La media query qui sotto inverte la visibilità sotto i
+   600px di larghezza. */
+.bar-month-label .bml-short{display:inline}
+.bar-month-label .bml-num{display:none}
 .months-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;max-width:900px;margin:0 auto}
 .month-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s}
 .month-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.08)}
@@ -477,6 +484,13 @@ body {
   .plant-dot{width:10px;height:10px;font-size:6px}
   .bar-plant-label{width:75px}
   .bar-month-labels{margin-left:83px}
+  /* Su mobile mostro i numeri (1-12) al posto delle abbreviazioni
+     testuali, perché "Gen Feb Mar Apr Mag Giu Lug Ago Set Ott Nov Dic"
+     in 8px su uno schermo da 360px non ci sta tutto (l'ultima label
+     "Dic" finisce troncata fuori schermo). I numeri occupano meno
+     spazio e sono universalmente leggibili. */
+  .bar-month-label .bml-short{display:none}
+  .bar-month-label .bml-num{display:inline}
   .substrate-grid{grid-template-columns:1fr}
   .sub-name{width:100px;font-size:10px}
   .preset-btn{padding:5px 8px;font-size:10px}

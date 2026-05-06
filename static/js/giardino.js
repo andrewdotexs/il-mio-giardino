@@ -409,9 +409,34 @@ function cSC(s){return["stop","active","reduce","special"][s]}
 function cSL(s){return["Riposo","Attiva","Ridotta","Attenzione"][s]}
 
 function cInitMensile() {
+  // Cleanup difensivo: la funzione può essere chiamata più volte (una
+  // dal bootstrap dopo il caricamento piante, una da showSection alla
+  // prima visita della tab) e senza questo reset accumulava 24 label
+  // mesi e 24 schede mensili invece di 12. La causa è che gli helper
+  // sotto fanno appendChild senza prima azzerare il container.
   const barLabels = document.getElementById('c-bar-labels');
-  cMonthsShort.forEach(m=>{const el=document.createElement('div');el.className='bar-month-label';el.textContent=m;barLabels.appendChild(el)});
   const yearBars = document.getElementById('c-year-bars');
+  const grid = document.getElementById('c-months-grid');
+  barLabels.innerHTML = '';
+  yearBars.innerHTML = '';
+  grid.innerHTML = '';
+
+  // Sui telefoni stretti (<600px) le label "Gen Feb Mar..." in 8px non
+  // ci stanno tutte e l'ultima ("Dic") veniva troncata fuori schermo.
+  // Su desktop invece le abbreviazioni sono leggibili e più informative
+  // dei numeri puri. Soluzione: metto entrambi i testi nella label come
+  // due span e lascio decidere al CSS (media query) quale mostrare in
+  // base alla larghezza dello schermo. Il tooltip sulla cella sotto
+  // mostra comunque il nome esteso del mese in entrambi i casi.
+  for (let m = 1; m <= 12; m++) {
+    const el = document.createElement('div');
+    el.className = 'bar-month-label';
+    el.title = cMonths[m - 1];
+    el.innerHTML =
+      `<span class="bml-short">${cMonthsShort[m - 1]}</span>` +
+      `<span class="bml-num">${m}</span>`;
+    barLabels.appendChild(el);
+  }
   cPlants.forEach(p=>{
     const row=document.createElement('div');row.className='bar-plant-row';
     const label=document.createElement('div');label.className='bar-plant-label';
@@ -423,7 +448,6 @@ function cInitMensile() {
     p.months.forEach((s,mi)=>{const bar=document.createElement('div');bar.className='bar-month '+cSC(s);bar.title=cMonths[mi]+': '+cSL(s);bars.appendChild(bar)});
     row.appendChild(bars);yearBars.appendChild(row);
   });
-  const grid = document.getElementById('c-months-grid');
   cMonths.forEach((month,mi)=>{
     const card=document.createElement('div');card.className='month-card';card.onclick=()=>cOpenMonthDetail(mi);
     const header=document.createElement('div');header.className='month-header';
